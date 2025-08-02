@@ -20,6 +20,10 @@ using UnswitchAttrs = Attr::BitFlagsAttr<UnswitchAttr>;
 class LoopUnswitchPass : public PM::PassInfo<LoopUnswitchPass> {
 public:
     PM::PreservedAnalyses run(LinearFunction &function, LFAM &lfam);
+
+    explicit LoopUnswitchPass(bool enable_partition = true) : enable_partition(enable_partition) {}
+private:
+    bool enable_partition = true;
     size_t name_cnt = 0;
 };
 

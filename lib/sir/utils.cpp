@@ -112,8 +112,14 @@ enum class InvariantType {
     Must, MustNot, DontKnow
 };
 InvariantType analyzeValInvariant(Value* val, HELPERInst* loop) {
-    if (val->is<LOADInst, STOREInst>())
+    if (val->is<STOREInst>())
         return InvariantType::MustNot;
+
+    if (auto ld = val->as<LOADInst>()) {
+        if (isMemoryInvariantTo(ld->getPtr().get(), loop))
+            return InvariantType::MustNot;
+        return InvariantType::Must;
+    }
 
     auto inst = val->as<Instruction>();
     if (!inst)
@@ -198,5 +204,8 @@ bool isTriviallyIdentical(const pVal &lhs, const pVal &rhs) {
     Err::gassert(lhs_i->getNumOperands() == 2);
     return (isTriviallyIdentical(lhs_i->getOperand(0)->getValue(), rhs_i->getOperand(1)->getValue()) &&
             isTriviallyIdentical(lhs_i->getOperand(1)->getValue(), rhs_i->getOperand(0)->getValue()));
+}
+bool isTriviallyIdentical(Value* lhs, Value* rhs) {
+    return isTriviallyIdentical(lhs->as<Value>(), rhs->as<Value>());
 }
 } // namespace SIR

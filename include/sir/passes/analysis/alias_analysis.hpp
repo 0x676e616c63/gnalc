@@ -30,12 +30,16 @@ struct AffineExpr {
 
     // Loop Invariant, but not an SIR constant. It can be a nullptr.
     // TODO: Something like SCEVExpr in IR may be better.
-    pVal invariant = nullptr;
+    Value* invariant = nullptr;
 
     int coe(IndVar *i) const;
     // One induction variable and no constant or invariant
     bool isLinear() const;
     std::pair<int, IndVar*> getLinear() const;
+
+    bool isConstant() const;
+    int getConstant() const;
+
     AffineExpr operator+(const AffineExpr &rhs) const;
     AffineExpr operator-(const AffineExpr &rhs) const;
     AffineExpr operator*(int rhs) const;
@@ -47,6 +51,12 @@ struct AffineExpr {
 // Two induction variables are isomorphic iff they have the base, step, bound and nested depth.
 bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs);
 
+struct IterRange {
+    AffineExpr base;
+    AffineExpr step;
+    AffineExpr bound;
+};
+
 struct ArrayAccess {
     Value *base;
 
@@ -57,8 +67,12 @@ struct ArrayAccess {
     //
     // Access for a[i][j]: indices = { 2 * j, i + 1 }
     std::vector<AffineExpr> indices;
-    // TODO: Domain
+    std::map<IndVar*, IterRange> domain;
 };
+
+std::ostream& operator<<(std::ostream &os, const AffineExpr &expr);
+std::ostream& operator<<(std::ostream &os, const IterRange &access);
+std::ostream& operator<<(std::ostream &os, const ArrayAccess &access);
 
 struct MemoryAccess {
 private:
@@ -90,9 +104,10 @@ private:
     std::optional<InstRW> analyzeInstRW(Instruction *) const;
 
     LinearFunction* func{};
+    LFAM* fam{};
 
 public:
-    explicit LAAResult(LinearFunction *func_) : func(func_) {}
+    LAAResult(LinearFunction *func_, LFAM* fam_) : func(func_), fam(fam_) {}
 
     const std::optional<MemoryAccess> &queryPointer(Value *) const;
     const std::optional<InstRW> &queryInstRW(Instruction *) const;

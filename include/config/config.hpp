@@ -9,6 +9,9 @@ namespace Config::SIR {
 // Loop Interchange
 // We interchange loops if we gain more than this threshold.
 constexpr auto LOOP_INTERCHANGE_BENEFIT_THRESHOLD = 0;
+
+// Early Inline
+constexpr auto EARLY_INLINE_INST_THRESHOLD = 64;
 }
 
 namespace Config::IR {

@@ -28,14 +28,14 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &val) {
     if (auto ld = val->as<LOADInst>())
         ptr = ld->getPtr();
 
+    // For pointers, see if they are invariant first.
     if (ptr->getType()->is<PtrType>()) {
         if (isMemoryInvariantTo(ptr.get(), &wh))
             return {UpdateType::Invariant, val, nullptr};
+        // fall through to affine cases
     }
-    else if (isLoopInvariant(ptr.get(), &wh))
-        return {UpdateType::Invariant, val, nullptr};
-    else
-        return {UpdateType::Unknown, nullptr, nullptr};
+    // For scalars, they must not be in loop, which is always invariant.
+    else return {UpdateType::Invariant, val, nullptr};
 
     // Find the base
     auto base_it = std::next(IListRFind(ilist, wh.as<WHILEInst>()));
@@ -172,11 +172,13 @@ std::optional<ForInfo> transformWhile(IList &ilist, WHILEInst &wh, LinearFunctio
                                    l_evo.step, l_evo.iv_loads, l_evo.update_insts};
             }
 
-            Logger::logDebug("[While2For]: Skipped non-comparable condition.");
+            Logger::logDebug("[While2For]: Skipped non-comparable condition (ICMPOP::", Util::getEnumName(cond), ")");
             return std::nullopt;
         }
 
-        Logger::logDebug("[While2For]: Skipped non-comparable operands.");
+        Logger::logDebug("[While2For]: Skipped non-comparable operands. {lhs: '", lhs->getName(), "' (",
+                         Util::getEnumName(l_evo.type), "), rhs: '", rhs->getName(), "' (",
+                         Util::getEnumName(r_evo.type), ")}");
         return std::nullopt;
     }
     Logger::logDebug("[While2For]: Skipped non-icmp condition.");
@@ -209,7 +211,7 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &lfam) {
     for (auto &[ilist, iter, while_inst, depth] : replace_map) {
         if (auto for_info_opt = transformWhile(*ilist, *while_inst, function)) {
             auto info = *for_info_opt;
-            auto iv = std::make_shared<IndVar>(info.indvar_mem->getName() + ".ind." + std::to_string(name_cnt++),
+            auto iv = std::make_shared<IndVar>(info.indvar_mem->getName() + ".iv." + std::to_string(name_cnt++),
                                                info.indvar_mem, info.base, info.bound, info.step, depth);
             auto for_inst = std::make_shared<FORInst>(iv, while_inst->getBodyInsts());
             Err::gassert(while_inst->getCondInsts().back()->is<ICMPInst>());

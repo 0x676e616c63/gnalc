@@ -765,6 +765,7 @@ SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
         if (rhs->isIRValue())
             rhs_ci = rhs->getRawIRValue()->as<ConstantInt>();
 
+        // Constant folding
         if (lhs_ci && rhs_ci) {
             int x = lhs_ci->getVal();
             int y = rhs_ci->getVal();
@@ -783,7 +784,6 @@ SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
             return nullptr;
         }
 
-        // Peephole and try to move constants to left hand side
         if (lhs_ci) {
             if (lhs_ci->getVal() == 0) {
                 if (op == Op::Add)
@@ -812,10 +812,6 @@ SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
             // // t +/* c ---> c +/* t
             // if (op == Op::Add || op == Op::Mul)
             //     return foldSCEVExpr(swapOperands(expr));
-
-            // t - c ---> -c + t
-            if (op == Op::Sub)
-                return foldSCEVExpr(getSCEVExprAdd(getSCEVExpr(-rhs_ci->getVal()), lhs));
         }
 
         // Transform the tree.
@@ -852,6 +848,19 @@ SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
                         getSCEVExprMul(getSCEVExpr(y),  lhs->getRHS()));
                 }
             }
+        }
+
+        // x + (c - x) -->  c
+        if (op == Op::Add && rhs->isBinary() && rhs->getOp() == Op::Sub) {
+            auto rhs_lhs = rhs->getLHS(), rhs_rhs = rhs->getRHS();
+            if (rhs_rhs == lhs)
+                return rhs_lhs;
+        }
+        // (c - x) + x --> c
+        if (op == Op::Add && lhs->isBinary() && lhs->getOp() == Op::Sub) {
+            auto lhs_lhs = lhs->getLHS(), lhs_rhs = lhs->getRHS();
+            if (lhs_rhs == rhs)
+                return lhs_lhs;
         }
     }
 

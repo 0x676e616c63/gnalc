@@ -10,6 +10,7 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 
 #include "match/match.hpp"
+#include "parser/irgen.hpp"
 #include "sir/base.hpp"
 #include "sir/utils.hpp"
 #include "sir/visitor.hpp"
@@ -18,6 +19,65 @@
 
 namespace SIR {
 PM::UniqueKey LAliasAnalysis::Key;
+
+std::ostream &operator<<(std::ostream &os, const AffineExpr &expr) {
+    bool first = true;
+
+    for (const auto &coeff : expr.coeffs) {
+        if (!first)
+            os << " + ";
+        first = false;
+
+        if (coeff.second != 1)
+            os << coeff.second << " * ";
+        os << coeff.first->getName();
+    }
+
+    if (expr.constant != 0) {
+        if (!first)
+            os << " + ";
+        os << expr.constant;
+        first = false;
+    }
+
+    if (expr.invariant != nullptr) {
+        if (!first)
+            os << " + ";
+        os << expr.invariant->getName();
+        first = false;
+    }
+
+    if (first)
+        os << "0";
+
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const IterRange &r) {
+    os << "[" << r.base << ", " << r.bound << ") step " << r.step;
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const ArrayAccess &access) {
+    os << access.base->getName();
+
+    for (size_t i = 0; i < access.indices.size(); ++i)
+        os << "[" << access.indices[i] << "]";
+
+    if (!access.domain.empty()) {
+        os << " where { ";
+        bool first = true;
+        for (const auto &kv : access.domain) {
+            if (!first)
+                os << "; ";
+            os << kv.first->getName() << " in " << kv.second;
+            first = false;
+        }
+        os << " }";
+    }
+
+    return os;
+}
 
 void removeZeroCoeffs(std::map<IndVar *, int> &expr) {
     for (auto it = expr.begin(); it != expr.end();) {
@@ -38,6 +98,12 @@ bool AffineExpr::isLinear() const { return coeffs.size() == 1 && constant == 0 &
 std::pair<int, IndVar *> AffineExpr::getLinear() const {
     Err::gassert(isLinear(), "AffineExpr is not linear");
     return std::make_pair(coeffs.begin()->second, coeffs.begin()->first);
+}
+
+bool AffineExpr::isConstant() const { return coeffs.empty() && invariant == nullptr; }
+int AffineExpr::getConstant() const {
+    Err::gassert(isConstant(), "AffineExpr is not constant");
+    return constant;
 }
 
 AffineExpr AffineExpr::operator+(const AffineExpr &rhs) const {
@@ -95,10 +161,10 @@ bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
     using Key = std::tuple<pVal, pVal, pVal, size_t, int>;
     std::vector<Key> lhs_decay, rhs_decay;
 
-    for (const auto& [indvar, coe] : lhs.coeffs)
+    for (const auto &[indvar, coe] : lhs.coeffs)
         lhs_decay.emplace_back(indvar->getBase(), indvar->getStep(), indvar->getBound(), indvar->getDepth(), coe);
 
-    for (const auto& [indvar, coe] : rhs.coeffs)
+    for (const auto &[indvar, coe] : rhs.coeffs)
         rhs_decay.emplace_back(indvar->getBase(), indvar->getStep(), indvar->getBound(), indvar->getDepth(), coe);
 
     std::sort(lhs_decay.begin(), lhs_decay.end());
@@ -107,12 +173,12 @@ bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
     return lhs_decay == rhs_decay;
 }
 
-std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction* func) {
+std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction *func) {
     if (auto ci32 = expr->as_raw<ConstantInt>())
         return AffineExpr{.coeffs = {}, .constant = ci32->getVal()};
 
     if (auto indvar = expr->as_raw<IndVar>())
-        return AffineExpr{.coeffs = {{indvar, 1}}, .constant = 0 };
+        return AffineExpr{.coeffs = {{indvar, 1}}, .constant = 0};
 
     if (auto binary = expr->as_raw<BinaryInst>()) {
         auto lhs = binary->getLHS();
@@ -132,8 +198,7 @@ std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction* func) {
                 if (lhs_affine->invariant == rhs_affine->invariant) {
                     lhs_affine->invariant = nullptr;
                     rhs_affine->invariant = nullptr;
-                }
-                else
+                } else
                     return std::nullopt;
             }
             return *lhs_affine - *rhs_affine;
@@ -154,20 +219,26 @@ std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction* func) {
         return std::nullopt;
     }
 
-    if (auto load = expr->as<LOADInst>()) {
+    if (auto load = expr->as_raw<LOADInst>()) {
         if (isMemoryInvariantTo(load->getPtr().get(), func))
             return AffineExpr{.coeffs = {}, .constant = 0, .invariant = load};
     }
 
-    return std::nullopt;
+    return AffineExpr{.coeffs = {}, .constant = 0, .invariant = expr->as_raw<Value>()};
 }
 
 std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
     auto base_ptr = ptr;
     std::vector<AffineExpr> indices;
+    std::map<IndVar *, IterRange> domain;
     while (true) {
         if (auto gep = base_ptr->as_raw<GEPInst>()) {
             base_ptr = gep->getPtr().get();
+
+            if (auto attr = gep->attr().get<Parser::IRGenAttrs>(); attr && attr->has(Parser::IRGenAttr::DecayGep))
+                continue;
+
+            // gep ptr, i --> a[i]
             // gep ptr, 0, i --> a[i]
             pVal index;
             if (!match(gep, M::Gep(M::Val(), M::Is(0), M::Bind(index))) &&
@@ -177,6 +248,17 @@ std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
             auto affine = analyzeAffineExpr(index.get(), func);
             if (!affine)
                 return std::nullopt;
+
+            for (const auto &[iv, coe] : affine->coeffs) {
+                auto base = analyzeAffineExpr(iv->getBase().get(), func);
+                auto step = analyzeAffineExpr(iv->getStep().get(), func);
+                auto bound = analyzeAffineExpr(iv->getBound().get(), func);
+                if (!base || !step || !bound) {
+                    Logger::logDebug("[LAA]: Not Affine Domain?");
+                    return std::nullopt;
+                }
+                domain.emplace(iv, IterRange{.base = *base, .step = *step, .bound = *bound});
+            }
             indices.insert(indices.begin(), std::move(*affine));
         } else if (auto bitcast = base_ptr->as_raw<BITCASTInst>())
             base_ptr = bitcast->getOVal().get();
@@ -188,7 +270,7 @@ std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
 
     Err::gassert(base_ptr->getType()->is<PtrType>());
     if (!indices.empty())
-        return MemoryAccess(ArrayAccess{.base = base_ptr, .indices = std::move(indices)});
+        return MemoryAccess(ArrayAccess{.base = base_ptr, .indices = std::move(indices), .domain = std::move(domain)});
 
     return MemoryAccess(ScalarAccess{.base = base_ptr});
 }
@@ -216,8 +298,8 @@ AliasInfo LAAResult::getAliasInfo(Value *ptr1, Value *ptr2) const {
     Err::gassert((info1->isArray() && info2->isArray()) || (info1->isScalar() && info2->isScalar()), "Bad analysis");
 
     if (info1->isArray()) {
-        auto &[base1, affine1] = info1->array();
-        auto &[base2, affine2] = info2->array();
+        auto &[base1, affine1, domain1] = info1->array();
+        auto &[base2, affine2, domain2] = info2->array();
 
         if (base1 != base2)
             return AliasInfo::NoAlias;
@@ -226,6 +308,7 @@ AliasInfo LAAResult::getAliasInfo(Value *ptr1, Value *ptr2) const {
             return AliasInfo::MustAlias;
 
         // FIXME: More accurate dep test here
+        // TODO: Use the domain
         return AliasInfo::MayAlias;
     }
 
@@ -244,19 +327,12 @@ const std::optional<InstRW> &LAAResult::queryInstRW(Instruction *inst) const {
     return inst_rw_cache[inst] = analyzeInstRW(inst);
 }
 
-const std::optional<MemoryAccess> &LAAResult::queryPointer(const pVal & v) const {
-    return queryPointer(v.get());
-}
-const std::optional<InstRW> &LAAResult::queryInstRW(const pInst & inst) const {
-    return queryInstRW(inst.get());
-}
+const std::optional<MemoryAccess> &LAAResult::queryPointer(const pVal &v) const { return queryPointer(v.get()); }
+const std::optional<InstRW> &LAAResult::queryInstRW(const pInst &inst) const { return queryInstRW(inst.get()); }
 
 AliasInfo LAAResult::getAliasInfo(const pVal &lhs, const pVal &rhs) const { return getAliasInfo(lhs.get(), rhs.get()); }
 
 std::optional<InstRW> LAAResult::analyzeInstRW(Instruction *inst) const {
-    if (inst->is<BinaryInst, CastInst, GEPInst, FNEGInst, ICMPInst, FCMPInst>())
-        return InstRW{};
-
     if (auto load = inst->as_raw<LOADInst>())
         return InstRW{.read = {load->getPtr().get()}};
     if (auto store = inst->as_raw<STOREInst>())
@@ -267,6 +343,7 @@ std::optional<InstRW> LAAResult::analyzeInstRW(Instruction *inst) const {
         rw.read.insert(item.read.begin(), item.read.end());
         rw.write.insert(item.write.begin(), item.write.end());
     };
+
     auto mergeList = [&](const std::list<pInst> &list) -> bool {
         for (const auto &inner_inst : list) {
             auto &curr_rw = queryInstRW(inner_inst.get());
@@ -282,19 +359,49 @@ std::optional<InstRW> LAAResult::analyzeInstRW(Instruction *inst) const {
             return std::nullopt;
         return rw;
     }
+
     if (auto while_inst = inst->as_raw<WHILEInst>()) {
         if (!mergeList(while_inst->getCondInsts()) || !mergeList(while_inst->getBodyInsts()))
             return std::nullopt;
         return rw;
     }
+
     if (auto for_inst = inst->as_raw<FORInst>()) {
         if (!mergeList(for_inst->getBodyInsts()))
             return std::nullopt;
         return rw;
     }
 
-    // For other instructions like CALLInst, give up.
-    return std::nullopt;
+    if (auto call = inst->as_raw<CALLInst>()) {
+        auto callee_decl = call->getFunc();
+        auto callee_def = callee_decl->as<LinearFunction>();
+
+        // TODO: Inter-procedural analysis
+        if (callee_def)
+            return std::nullopt;
+
+        if (callee_decl->hasFnAttr(FuncAttr::builtinMemWriteOnly)) {
+            auto actual_args = call->getArgs();
+            for (const auto &actual : actual_args) {
+                if (actual->getType()->getTrait() == IRCTYPE::PTR)
+                    rw.write.insert(actual.get());
+            }
+        } else if (callee_decl->hasFnAttr(FuncAttr::builtinMemReadOnly)) {
+            auto actual_args = call->getArgs();
+            for (const auto &actual : actual_args) {
+                if (actual->getType()->getTrait() == IRCTYPE::PTR)
+                    rw.read.insert(actual.get());
+            }
+        } else if (callee_decl->hasFnAttr(FuncAttr::builtinMemNoReadWrite))
+            return InstRW{};
+        else
+            return std::nullopt;
+
+        return rw;
+    }
+
+    // For other instructions, they don't have any read/write.
+    return InstRW{};
 }
 
 bool LAAResult::isIndependent(Instruction *lhs, Instruction *rhs) const {
@@ -336,12 +443,12 @@ bool LAAResult::isScalarIndependent(Instruction *lhs, Instruction *rhs) const {
 
     auto has_dep = [&](const std::set<Value *> &set1, const std::set<Value *> &set2) {
         for (const auto &s1 : set1) {
-            const auto& a1 = queryPointer(s1);
+            const auto &a1 = queryPointer(s1);
             // Scalar pointer's query can't fail, so s1 must be array if `a1`
             if (!a1 || !a1->isScalar())
                 continue;
             for (const auto &s2 : set2) {
-                const auto& a2 = queryPointer(s2);
+                const auto &a2 = queryPointer(s2);
                 if (!a2 || !a2->isScalar())
                     continue;
                 if (getAliasInfo(s1, s2) != AliasInfo::NoAlias)
@@ -364,5 +471,5 @@ bool LAAResult::isScalarIndependent(const pInst &lhs, const pInst &rhs) const {
 
 bool LAAResult::isIndependent(const pInst &lhs, const pInst &rhs) const { return isIndependent(lhs.get(), rhs.get()); }
 
-LAAResult LAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return LAAResult(&f); }
+LAAResult LAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return LAAResult(&f, &fam); }
 } // namespace SIR

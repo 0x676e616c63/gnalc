@@ -7,6 +7,7 @@
 
 #include "ir/block_utils.hpp"
 #include "sir/base.hpp"
+#include "visitor.hpp"
 
 namespace SIR {
 bool isMemoryInvariantTo(Value* val, Value* item);
@@ -20,6 +21,15 @@ bool isLoopInvariant(const pVal& val, const pHelper& loop);
 // there are much full redundancy.
 // However, it contains no phi, so a recursive comparison is enough.
 bool isTriviallyIdentical(const pVal &lhs, const pVal &rhs);
+bool isTriviallyIdentical(Value* lhs, Value* rhs);
+
+struct CountInstVistor : Visitor {
+    size_t count = 0;
+    void visit(Instruction &inst) override {
+        ++count;
+        Visitor::visit(inst);
+    }
+};
 } // namespace SIR
 
 #endif

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // Early Inline
+
 #pragma once
 #ifndef GNALC_SIR_PASSES_TRANSFORMS_EARLY_INLINE_HPP
 #define GNALC_SIR_PASSES_TRANSFORMS_EARLY_INLINE_HPP

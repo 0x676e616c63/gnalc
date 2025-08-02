@@ -4,6 +4,7 @@
 #include "ir/function.hpp"
 #include "ir/visitor.hpp"
 #include "sir/clone.hpp"
+#include "sir/utils.hpp"
 
 #include <algorithm>
 #include <map>
@@ -367,18 +368,10 @@ void LinearFunction::appendInsts(std::list<pInst> insts_) {
 }
 
 size_t LinearFunction::getInstCount() const {
-    size_t i = 0;
-    for (const auto &inst : insts) {
-        if (auto if_inst = inst->as<IFInst>())
-            i += if_inst->getInstCount();
-        else if (auto while_inst = inst->as<WHILEInst>())
-            i += while_inst->getInstCount();
-        else if (auto for_inst = inst->as<FORInst>())
-            i += for_inst->getInstCount();
-        else
-            i++;
-    }
-    return i;
+    SIR::CountInstVistor cnt_visitor;
+    // FIXME:
+    const_cast<LinearFunction *>(this)->accept(cnt_visitor);
+    return cnt_visitor.count;
 }
 
 const std::vector<pFormalParam> &LinearFunction::getParams() const { return params; }

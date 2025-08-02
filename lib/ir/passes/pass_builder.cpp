@@ -363,6 +363,10 @@ FPM PassBuilder::buildFunctionPipeline(const PMOptions &options) {
 
 MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
     MPM mpm;
+    // Shake off SIR inlined functions
+    if (options.tree_shaking)
+        mpm.addPass(TreeShakingPass());
+
     mpm.addPass(makeModulePass(buildFunctionPipeline(options)));
     if (options.tree_shaking)
         mpm.addPass(TreeShakingPass());
@@ -373,9 +377,12 @@ MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // For SIR pass debug
     FPM fpm;
-    // fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
+    // fpm.addPass(LoopSimplifyPass());
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(PrintSCEVPass(std::cerr));
     fpm.addPass(NameNormalizePass());
     return fpm;
     // // Parallel

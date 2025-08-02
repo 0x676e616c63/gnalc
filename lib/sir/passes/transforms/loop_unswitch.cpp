@@ -37,6 +37,7 @@ struct UnswitchCandidate {
 struct UnswitchVisitor : ContextVisitor {
     using Candidates = std::vector<UnswitchCandidate>;
     Candidates *candidates;
+    bool enable_partition = false;
 
     static bool isCondLoopInvariant(FORInst &for_inst, const pVal &cond) {
         if (!cond->is<ICMPInst, FCMPInst>())
@@ -80,6 +81,9 @@ struct UnswitchVisitor : ContextVisitor {
                 });
                 break;
             }
+
+            if (!enable_partition)
+                continue;
 
             // For condition involving induction variable, partition the iteration space
             auto iv = for_inst.getIndVar();
@@ -136,7 +140,8 @@ struct UnswitchVisitor : ContextVisitor {
         ContextVisitor::visit(ctx, for_inst);
     }
 
-    explicit UnswitchVisitor(Candidates *candidates_) : candidates(candidates_) {}
+    explicit UnswitchVisitor(Candidates *candidates_, bool enable_partition_)
+        : candidates(candidates_), enable_partition(enable_partition_) {}
 };
 
 PM::PreservedAnalyses LoopUnswitchPass::run(LinearFunction &function, LFAM &lfam) {
@@ -144,7 +149,7 @@ PM::PreservedAnalyses LoopUnswitchPass::run(LinearFunction &function, LFAM &lfam
 
     while (true) {
         UnswitchVisitor::Candidates candidates;
-        UnswitchVisitor visitor(&candidates);
+        UnswitchVisitor visitor(&candidates, enable_partition);
         function.accept(visitor);
 
         if (candidates.empty())
