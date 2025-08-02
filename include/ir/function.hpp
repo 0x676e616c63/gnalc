@@ -49,10 +49,11 @@ enum class FuncAttr {
     builtinMemWriteOnly = 1 << 9,
     builtinMemReadWrite = 1 << 10,
     builtinMemNoReadWrite = 1 << 11,
+    builtinPure = 1 << 12,
 
     // Loop Parallel
-    Runtime = 1 << 12,
-    ParallelBody = 1 << 13,
+    Runtime = 1 << 13,
+    ParallelBody = 1 << 14,
 };
 
 enum class IntrinsicID {

@@ -43,7 +43,7 @@ struct UnswitchVisitor : ContextVisitor {
         if (!cond->is<ICMPInst, FCMPInst>())
             return false;
 
-        return isLoopInvariant(cond.get(), &for_inst);
+        return isUseDefInvariantTo(cond.get(), &for_inst);
     }
 
     void visit(Context ctx, FORInst &for_inst) override {

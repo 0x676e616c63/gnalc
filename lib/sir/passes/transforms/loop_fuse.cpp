@@ -67,7 +67,7 @@ bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
                     return true;
 
                 for (size_t i = 0; i < idx1.size(); ++i) {
-                    if (!isIsomorphic(idx1[i], idx2[i]))
+                    if (!idx1[i].isIsomorphic(idx2[i]))
                         return true;
                 }
 
@@ -160,6 +160,9 @@ PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
 
             laa_res = lfam.getFreshResult<LAliasAnalysis>(function);
             loop_fuse_modified = true;
+
+            // Revisit this depth
+            --searching_depth;
         }
     }
 

@@ -377,12 +377,8 @@ MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // For SIR pass debug
     FPM fpm;
-    fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
-    // fpm.addPass(LoopSimplifyPass());
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(PrintSCEVPass(std::cerr));
     fpm.addPass(NameNormalizePass());
     return fpm;
     // // Parallel

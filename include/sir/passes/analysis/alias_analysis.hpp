@@ -33,6 +33,7 @@ struct AffineExpr {
     Value* invariant = nullptr;
 
     int coe(IndVar *i) const;
+    int coe(const pIndVar& i) const;
     // One induction variable and no constant or invariant
     bool isLinear() const;
     std::pair<int, IndVar*> getLinear() const;
@@ -44,17 +45,29 @@ struct AffineExpr {
     AffineExpr operator-(const AffineExpr &rhs) const;
     AffineExpr operator*(int rhs) const;
     bool operator==(const AffineExpr &rhs) const;
+    bool isIsomorphic(const AffineExpr &rhs) const;
+
+    bool knownNonNegative() const;
+    bool knownLessOrEqual(const AffineExpr &rhs) const;
+    bool knownGreaterOrEqual(const AffineExpr &rhs) const;
 };
+
+// Two induction variables are isomorphic iff they have the base, step, bound and nested depth.
+bool isIndVarIsomorphic(IndVar *lhs, IndVar *rhs);
 
 // Two Affine Exprs are isomorphic iff their `coeffs` are isomorphic and constants are equal.
 // Two `coeffs` are isomorphic iff they have the same `coeff` on isomorphic induction variables.
-// Two induction variables are isomorphic iff they have the base, step, bound and nested depth.
-bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs);
+bool isAffineExprIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs);
 
 struct IterRange {
     AffineExpr base;
     AffineExpr step;
     AffineExpr bound;
+
+    bool covers(const IterRange& other) const;
+    bool overlaps(const IterRange &other) const;
+    bool equals(const IterRange &other) const;
+    bool operator==(const IterRange &other) const;
 };
 
 struct ArrayAccess {
@@ -68,6 +81,8 @@ struct ArrayAccess {
     // Access for a[i][j]: indices = { 2 * j, i + 1 }
     std::vector<AffineExpr> indices;
     std::map<IndVar*, IterRange> domain;
+    bool covers(const ArrayAccess &other) const;
+    bool overlaps(const ArrayAccess &other) const;
 };
 
 std::ostream& operator<<(std::ostream &os, const AffineExpr &expr);
@@ -88,6 +103,9 @@ public:
     MemoryAccess() = default;
     explicit MemoryAccess(const ArrayAccess &array_access) : access(array_access) {}
     explicit MemoryAccess(const ScalarAccess &scalar_access) : access(scalar_access) {}
+
+    bool covers(const MemoryAccess &other) const;
+    bool overlaps(const MemoryAccess &other) const;
 };
 
 struct InstRW {

@@ -20,6 +20,7 @@
 #include "sir/passes/transforms/reshape_fold.hpp"
 #include "sir/passes/transforms/early_inline.hpp"
 #include "sir/passes/transforms/loop_interchange.hpp"
+#include "sir/passes/transforms/affine_licm.hpp"
 
 // Utilities
 #include "sir/passes/utilities/sirprinter.hpp"
@@ -91,8 +92,14 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(ConstantFoldPass());
     lfpm.addPass(EarlyDCEPass());
     lfpm.addPass(While2ForPass());
+    lfpm.addPass(ReshapeFoldPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintLAAPass(std::cerr));
+    lfpm.addPass(AffineLICMPass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    lfpm.addPass(EarlyDCEPass());
+    lfpm.addPass(ReshapeFoldPass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     return lfpm;
 }
 

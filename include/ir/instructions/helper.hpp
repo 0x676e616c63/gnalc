@@ -297,8 +297,8 @@ public:
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
     std::list<pInst> &getBodyInsts() { return body_insts; }
 
-    LInstIter body_begin() { return LInstIter(body_insts.begin()); }
-    LInstIter body_end() { return LInstIter(body_insts.end()); }
+    LInstIter body_begin() { return body_insts.begin(); }
+    LInstIter body_end() { return body_insts.end(); }
 
     NestedInstIterator nested_insts_begin() override { return NestedInstIterator(as<HELPERInst>()); }
     NestedInstIterator nested_insts_end() override { return NestedInstIterator(); }

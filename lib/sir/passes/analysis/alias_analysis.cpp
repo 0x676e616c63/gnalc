@@ -93,6 +93,11 @@ int AffineExpr::coe(IndVar *i) const {
     return it == coeffs.end() ? 0 : it->second;
 }
 
+int AffineExpr::coe(const pIndVar &i) const {
+    return coe(i.get());
+}
+
+
 bool AffineExpr::isLinear() const { return coeffs.size() == 1 && constant == 0 && invariant == nullptr; }
 
 std::pair<int, IndVar *> AffineExpr::getLinear() const {
@@ -153,9 +158,20 @@ bool AffineExpr::operator==(const AffineExpr &rhs) const {
     return coeffs == rhs.coeffs && constant == rhs.constant && rhs.invariant == invariant;
 }
 
-bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
-    if (lhs.constant != rhs.constant || lhs.coeffs.size() != rhs.coeffs.size() ||
-        !isTriviallyIdentical(lhs.invariant, rhs.invariant))
+bool isIndVarIsomorphic(IndVar *lhs, IndVar *rhs) {
+    return isTriviallyIdentical(lhs->getBase(), rhs->getBase()) &&
+           isTriviallyIdentical(lhs->getStep(), rhs->getStep()) &&
+           isTriviallyIdentical(lhs->getBound(), rhs->getBound()) && lhs->getDepth() == rhs->getDepth();
+}
+
+bool isAffineExprIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
+    if (lhs.constant != rhs.constant || lhs.coeffs.size() != rhs.coeffs.size())
+        return false;
+
+    if ((lhs.invariant && !rhs.invariant) || (!lhs.invariant && rhs.invariant))
+        return false;
+
+    if (lhs.invariant && rhs.invariant && !isTriviallyIdentical(lhs.invariant, rhs.invariant))
         return false;
 
     using Key = std::tuple<pVal, pVal, pVal, size_t, int>;
@@ -172,6 +188,201 @@ bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
 
     return lhs_decay == rhs_decay;
 }
+
+bool AffineExpr::isIsomorphic(const AffineExpr &rhs) const { return isAffineExprIsomorphic(*this, rhs); }
+
+bool AffineExpr::knownNonNegative() const {
+    if (isConstant())
+        return constant >= 0;
+
+    if (invariant)
+        return false;
+
+    for (const auto &[lhs_var, lhs_coe] : coeffs) {
+        auto base_ci = lhs_var->getBase()->as<ConstantInt>();
+        auto step_ci = lhs_var->getStep()->as<ConstantInt>();
+
+        if (!base_ci || !step_ci)
+            return false;
+
+        // (base + i * step) * coe
+        if (!(base_ci->getVal() >= 0 && step_ci->getVal() >= 0 && lhs_coe >= 0) &&
+            !(base_ci->getVal() <= 0 && step_ci->getVal() <= 0 && lhs_coe <= 0))
+            return false;
+    }
+
+    return true;
+}
+
+bool AffineExpr::knownLessOrEqual(const AffineExpr &rhs) const {
+    // Quick path for two constants
+    if (isConstant() && rhs.isConstant())
+        return constant <= rhs.constant;
+
+    // If lhs is zero, see if rhs is non-negative
+    if (isConstant() && constant <= 0 && rhs.knownNonNegative())
+        return true;
+
+    if (invariant != rhs.invariant)
+        return false;
+
+    for (const auto &[lhs_var, lhs_coe] : coeffs) {
+        int rhs_coe = 0;
+        for (const auto &[rhs_var, coe] : rhs.coeffs) {
+            if (isIndVarIsomorphic(lhs_var, rhs_var)) {
+                rhs_coe = coe;
+                break;
+            }
+        }
+        if (lhs_coe > rhs_coe)
+            return false;
+    }
+
+    return constant <= rhs.constant;
+}
+
+bool AffineExpr::knownGreaterOrEqual(const AffineExpr &rhs) const {
+    // Quick path for two constants
+    if (isConstant() && rhs.isConstant())
+        return constant >= rhs.constant;
+
+    if (rhs.isConstant() && rhs.constant <= 0 && knownNonNegative())
+        return true;
+
+    if (invariant != rhs.invariant)
+        return false;
+
+    for (const auto &[lhs_var, lhs_coe] : coeffs) {
+        int rhs_coe = 0;
+        for (const auto &[rhs_var, coe] : rhs.coeffs) {
+            if (isIndVarIsomorphic(lhs_var, rhs_var)) {
+                rhs_coe = coe;
+                break;
+            }
+        }
+        if (lhs_coe < rhs_coe)
+            return false;
+    }
+
+    return constant >= rhs.constant;
+}
+
+bool IterRange::covers(const IterRange &other) const {
+    if (!base.knownLessOrEqual(other.base))
+        return false;
+    if (!bound.knownGreaterOrEqual(other.bound))
+        return false;
+
+    if (step == other.step)
+        return true;
+
+    int step_coe1 = 0;
+    int step_coe2 = 0;
+
+    if (step.isLinear() && other.step.isLinear()) {
+        auto [c1, iv1] = step.getLinear();
+        auto [c2, iv2] = other.step.getLinear();
+        if (iv1 != iv2)
+            return false;
+        step_coe1 = c1;
+        step_coe2 = c2;
+    } else if (step.isConstant() && other.step.isConstant()) {
+        step_coe1 = step.constant;
+        step_coe2 = other.step.constant;
+    }
+
+    if (step_coe1 > step_coe2 || step_coe2 % step_coe1 != 0)
+        return false;
+
+    // Ensure (base2 - base1) % step1 == 0
+    auto delta = other.base - base;
+    if (!delta.isConstant())
+        return false;
+
+    int d = delta.getConstant();
+    if (d % step_coe1 != 0)
+        return false;
+
+    return true;
+}
+
+bool IterRange::overlaps(const IterRange &other) const {
+    return !base.knownGreaterOrEqual(other.bound) && !bound.knownLessOrEqual(other.base);
+}
+
+bool IterRange::equals(const IterRange &other) const {
+    return base.isIsomorphic(other.base) && bound.isIsomorphic(other.bound) && step.isIsomorphic(other.step);
+}
+bool IterRange::operator==(const IterRange &other) const { return equals(other); }
+
+bool ArrayAccess::covers(const ArrayAccess &other) const {
+    if (base != other.base)
+        return false;
+
+    if (indices.size() != other.indices.size())
+        return false;
+
+    for (size_t i = 0; i < indices.size(); i++) {
+        if (!indices[i].isLinear() || !other.indices[i].isLinear())
+            return false;
+
+        if (isAffineExprIsomorphic(indices[i], other.indices[i]))
+            continue;
+
+        auto [c1, iv1] = indices[i].getLinear();
+        auto [c2, iv2] = other.indices[i].getLinear();
+
+        if (c1 != c2 || !domain.at(iv1).covers(other.domain.at(iv2)))
+            return false;
+    }
+
+    return true;
+}
+
+bool ArrayAccess::overlaps(const ArrayAccess &other) const {
+    if (base != other.base)
+        return false;
+
+    if (indices.size() != other.indices.size())
+        return true;
+
+    for (size_t i = 0; i < indices.size(); i++) {
+        if (!indices[i].isLinear() || !other.indices[i].isLinear())
+            return true;
+
+        if (isAffineExprIsomorphic(indices[i], other.indices[i]))
+            return true;
+
+        auto [c1, iv1] = indices[i].getLinear();
+        auto [c2, iv2] = other.indices[i].getLinear();
+
+        if (c1 != c2 || domain.at(iv1).overlaps(other.domain.at(iv2)))
+            return true;
+    }
+
+    return false;
+}
+
+bool MemoryAccess::covers(const MemoryAccess &other) const {
+    if (type() != other.type())
+        return false;
+
+    if (isArray())
+        return array().covers(other.array());
+
+    return scalar().base == other.scalar().base;
+}
+
+bool MemoryAccess::overlaps(const MemoryAccess &other) const {
+    if (type() != other.type())
+        return false;
+
+    if (isArray())
+        return array().overlaps(other.array());
+
+    return scalar().base == other.scalar().base;
+}
+
 
 std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction *func) {
     if (auto ci32 = expr->as_raw<ConstantInt>())
@@ -269,7 +480,7 @@ std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
     }
 
     Err::gassert(base_ptr->getType()->is<PtrType>());
-    if (!indices.empty())
+    if (getElm(ptr->getType())->is<ArrayType>())
         return MemoryAccess(ArrayAccess{.base = base_ptr, .indices = std::move(indices), .domain = std::move(domain)});
 
     return MemoryAccess(ScalarAccess{.base = base_ptr});

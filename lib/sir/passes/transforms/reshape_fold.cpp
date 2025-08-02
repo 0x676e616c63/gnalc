@@ -35,7 +35,7 @@ std::optional<std::vector<int>> calculateMask(const std::vector<AffineExpr> &src
         for (int j = 0; j < dim; ++j) {
             if (used.count(j))
                 continue;
-            if (isIsomorphic(src[i], dest[j])) {
+            if (src[i].isIsomorphic(dest[j])) {
                 mask.emplace_back(j);
                 used.insert(j);
                 found_i = true;
