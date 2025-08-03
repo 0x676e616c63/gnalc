@@ -9,6 +9,12 @@ namespace Config::SIR {
 // Loop Interchange
 // We interchange loops if we gain more than this threshold.
 constexpr auto LOOP_INTERCHANGE_BENEFIT_THRESHOLD = 0;
+
+// Early Inline
+constexpr auto EARLY_INLINE_INST_THRESHOLD = 64;
+
+// Relayout
+constexpr auto RELAYOUT_TRANSPOSE_COST_THRESHOLD = -1;
 }
 
 namespace Config::IR {
@@ -57,7 +63,8 @@ constexpr auto LSR_MULTIPLY_EXPANSION_THRESHOLD = 8;
 constexpr auto LSR_GEP_REDUCTION_COST_THRESHOLD = -1000000; // no threshold
 
 // Loop Unroll
-constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;
+constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 1;
+constexpr unsigned LOOP_UNROLLING_PEEL_SIZE = -1;
 constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 400;
 constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_COUNT = 16;
 constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE = 200;

@@ -103,6 +103,8 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
         // Do a post order traversal of the loop tree, so that we can move instructions in one go.
         auto lpdfv = top_level->getDFVisitor<Util::DFVOrder::PostOrder>();
         for (const auto &loop : lpdfv) {
+            if (loop->getHeader()->isName("%for.cond2"))
+                int a;
             Err::gassert(loop->isLCSSAForm(), "Expected LCSSA form in LICM.");
             auto loop_blocks = loop->getBlocks();
             //

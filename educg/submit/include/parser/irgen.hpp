@@ -13,6 +13,17 @@
 
 namespace Parser {
 
+enum class IRGenAttr {
+    DecayGep = 1 << 0,
+    ArraySubscript = 1 << 1,
+    LoadFromArray = 1 << 2,
+    LoadFromScalar = 1 << 3,
+    LoadFromGlobal = 1 << 4,
+};
+
+GNALC_ENUM_OPERATOR(IRGenAttr)
+using IRGenAttrs = Attr::BitFlagsAttr<IRGenAttr>;
+
 class IRGenerator : public AST::ASTVisitor {
     IR::Module module;
     IR::pVal curr_val;
@@ -106,7 +117,7 @@ public:
     static constexpr auto irval_temp_name = Config::IR::REGISTER_TEMP_NAME;
 
 private:
-    size_t name_cnt = 0;
+    std::unordered_map<std::string, size_t> name_map;
     std::string name(const std::string& id);
 
     // Throw exception if failed

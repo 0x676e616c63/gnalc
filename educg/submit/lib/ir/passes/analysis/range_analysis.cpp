@@ -11,9 +11,9 @@
 #include "../../../../include/ir/instructions/converse.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/instructions/vector.hpp"
+#include "../../../../include/ir/match.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/scev.hpp"
-#include "../../../../include/ir/match.hpp"
 #include "../../../../include/match/match.hpp"
 #include "../../../../include/utils/logger.hpp"
 
@@ -362,7 +362,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             }
         }
         // Induction variables
-        for (const auto& phi : bb->phis()) {
+        for (const auto &phi : bb->phis()) {
             worklist.emplace_back(phi.get(), bb.get());
             in_worklist.emplace(phi.get(), bb.get());
         }
@@ -441,8 +441,11 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             };
 
             auto analyzeAddRec = [&scev, &bb, &res](TREC *trec) {
+                // For constant affine addrec, at least one bound can be determined.
                 if (auto constant_addrec = trec->getConstantAffineAddRec()) {
                     auto [base, step] = *constant_addrec;
+
+                    // If the trip count can be statically determined, compute a more precise range.
                     if (auto trip_count = scev.getTripCount(trec->getLoop())) {
                         int c;
                         if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
@@ -452,12 +455,16 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                                 return IRng(base, m);
                             return IRng(m, base);
                         }
-                    } else {
-                        if (step > 0)
-                            return IRng(base, IRng::MAX);
-                        return IRng(IRng::MIN, base);
                     }
-                } else if (auto addrec = trec->getAffineAddRec()) {
+
+                    // Fallback: unknown trip count
+                    if (step > 0)
+                        return IRng(base, IRng::MAX);
+                    return IRng(IRng::MIN, base);
+                }
+
+                // Fallback: affine addrec, see if they are non-negative
+                if (auto addrec = trec->getAffineAddRec()) {
                     auto [base, step] = *addrec;
                     if (base->isIRValue() && step->isIRValue()) {
                         if (res.knownNonNegative(base->getRawIRValue(), bb) &&
@@ -465,6 +472,28 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                             return IRng(0, IRng::MAX);
                         }
                     }
+                }
+                return IRng();
+            };
+
+            auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
+                auto first_rng = analyzeSCEVExpr(trec->getFirst());
+                if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+                    int trip_cnt_ci;
+                    if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
+                        if (trip_cnt_ci <= 1)
+                            return first_rng;
+                    }
+                }
+
+                auto rest = trec->getRest();
+                if (rest->isExpr()) {
+                    auto rng = analyzeSCEVExpr(rest->getExpr());
+                    return merge(IRng(first_rng), rng);
+                }
+                if (rest->isAddRec()) {
+                    auto rng = analyzeAddRec(rest);
+                    return merge(IRng(first_rng), rng);
                 }
                 return IRng();
             };
@@ -477,26 +506,8 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 if (updateContextualInt(inst, bb, analyzeAddRec(trec)))
                     continue;
             } else if (trec->isPeeled()) {
-                int first_ci;
-                if (trec->getFirst()->isIRValue() && match(trec->getFirst()->getIRValue(), M::Bind(first_ci))) {
-                    if (auto trip_count = scev.getTripCount(trec->getLoop())) {
-                        int trip_cnt_ci;
-                        if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
-                            if (trip_cnt_ci > 1) {
-                                auto rest = trec->getRest();
-                                if (rest->isExpr()) {
-                                    auto rng = analyzeSCEVExpr(rest->getExpr());
-                                    if (updateContextualInt(inst, bb, merge(IRng(first_ci), rng)))
-                                        continue;
-                                } else if (rest->isAddRec()) {
-                                    auto rng = analyzeAddRec(rest);
-                                    if (updateContextualInt(inst, bb, merge(IRng(first_ci), rng)))
-                                        continue;
-                                }
-                            }
-                        }
-                    }
-                }
+                if (updateContextualInt(inst, bb, analyzePeeledTREC(trec)))
+                    continue;
             }
         }
 

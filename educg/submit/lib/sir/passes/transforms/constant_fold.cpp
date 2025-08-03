@@ -6,8 +6,11 @@
 #include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 
 #include "../../../../include/ir/instructions/compare.hpp"
-#include "../../../../include/sir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/sir/visitor.hpp"
+
+#include <optional>
+#include <vector>
+#include <utility>
 
 namespace SIR {
 struct RangeFoldVisitor : ContextVisitor {

@@ -16,6 +16,7 @@
 #include "../../../../include/ir/passes/analysis/target_analysis.hpp"
 #include "../../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../../include/match/match.hpp"
+#include "../../../../include/sir/passes/transforms/loop_annotator.hpp"
 
 #include <vector>
 
@@ -23,6 +24,13 @@ using namespace Match;
 
 namespace IR {
 bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const pLoop &loop) {
+    // See if SIR has prepared this for us
+    if (auto loop_attrs = loop->getHeader()->attr().get<SIR::LoopAttrs>()) {
+        if (loop_attrs && loop_attrs->has(SIR::LoopAttr::NoCarriedDependency))
+            return true;
+    }
+
+    // Fallback analysis
     std::vector<pLoad> loads;
     std::vector<pStore> stores;
     for (const auto &block : loop->blocks()) {
@@ -51,9 +59,10 @@ bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const 
 
     // For MustAlias and NoAlias, they can't have loop-carried dependencies.
     for (const auto &load : loads) {
+        auto rp = loop_aa->getBase(load->getPtr());
         for (const auto &store : stores) {
-            auto alias = loop_aa->getAliasInfo(load->getPtr(), store->getPtr());
-            if (alias == AliasInfo::MayAlias) {
+            auto wp = loop_aa->getBase(store->getPtr());
+            if (rp == wp) {
                 Logger::logDebug("[Para]: Find dependency between '", load->getName(), "' and '", store->getName(),
                                  "'.");
                 return false;
@@ -62,12 +71,12 @@ bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const 
     }
 
     for (const auto &store1 : stores) {
+        auto wp1 = loop_aa->getBase(store1->getPtr());
         for (const auto &store2 : stores) {
             if (store1 == store2)
                 continue;
-
-            auto alias = loop_aa->getAliasInfo(store1->getPtr(), store2->getPtr());
-            if (alias == AliasInfo::MayAlias) {
+            auto wp2 = loop_aa->getBase(store2->getPtr());
+            if (wp1 == wp2) {
                 Logger::logDebug("[Para]: Find dependency between '", store1->getName(), "' and '", store2->getName(),
                                  "'.");
                 return false;
@@ -347,13 +356,18 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
 
     // Ensure local arrays can be rewritten into global arrays
     std::vector<pAlloca> local_arrays;
+    std::unordered_set<pVal> inserted;
     for (const auto &block : top_level->blocks()) {
         for (const auto &inst : *block) {
             if (inst->is<LOADInst, STOREInst>()) {
                 auto base = getPtrBase(getMemLocation(inst));
                 FAIL_IF(!base);
-                if (base->is<ALLOCAInst>())
+                if (inserted.count(base))
+                    continue;
+                if (base->is<ALLOCAInst>()) {
                     local_arrays.emplace_back(base->as<ALLOCAInst>());
+                    inserted.emplace(base);
+                }
             }
         }
     }
@@ -386,7 +400,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     static constexpr auto gv_prefix = Config::IR::LOOP_PARALLEL_GLOBALVAR_NAME_PREFIX;
     static constexpr auto body_fn_prefix = Config::IR::LOOP_PARALLEL_BODY_FUNCTION_NAME_PREFIX;
 
-    auto &target = fam.getResult<TargetAnalysis>(function);
+    auto target = fam.getResult<TargetAnalysis>(function);
     if (!target->isIntrinsicSupported(IntrinsicID::ParallelForEntry))
         return PreserveAll();
 
@@ -507,7 +521,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
             auto entry = function.getBlocks().front();
             entry->delFirstOfInst(alloc);
 
-            Logger::logDebug("[Para]: Rewritten local array '", alloc->getName(), "' into Global Array '",
+            Logger::logDebug("[Para]: Rewritten local array '", alloc->getName(), "' into global array '",
                              global_var->getName(), "'.");
         }
         local_arrays.clear();

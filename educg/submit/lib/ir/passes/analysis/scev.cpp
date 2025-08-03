@@ -492,8 +492,15 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         auto eval_res = eval(it->second, loop);
         // For a loop invariant, if its value can not be calculated statically,
         // consider it as a runtime constant (or loop invariant, IRValTREC).
-        if (loop->isTriviallyInvariant(val) && !eval_res->isExpr())
+        if (loop->isTriviallyInvariant(val) && !eval_res->isExpr()) {
+            if (!loop->isOutermost()) {
+                // See if it has already been figured out a constant by parent loop.
+                auto parent_evo = getSCEVAtScope(val, loop->getParent().get());
+                if (parent_evo->isExpr())
+                    return parent_evo;
+            }
             return getIRValTREC(val);
+        }
         return eval_res;
     }
 
@@ -723,7 +730,24 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
     return getTRECUntracked();
 }
 
-void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
+SCEVExpr* SCEVHandle::swapOperands(SCEVExpr *x) {
+    Err::gassert(x->isBinary());
+    switch (x->getOp()) {
+        case SCEVExpr::Binary::Op::Add:
+            return getSCEVExprAdd(x->getRHS(), x->getLHS());
+        case SCEVExpr::Binary::Op::Sub:
+            return getSCEVExprSub(x->getRHS(), x->getLHS());
+        case SCEVExpr::Binary::Op::Mul:
+            return getSCEVExprMul(x->getRHS(), x->getLHS());
+        case SCEVExpr::Binary::Op::Div:
+            return getSCEVExprDiv(x->getRHS(), x->getLHS());
+    }
+    Err::unreachable();
+    return nullptr;
+}
+
+
+SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
     using Op = SCEVExpr::Binary::Op;
     if (expr->isBinary()) {
         auto lhs = expr->getLHS();
@@ -731,19 +755,15 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
         auto op = expr->getOp();
 
         // Do this in a post order
-        foldSCEVExpr(lhs);
-        foldSCEVExpr(rhs);
+        lhs = foldSCEVExpr(lhs);
+        rhs = foldSCEVExpr(rhs);
 
         // Peephole
         if (lhs == rhs) {
-            if (op == Op::Sub) {
-                expr->setIRValue(function->getConst(0).get());
-                return;
-            }
-            if (op == Op::Div) {
-                expr->setIRValue(function->getConst(1).get());
-                return;
-            }
+            if (op == Op::Sub)
+                return getSCEVExpr(0);
+            if (op == Op::Div)
+                return getSCEVExpr(1);
         }
 
         pConstI32 lhs_ci, rhs_ci;
@@ -752,81 +772,53 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
         if (rhs->isIRValue())
             rhs_ci = rhs->getRawIRValue()->as<ConstantInt>();
 
+        // Constant folding
         if (lhs_ci && rhs_ci) {
             int x = lhs_ci->getVal();
             int y = rhs_ci->getVal();
             switch (op) {
             case Op::Add:
-                expr->setIRValue(function->getConst(x + y).get());
-                break;
+                return getSCEVExpr(x + y);
             case Op::Sub:
-                expr->setIRValue(function->getConst(x - y).get());
-                break;
+                return getSCEVExpr(x - y);
             case Op::Mul:
-                expr->setIRValue(function->getConst(x * y).get());
-                break;
+                return getSCEVExpr(x * y);
             case Op::Div:
-                expr->setIRValue(function->getConst(x / y).get());
-                break;
+                return getSCEVExpr(x / y);
             default:
                 Err::unreachable();
             }
-            return;
+            return nullptr;
         }
 
-        // Peephole and try to move constants to left hand side
         if (lhs_ci) {
             if (lhs_ci->getVal() == 0) {
-                if (op == Op::Add) {
-                    *expr = *rhs;
-                    foldSCEVExpr(expr);
-                    return;
-                }
-                if (op == Op::Mul) {
-                    expr->setIRValue(function->getConst(0).get());
-                    return;
-                }
+                if (op == Op::Add)
+                    return foldSCEVExpr(rhs);
+                if (op == Op::Mul || op == Op::Div)
+                    return getSCEVExpr(0);
             }
             if (lhs_ci->getVal() == 1) {
-                if (op == Op::Mul) {
-                    *expr = *rhs;
-                    foldSCEVExpr(expr);
-                    return;
-                }
+                if (op == Op::Mul)
+                    return foldSCEVExpr(rhs);
             }
         }
         else if (rhs_ci) {
             if (rhs_ci->getVal() == 0) {
-                if (op == Op::Add || op == Op::Sub) {
-                    *expr = *lhs;
-                    foldSCEVExpr(expr);
-                    return;
-                }
-                if (op == Op::Mul) {
-                    expr->setIRValue(function->getConst(0).get());
-                    return;
-                }
+                if (op == Op::Add || op == Op::Sub)
+                    return foldSCEVExpr(lhs);
+                if (op == Op::Mul)
+                    return getSCEVExpr(0);
             }
             if (rhs_ci->getVal() == 1) {
-                if (op == Op::Mul) {
-                    *expr = *lhs;
-                    foldSCEVExpr(expr);
-                    return;
-                }
+                if (op == Op::Mul || op == Op::Div)
+                    return foldSCEVExpr(lhs);
             }
 
-            // t +/* c ---> c +/* t
-            if (op == Op::Add || op == Op::Mul) {
-                expr->swapOperands();
-                foldSCEVExpr(expr);
-                return;
-            }
-            // t - c ---> -c + t
-            else if (op == Op::Sub) {
-                *expr = *getSCEVExprAdd(getSCEVExpr(-rhs_ci->getVal()), lhs);
-                foldSCEVExpr(expr);
-                return;
-            }
+            // Don't swap operands, we've done this in getSCEVExprAdd
+            // // t +/* c ---> c +/* t
+            // if (op == Op::Add || op == Op::Mul)
+            //     return foldSCEVExpr(swapOperands(expr));
         }
 
         // Transform the tree.
@@ -834,7 +826,7 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
         if (op == Op::Add || op == Op::Mul) {
             // R7, R8
             if (lhs->isIRValue() && rhs->isBinary() && rhs->getOp() == op) {
-                expr->swapOperands();
+                expr = swapOperands(expr);
                 std::swap(lhs, rhs);
                 std::swap(lhs_ci, rhs_ci);
             }
@@ -846,10 +838,8 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
                     auto x = lhs_lhs_ci->getVal();
                     auto y = rhs_ci->getVal();
                     if (op == Op::Add)
-                        *expr = *getSCEVExprAdd(getSCEVExpr(x + y), lhs->getRHS());
-                    else
-                        *expr = *getSCEVExprMul(getSCEVExpr(x + y), lhs->getRHS());
-                    return;
+                        return getSCEVExprAdd(getSCEVExpr(x + y), lhs->getRHS());
+                    return getSCEVExprMul(getSCEVExpr(x * y), lhs->getRHS());
                 }
             }
         }
@@ -861,24 +851,37 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
                 if (lhs_lhs_ci && rhs_ci) {
                     auto x = lhs_lhs_ci->getVal();
                     auto y = rhs_ci->getVal();
-                    *expr = *getSCEVExprAdd(getSCEVExpr(x * y),
+                    return getSCEVExprAdd(getSCEVExpr(x * y),
                         getSCEVExprMul(getSCEVExpr(y),  lhs->getRHS()));
-                    return;
                 }
             }
         }
+
+        // x + (c - x) -->  c
+        if (op == Op::Add && rhs->isBinary() && rhs->getOp() == Op::Sub) {
+            auto rhs_lhs = rhs->getLHS(), rhs_rhs = rhs->getRHS();
+            if (rhs_rhs == lhs)
+                return rhs_lhs;
+        }
+        // (c - x) + x --> c
+        if (op == Op::Add && lhs->isBinary() && lhs->getOp() == Op::Sub) {
+            auto lhs_lhs = lhs->getLHS(), lhs_rhs = lhs->getRHS();
+            if (lhs_rhs == rhs)
+                return lhs_lhs;
+        }
     }
+
+    return expr;
 }
 
 TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
-    if (trec->isExpr()) {
-        foldSCEVExpr(trec->getExpr());
-        return trec;
-    }
+    if (trec->isExpr())
+        return getExprTREC(foldSCEVExpr(trec->getExpr()));
+
     if (!trec->isAddRec() && !trec->isPeeled())
         return getTRECUntracked();
 
-    foldTREC(trec);
+    trec = foldTREC(trec);
 
     if (trec->getLoop() == loop)
         return trec;
@@ -1030,8 +1033,7 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
     for (size_t i = 1; i < worklist.size(); ++i)
         res = getSCEVExprAdd(res, worklist[i]);
     auto ret = getSCEVExprAdd(flatten[0], res);
-    foldSCEVExpr(ret);
-    return ret;
+    return foldSCEVExpr(ret);
 }
 
 // FIXME: See if there is overflow
@@ -1173,7 +1175,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
             auto delta = getSCEVExprSub(cond, base);
             auto step_minus_1 = getSCEVExprSub(step, getSCEVExpr(1));
             auto ret = getSCEVExprDiv(getSCEVExprAdd(delta, step_minus_1), step);
-            foldSCEVExpr(ret);
+            ret = foldSCEVExpr(ret);
 
             if (step->getRawIRValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
                 Logger::logDebug("[SCEV]: The step is known non-positive by RangeAnalysis.");
@@ -1189,8 +1191,7 @@ SCEVExpr *SCEVHandle::getTripCount(const Loop *loop, RangeResult *ranges) {
     if (auto be = getBackEdgeTakenCount(loop)) {
         if (loop->isExiting(loop->getLatch())) {
             auto ret = getSCEVExprAdd(be, getSCEVExpr(1));
-            foldSCEVExpr(ret);
-            return ret;
+            return foldSCEVExpr(ret);
         }
         return be;
     }
@@ -1342,19 +1343,20 @@ TREC *SCEVHandle::unifyPeeledTREC(TREC *peeled) {
     return peeled;
 }
 
-void SCEVHandle::foldTREC(TREC *trec) {
+TREC* SCEVHandle::foldTREC(TREC *trec) {
     if (trec->isExpr())
-        foldSCEVExpr(trec->getExpr());
-    else if (trec->isAddRec()) {
-        foldTREC(trec->getBase());
-        foldTREC(trec->getStep());
-    } else if (trec->isPeeled()) {
-        foldSCEVExpr(trec->getFirst());
-        foldTREC(trec->getRest());
-        auto unified = unifyPeeledTREC(trec);
-        if (unified != trec)
-            *trec = *unified;
+        return getExprTREC(foldSCEVExpr(trec->getExpr()));
+
+    if (trec->isAddRec())
+        return getAddRecTREC(trec->getLoop(), foldTREC(trec->getBase()), foldTREC(trec->getStep()));
+
+    if (trec->isPeeled()) {
+        auto first = foldSCEVExpr(trec->getFirst());
+        auto rest = foldTREC(trec->getRest());
+        return unifyPeeledTREC(getPeeledTREC(trec->getLoop(), first, rest));
     }
+    Err::unreachable();
+    return nullptr;
 }
 
 SCEVExpr *SCEVHandle::getPoolSCEV(const std::shared_ptr<SCEVExpr> &expr) {

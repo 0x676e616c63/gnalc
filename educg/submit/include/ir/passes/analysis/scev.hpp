@@ -54,20 +54,12 @@ public:
         Err::gassert(lhs != nullptr && rhs != nullptr);
     }
 
-    void setIRValue(Value *ir_val) {
-        value = ir_val;
-        type = SCEVExprType::Value;
-        Err::gassert(ir_val != nullptr);
-    }
     bool isIRValue() const { return type == SCEVExprType::Value; }
     bool isBinary() const { return type == SCEVExprType::Binary; }
     Value *getRawIRValue() const { return std::get<Value *>(value); }
     pVal getIRValue() const { return std::get<Value *>(value)->as<Value>(); }
     SCEVExpr *getLHS() const { return std::get<Binary>(value).lhs; }
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
-    void swapOperands() {
-        std::swap(std::get<Binary>(value).lhs, std::get<Binary>(value).rhs);
-    }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
 };
 enum class TRECType { AddRec, Peeled, Expr, Undefined, Untracked };
@@ -207,8 +199,8 @@ public:
     TREC *getTRECSub(TREC *x, TREC *y);
     TREC *getTRECMul(TREC *x, TREC *y);
     TREC *getTRECNeg(TREC *x);
-    TREC *unifyPeeledTREC(TREC *peeled);
-    void foldTREC(TREC *trec);
+    [[nodiscard]] TREC *unifyPeeledTREC(TREC *peeled);
+    [[nodiscard]] TREC* foldTREC(TREC *trec);
 
     SCEVExpr *getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
@@ -217,7 +209,8 @@ public:
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
     SCEVExpr *getSCEVExpr(int x);
     SCEVExpr *getSCEVExpr(Value *x);
-    void foldSCEVExpr(SCEVExpr *expr);
+    [[nodiscard]] SCEVExpr* swapOperands(SCEVExpr *x);
+    [[nodiscard]] SCEVExpr* foldSCEVExpr(SCEVExpr *expr);
 private:
     pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
         BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;

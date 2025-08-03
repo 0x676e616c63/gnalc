@@ -54,9 +54,9 @@ public:
     PM::PreservedAnalyses run(Module &unit, MAM &manager);
 };
 
-class PrintLAAPass : public PM::PassInfo<PrintLAAPass>, public LinearPrinterBase {
+class PrintAffineAAPass : public PM::PassInfo<PrintAffineAAPass>, public LinearPrinterBase {
 public:
-    explicit PrintLAAPass(std::ostream &outStream_) : LinearPrinterBase(outStream_) {}
+    explicit PrintAffineAAPass(std::ostream &outStream_) : LinearPrinterBase(outStream_) {}
 
     PM::PreservedAnalyses run(LinearFunction &unit, LFAM &manager);
 };

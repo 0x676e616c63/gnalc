@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../../include/sir/passes/transforms/early_dce.hpp"
-
-#include "../../../../include/sir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/sir/visitor.hpp"
+#include "../../../../include/sir/base.hpp"
+#include "../../../../include/ir/instructions/helper.hpp"
+#include "../../../../include/ir/instructions/control.hpp"
 
 namespace SIR {
 struct DCEVisitor : ContextVisitor {

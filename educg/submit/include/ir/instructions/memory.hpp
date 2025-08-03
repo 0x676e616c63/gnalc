@@ -30,6 +30,7 @@ public:
     ALLOCAInst(NameRef name, pType btype, int _align = 4);
 
     pType getBaseType() const;
+    void setBaseType(const pType& btype);
     bool isArray() const;
     int getAlign() const;
     void setAlign(int a);
@@ -53,6 +54,7 @@ public:
     LOADInst(NameRef name, size_t n, const pVal &_ptr, int _align = 4);
 
     pVal getPtr() const;
+    void setPtr(const pVal &ptr);
     int getAlign() const;
     void setAlign(int a);
 
@@ -75,6 +77,7 @@ public:
     pType getBaseType() const;
     pVal getValue() const;
     pVal getPtr() const;
+    void setPtr(const pVal &ptr);
     int getAlign() const;
     void setAlign(int a);
 
@@ -103,6 +106,7 @@ public:
     pType getBaseType() const;
     pVal getPtr() const;
     std::vector<pVal> getIdxs() const;
+    void setIdxs(const std::vector<pVal> &idxs);
 
     // Check if all the indices are constant.
     bool isConstantOffset() const;

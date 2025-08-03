@@ -91,7 +91,7 @@ void IRGenerator::visit(CompUnit &node) {
     curr_val = nullptr;
     curr_making_initializer = nullptr;
     curr_insts.clear();
-    name_cnt = 0;
+    name_map.clear();
     is_making_lval = false;
 }
 
@@ -158,7 +158,7 @@ void IRGenerator::visit(VarDef &node) {
 
     if (curr_func != nullptr) // Check if global
     {
-        auto alloca_inst = std::make_shared<IR::ALLOCAInst>(name(node.getId() + ".def"), irtype);
+        auto alloca_inst = std::make_shared<IR::ALLOCAInst>(name(node.getId()), irtype);
         curr_func->addInst(alloca_inst); // CURR_FUNC
 
         curr_initializer.reset(node_type);
@@ -431,7 +431,7 @@ void IRGenerator::visit(FuncDef &node) {
     curr_func->appendInsts(std::move(curr_insts));
     curr_insts.clear();
     curr_func = nullptr;
-    name_cnt = 0;
+    name_map.clear();
 }
 
 // FuncFParam: 'a' int32[][2] \n
@@ -517,6 +517,7 @@ void IRGenerator::visit(DeclRef &node) {
             curr_val = alloca_inst;
         } else {
             auto load = std::make_shared<IR::LOADInst>(name(node.getId() + ".ld"), alloca_inst);
+            load->attr().add(IRGenAttrs{IRGenAttr::LoadFromScalar});
             curr_insts.emplace_back(load);
             curr_val = load;
         }
@@ -525,6 +526,7 @@ void IRGenerator::visit(DeclRef &node) {
             curr_val = gv;
         } else {
             auto load = std::make_shared<IR::LOADInst>(name(node.getId() + ".ld"), gv);
+            load->attr().add(IRGenAttrs{IRGenAttr::LoadFromGlobal});
             curr_insts.emplace_back(load);
             curr_val = load;
         }
@@ -575,6 +577,7 @@ void IRGenerator::visit(ArrayExp &node) {
     // LOAD from Function Parameters
     if (auto load_inst = base->as<IR::LOADInst>()) {
         curr_gep = std::make_shared<IR::GEPInst>(name("gep"), base, indices[0]);
+        curr_gep->attr().add(IRGenAttrs{IRGenAttr::ArraySubscript});
         curr_insts.emplace_back(curr_gep->as<IR::Instruction>());
         ++i;
     }
@@ -584,11 +587,13 @@ void IRGenerator::visit(ArrayExp &node) {
                          getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::PTR,
                      "Invalid array index.");
         curr_gep = std::make_shared<IR::GEPInst>(name("gep"), curr_gep, module.getConst(0), indices[i]);
+        curr_gep->attr().add(IRGenAttrs{IRGenAttr::ArraySubscript});
         curr_insts.emplace_back(curr_gep->as<IR::Instruction>());
     }
 
     if (!is_making_lval && IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::BASIC) {
         auto load_inst = std::make_shared<IR::LOADInst>(name(node.getId() + ".arrld"), curr_gep);
+        load_inst->attr().add(IRGenAttrs{IRGenAttr::LoadFromArray});
         curr_insts.emplace_back(load_inst);
         curr_val = load_inst;
     } else {
@@ -1051,7 +1056,9 @@ void IRGenerator::visit(ReturnStmt &node) {
 }
 
 std::string IRGenerator::name(const std::string &id){
-    return "%" + id + std::to_string(name_cnt++);
+    if (name_map[id]++ == 0)
+        return "%" + id;
+    return "%" + id + std::to_string(name_map[id]);
 }
 
 IR::pVal IRGenerator::type_cast(const IR::pVal &val, const IR::pType &dest) {
@@ -1069,6 +1076,7 @@ IR::pVal IRGenerator::type_cast(const IR::pVal &val, const IR::pType &dest) {
             auto gep = std::make_shared<IR::GEPInst>(
                 name("decay.gep"), val, module.getConst(0),
                 module.getConst(0));
+            gep->attr().add(IRGenAttrs{IRGenAttr::DecayGep});
             Err::gassert(curr_func != nullptr,
                          "Invalid implicit type conversion in global.");
             curr_insts.emplace_back(gep);

@@ -1,12 +1,11 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-// Alias Analysis for SIR
-// TODO: Maybe we should preserve these info in IRGen
-//       rather than analyzing it afterwards.
+// Affine Alias Analysis for SIR
+// Alias Analysis for Affine Fors
 #pragma once
-#ifndef GNALC_SIR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
-#define GNALC_SIR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
+#ifndef GNALC_SIR_PASSES_ANALYSIS_AFFINE_ALIAS_ANALYSIS_HPP
+#define GNALC_SIR_PASSES_ANALYSIS_AFFINE_ALIAS_ANALYSIS_HPP
 
 #include "../../../ir/instructions/control.hpp"
 #include "../../../ir/passes/analysis/alias_analysis.hpp"
@@ -30,22 +29,45 @@ struct AffineExpr {
 
     // Loop Invariant, but not an SIR constant. It can be a nullptr.
     // TODO: Something like SCEVExpr in IR may be better.
-    pVal invariant = nullptr;
+    Value* invariant = nullptr;
 
     int coe(IndVar *i) const;
+    int coe(const pIndVar& i) const;
     // One induction variable and no constant or invariant
     bool isLinear() const;
     std::pair<int, IndVar*> getLinear() const;
+
+    bool isConstant() const;
+    int getConstant() const;
+
     AffineExpr operator+(const AffineExpr &rhs) const;
     AffineExpr operator-(const AffineExpr &rhs) const;
     AffineExpr operator*(int rhs) const;
     bool operator==(const AffineExpr &rhs) const;
+    bool isIsomorphic(const AffineExpr &rhs) const;
+
+    bool knownNonNegative() const;
+    bool knownLessOrEqual(const AffineExpr &rhs) const;
+    bool knownGreaterOrEqual(const AffineExpr &rhs) const;
 };
+
+// Two induction variables are isomorphic iff they have the same base, step, bound and nested depth.
+bool isIndVarIsomorphic(IndVar *lhs, IndVar *rhs);
 
 // Two Affine Exprs are isomorphic iff their `coeffs` are isomorphic and constants are equal.
 // Two `coeffs` are isomorphic iff they have the same `coeff` on isomorphic induction variables.
-// Two induction variables are isomorphic iff they have the base, step, bound and nested depth.
-bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs);
+bool isAffineExprIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs);
+
+struct IterRange {
+    AffineExpr base;
+    AffineExpr step;
+    AffineExpr bound;
+
+    bool covers(const IterRange& other) const;
+    bool overlaps(const IterRange &other) const;
+    bool equals(const IterRange &other) const;
+    bool operator==(const IterRange &other) const;
+};
 
 struct ArrayAccess {
     Value *base;
@@ -57,8 +79,14 @@ struct ArrayAccess {
     //
     // Access for a[i][j]: indices = { 2 * j, i + 1 }
     std::vector<AffineExpr> indices;
-    // TODO: Domain
+    std::map<IndVar*, IterRange> domain;
+    bool covers(const ArrayAccess &other) const;
+    bool overlaps(const ArrayAccess &other) const;
 };
+
+std::ostream& operator<<(std::ostream &os, const AffineExpr &expr);
+std::ostream& operator<<(std::ostream &os, const IterRange &access);
+std::ostream& operator<<(std::ostream &os, const ArrayAccess &access);
 
 struct MemoryAccess {
 private:
@@ -74,6 +102,9 @@ public:
     MemoryAccess() = default;
     explicit MemoryAccess(const ArrayAccess &array_access) : access(array_access) {}
     explicit MemoryAccess(const ScalarAccess &scalar_access) : access(scalar_access) {}
+
+    bool covers(const MemoryAccess &other) const;
+    bool overlaps(const MemoryAccess &other) const;
 };
 
 struct InstRW {
@@ -81,7 +112,7 @@ struct InstRW {
     std::set<Value *> write;
 };
 
-class LAAResult {
+class AffineAAResult {
 private:
     mutable std::unordered_map<Value *, std::optional<MemoryAccess>> access_cache;
     mutable std::unordered_map<Instruction *, std::optional<InstRW>> inst_rw_cache;
@@ -90,9 +121,10 @@ private:
     std::optional<InstRW> analyzeInstRW(Instruction *) const;
 
     LinearFunction* func{};
+    LFAM* fam{};
 
 public:
-    explicit LAAResult(LinearFunction *func_) : func(func_) {}
+    AffineAAResult(LinearFunction *func_, LFAM* fam_) : func(func_), fam(fam_) {}
 
     const std::optional<MemoryAccess> &queryPointer(Value *) const;
     const std::optional<InstRW> &queryInstRW(Instruction *) const;
@@ -114,16 +146,16 @@ public:
     bool isScalarIndependent(Instruction *lhs, Instruction *rhs) const;
 };
 
-class LAliasAnalysis : public PM::AnalysisInfo<LAliasAnalysis> {
+class AffineAliasAnalysis : public PM::AnalysisInfo<AffineAliasAnalysis> {
 public:
-    LAAResult run(LinearFunction &f, LFAM &fam);
+    AffineAAResult run(LinearFunction &f, LFAM &fam);
 
     // For PassManager
 public:
-    using Result = LAAResult;
+    using Result = AffineAAResult;
 
 private:
-    friend AnalysisInfo<LAliasAnalysis>;
+    friend AnalysisInfo<AffineAliasAnalysis>;
     static PM::UniqueKey Key;
 };
 
@@ -132,6 +164,28 @@ struct FuncRW {
     std::set<Value *> write;
 };
 std::optional<FuncRW> queryFuncRW(LFAM* lfam, LinearFunction* func);
+
+class AccessSynthesizer {
+    ConstantPool *pool{};
+    IList* ilist{};
+    LInstIter iter{};
+
+public:
+    explicit AccessSynthesizer(ConstantPool* cpool_) : pool(cpool_) {}
+    AccessSynthesizer(ConstantPool* cpool_, IList* ilist_, LInstIter iter_)
+        : pool(cpool_), ilist(ilist_), iter(iter_) {}
+
+    void setInsertPoint(IList* ilist_, LInstIter iter_) {
+        ilist = ilist_;
+        iter = iter_;
+    }
+
+    [[nodiscard]] pVal synthesize(const MemoryAccess& access) const;
+    [[nodiscard]] pVal synthesize(const pVal& base, const std::vector<AffineExpr>& indices) const;
+    [[nodiscard]] pVal synthesize(const ArrayAccess& access) const;
+    [[nodiscard]] pVal synthesize(const ScalarAccess& access) const;
+    [[nodiscard]] pVal synthesize(const AffineExpr& expr) const;
+};
 } // namespace SIR
 
 

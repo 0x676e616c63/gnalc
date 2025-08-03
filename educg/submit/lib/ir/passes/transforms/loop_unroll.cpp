@@ -1,7 +1,6 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-#include "../../../../include/sir/passes/transforms/loop_unswitch.hpp"
 #include "../../../../include/ir/passes/transforms/loop_unroll.hpp"
 #include "../../../../include/ir/base.hpp"
 #include "../../../../include/ir/block_utils.hpp"
@@ -14,8 +13,11 @@
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/scev.hpp"
+#include "../../../../include/ir/passes/transforms/namenormalizer.hpp"
+#include "../../../../include/ir/passes/utilities/cfg_export.hpp"
 #include "../../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../../include/ir/type_alias.hpp"
+#include "../../../../include/sir/passes/transforms/loop_unswitch.hpp"
 #include "../../../../include/utils/exception.hpp"
 #include "../../../../include/utils/logger.hpp"
 #include <algorithm>
@@ -26,18 +28,27 @@
 
 namespace IR {
 
-unsigned LoopUnrollPass::name_idx = 0;
+unsigned LoopUnrollPass::unroll_name_idx = 0;
+unsigned LoopUnrollPass::peel_name_idx = 0;
 
-LoopUnrollPass::LoopUnrollPass() {
-    // name_idx++;
+LoopUnrollPass::LoopUnrollPass(PassOption opt) : pass_options(opt) {
+    // unroll_name_idx++;
     // 日后可添加参数选项以快速调参
 }
 
-void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM& fam) {
+void LoopUnrollPass::unroll_analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM& fam) {
     if (auto unswitch_attr = loop->getHeader()->attr().get<SIR::UnswitchAttrs>()) {
         // Don't unroll partitioned loops to reduce the code size.
         if (unswitch_attr->has(SIR::UnswitchAttr::Partitioned)) {
             Logger::logInfo("[LoopUnroll] Unroll disabled because the loop has been partitioned.");
+            option.disable();
+            return;
+        }
+    }
+
+    if (auto unroll_attr = loop->getHeader()->attr().get<IR::UnrollAttrs>()) {
+        if (unroll_attr->has(IR::UnrollAttr::DontUnroll)) {
+            Logger::logInfo("[LoopUnroll] Unroll disabled because the loop has UnrollAttr::DontUnroll.");
             option.disable();
             return;
         }
@@ -199,7 +210,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         return false;
     };
 
-    auto calcUnrollFactor = [MaybeVectorized](const pLoop &_loop, const unsigned size, const unsigned MaxSize,
+    auto calcUnrollFactor = [&MaybeVectorized](const pLoop &_loop, const unsigned size, const unsigned MaxSize,
                                               const unsigned MaxCount) -> int {
         unsigned unroll_factor;
         if (MaybeVectorized(_loop)) {
@@ -242,7 +253,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         }
 
         // For fully unroll
-        if (ENABLE_FULLY_UNROLL) {
+        if (pass_options & PO_FullyUnroll) {
             if (trip_countN <= FUC && trip_countN*inst_size <= FUS) {
                 Logger::logInfo("[LoopUnroll] Fully unrolling: factor: " + std::to_string(trip_countN));
                 option.enable_fully(trip_countN);
@@ -251,7 +262,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         }
 
         // For partially unroll
-        if (ENABLE_PARTIALLY_UNROLL) {
+        if (pass_options & PO_PartiallyUnroll) {
             // Calculate unroll factor
             auto unroll_factor = calcUnrollFactor(loop, inst_size, PUS, PUC);
 
@@ -351,7 +362,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         return;
     } else {
         // 变量展开策略
-        if (ENABLE_RUNTIME_UNROLL) {
+        if (pass_options & PO_RuntimeUnroll) {
             // Calculate unroll factor
             int unroll_factor = calcUnrollFactor(loop, inst_size, RUS, RUC);
 
@@ -405,27 +416,27 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             //                         exit
             // while loop has no epilog, cloned_loop jump to rem_loop's header
 
-            pBlock prolog = std::make_shared<BasicBlock>("rtunroll.prolog." + std::to_string(name_idx));
-            pBlock epilog = std::make_shared<BasicBlock>("rtunroll.epilog." + std::to_string(name_idx));
+            pBlock prolog = std::make_shared<BasicBlock>("rtunroll.prolog." + std::to_string(unroll_name_idx));
+            pBlock epilog = std::make_shared<BasicBlock>("rtunroll.epilog." + std::to_string(unroll_name_idx));
 
             // prolog
             auto trip_countV = SCEVH.expandSCEVExprUnchecked(trip_countE, prolog, prolog->end());
-            auto remainderV = std::make_shared<BinaryInst>("rtunroll.remainder." + std::to_string(name_idx), OP::SREM, trip_countV, unroll_factorV);
+            auto remainderV = std::make_shared<BinaryInst>("rtunroll.remainder." + std::to_string(unroll_name_idx), OP::SREM, trip_countV, unroll_factorV);
             prolog->addInst(remainderV);
             if (stepV == nullptr) {
                 stepV = SCEVH.expandSCEVExprUnchecked(stepE, prolog, prolog->end());
             }
-            auto stepMremV = std::make_shared<BinaryInst>("rtunroll.stepMrem." + std::to_string(name_idx), OP::MUL, stepV, remainderV);
+            auto stepMremV = std::make_shared<BinaryInst>("rtunroll.stepMrem." + std::to_string(unroll_name_idx), OP::MUL, stepV, remainderV);
             prolog->addInst(stepMremV);
             // new_boundary = raw_boundary - step * remainder
-            auto new_boundaryV = std::make_shared<BinaryInst>("rtunroll.new_boundary." + std::to_string(name_idx), OP::SUB, raw_boundary_value, stepMremV);
+            auto new_boundaryV = std::make_shared<BinaryInst>("rtunroll.new_boundary." + std::to_string(unroll_name_idx), OP::SUB, raw_boundary_value, stepMremV);
             prolog->addInst(new_boundaryV);
 
             // tcLTuf and epilog (for dowhile)
 #if ENABLE_NEW_RT_PATH
             if (is_dowhile) {
 #endif
-                auto trip_count_less_than_unroll_factorV = std::make_shared<ICMPInst>("rtunroll.tcLTuf." + std::to_string(name_idx),
+                auto trip_count_less_than_unroll_factorV = std::make_shared<ICMPInst>("rtunroll.tcLTuf." + std::to_string(unroll_name_idx),
                     ICMPOP::slt, trip_countV, unroll_factorV);
                 trip_count_less_than_unroll_factorV->appendDbgData("trip_count_less_than_unroll_factor");
                 prolog->addInst(trip_count_less_than_unroll_factorV);
@@ -435,7 +446,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
             // epilog (for dowhile)
             if (is_dowhile) {
-                auto rem_eq_zeroV = std::make_shared<ICMPInst>("rtunroll.remEQzero." + std::to_string(name_idx),
+                auto rem_eq_zeroV = std::make_shared<ICMPInst>("rtunroll.remEQzero." + std::to_string(unroll_name_idx),
                     ICMPOP::eq, remainderV, FC.getConst(0));
                 rem_eq_zeroV->appendDbgData("rem_eq_zero");
                 epilog->addInst(rem_eq_zeroV);
@@ -455,11 +466,329 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
     option.disable();
 }
 
-bool LoopUnrollPass::peel(const pLoop &loop, const UnrollOption &option, Function &func) {
+void LoopUnrollPass::peel_analyze(const pLoop &loop, PeelOption &option, Function &FC, FAM& fam) {
+    if (!(pass_options & PO_Peel)) {
+        option.disable();
+        return;
+    }
+
+    if (!(loop->isSimplifyForm() && loop->isLCSSAForm())) {
+        Logger::logInfo("[LoopPeel] Peel disabled because the loop is not SimplifyForm or LCSSAForm.");
+        option.disable();
+        return;
+    }
+
+    auto& SCEVH = fam.getResult<SCEVAnalysis>(FC);
+
+    const auto trip_countE = SCEVH.getTripCount(loop);
+    if (trip_countE == nullptr || !trip_countE->isIRValue() || !trip_countE->getIRValue()->is<ConstantInt>()) {
+        Logger::logInfo("[LoopPeel] Peel disabled because the loop's trip count is uncertain.");
+        option.disable();
+        return;
+    }
+
+    const auto trip_countN = trip_countE->getIRValue()->as<ConstantInt>()->getVal();
+    if (trip_countN < 2) {
+        Logger::logInfo("[LoopPeel] Peel disabled because the loop's trip count < 2.");
+        option.disable();
+        return;
+    }
+
+    // Tools
+    auto GetIterVarAndInitVal = [](const pLoop &_loop, pVal &_iter_variable, pVal &_init_val) -> bool {
+        if (_loop->getExitingBlocks().size() == 1) {
+            if (const auto exiting_br_cond = (*_loop->getExitingBlocks().begin())->getBRInst()->getCond();
+                exiting_br_cond->is<ICMPInst>()) {
+                const auto icmp = exiting_br_cond->as<ICMPInst>();
+                const bool lhs_is_var = !_loop->isTriviallyInvariant(icmp->getLHS());
+                const bool rhs_is_var = !_loop->isTriviallyInvariant(icmp->getRHS());
+                if (lhs_is_var && rhs_is_var) {
+                    Err::unreachable("Both handles are variable!");
+                } else if (lhs_is_var) {
+                    _iter_variable = icmp->getLHS();
+                    goto got_iter_var;
+                } else if (rhs_is_var) {
+                    _iter_variable = icmp->getRHS();
+                    goto got_iter_var;
+                } else {
+                    Err::unreachable("Both handles are not variable!");
+                }
+            } else {
+                Logger::logDebug("[LoopPeel] GetIterVarAndInitVal: The loop's exit condition is not ICMPInst.");
+            }
+        } else {
+            Logger::logDebug("[LoopPeel] GetIterVarAndInitVal: The loop has multiple exits.");
+        }
+        return false;
+
+got_iter_var:
+        if (_iter_variable->is<PHIInst>()) {
+            // while loop
+            if (_iter_variable->as<Instruction>()->getParent() == _loop->getHeader()) {
+                _init_val = _iter_variable->as<PHIInst>()->getValueForBlock(_loop->getPreHeader());
+            } else {
+                Logger::logDebug("[LoopPeel] GetIterVarAndInitVal: Need implement.");
+            }
+        } else {
+            // dowhile loop
+            for (auto &phi : _loop->getHeader()->phis()) {
+                Err::gassert(phi->getNumOperands() == 4, "GetIterVarAndInitVal: Count of header phi's operands is not 4!");
+                if (phi->getValueForBlock(_loop->getLatch()) == _iter_variable) {
+                    _init_val = phi->getValueForBlock(_loop->getPreHeader());
+                }
+            }
+        }
+        if (_init_val == nullptr) {
+            Logger::logDebug("[LoopPeel] GetIterVarAndInitVal: Can't get init value.");
+            return false;
+        }
+        return true;
+    };
+
+    unsigned peel_factor = 0;
+
+    // Case 1: Loop has an if structure whose condition is related to the iteration variable.
+    // Implemented in SIR::LoopUnswitchPass.
+
+    // Case 2: The recursion tree of the initial value of the subloop iteration variable is of the peeled type.
+    for (const auto &subloop : loop->getSubLoops()) {
+        pVal iter_var, init_val;
+        if (!GetIterVarAndInitVal(subloop, iter_var, init_val)) {
+            Logger::logDebug("[LoopPeel] Case2: GetIterVarAndInitVal failed, skip.");
+            continue;
+        }
+        Logger::logDebug("[LoopPeel] Case2: Get iter variable: " + IRFormatter::formatValue(*iter_var) + ", init value: " + IRFormatter::formatValue(*init_val));
+        auto init_val_trec = SCEVH.getSCEVAtScope(init_val.get(), loop.get());
+        if (init_val_trec->isPeeled()) {
+            unsigned depth = 1;
+            for (auto rest = init_val_trec->getRest(); rest->isPeeled(); rest = rest->getRest()) {
+                depth = depth + 1;
+                if (depth > PEC) {
+                    Logger::logDebug("[LoopPeel] Case2: Peeled TREC depth > PEC, skip.");
+                    depth = 0;
+                    break;
+                }
+            }
+            if (depth != 0) {
+                Logger::logDebug("[LoopPeel] Case2: Peeled TREC depth: " + std::to_string(depth));
+                peel_factor = std::max(depth, peel_factor);
+            }
+        } else {
+            Logger::logDebug("[LoopPeel] Case2: init_val_trec is not peeled type, skip.");
+        }
+    }
+
+    // Case 3: Loop has Break or Continue control statements (multiple exits).
     // TODO
+
+    // Case ...
+
+    if (peel_factor != 0) {
+        if (peel_factor >= trip_countN) {
+            Logger::logInfo("[LoopPeel] Peel disabled because of peel factor >= trip count.");
+            option.disable();
+            return;
+        }
+        if (peel_factor > PEC) {
+            Logger::logInfo("[LoopPeel] Peel disabled because of peel factor > PEC.");
+            option.disable();
+            return;
+        }
+        if (loop->getInstCount()*(peel_factor+1) > PES) {
+            Logger::logInfo("[LoopPeel] Peel disabled because of size after peeling > PES.");
+            option.disable();
+            return;
+        }
+
+        Logger::logInfo("[LoopPeel] Peeling: factor: " + std::to_string(peel_factor));
+        option.enable_peel(peel_factor);
+        return;
+    }
+
+    Logger::logInfo("[LoopPeel] Peel disabled, nothing to do.");
+    option.disable();
+    return;
+}
+
+bool LoopUnrollPass::peel(const pLoop &loop, const PeelOption &option, Function &func) {
     if (!option.peel) {
         return false;
     }
+
+    // Note: Ensure peel_count < trip_count.
+    if (option.peel_count < 1) {
+        return false;
+    }
+
+    peel_name_idx++;
+
+    const auto count = option.peel_count;
+    const auto pre_header = loop->getPreHeader();
+    const auto header = loop->getHeader();
+    const auto latch = loop->getLatch();
+    const auto loop_blocks = loop->getBlocks();
+    const auto exits = loop->getExitBlocks();
+    const auto exitings = loop->getExitingBlocks();
+
+    std::vector<pBlock> blocks;
+    {
+        // LOOP BLOCK DFS ON CFG
+        std::set<pBlock> visited;
+        std::stack<pBlock> stack;
+        stack.push(header);
+        while (!stack.empty()) {
+            pBlock b = stack.top();
+            stack.pop();
+            if (visited.count(b)) continue;
+            visited.insert(b);
+            blocks.push_back(b);
+            auto succb = b->getNextBB();
+            for (auto it = succb.rbegin(); it != succb.rend(); ++it) {
+                if (!visited.count(*it) && !exits.count(*it)) {
+                    stack.push(*it);
+                }
+            }
+        }
+    }
+
+    std::map<pBlock, std::vector<pBlock>> BMap;
+    std::map<pInst, std::vector<pInst>> IMap;
+
+    // Initialize map
+    for (const auto &bb : blocks) {
+        BMap[bb] = std::vector<pBlock>(count+1, nullptr);
+        BMap[bb][0] = bb;
+        for (int i = 1; i <= count; i++) {
+            BMap[bb][i] = std::make_shared<BasicBlock>(bb->getName() + "." + std::to_string(peel_name_idx) + "peel" + std::to_string(i));
+        }
+        for (const auto &inst : bb->all_insts()) {
+            IMap[inst] = std::vector<pInst>(count+1, nullptr);
+            IMap[inst][0] = inst;
+        }
+    }
+
+    // Map tools
+    auto IMapFind = [&IMap](const pInst &inst, const unsigned i) {
+        auto ret = inst;
+        Err::gassert(ret != nullptr, "IMapFind: inst is nullptr.");
+        if (const auto it = IMap.find(inst); it != IMap.end()) {
+            ret =  it->second[i];
+            Err::gassert(ret != nullptr, "IMapFind: Result is nullptr.");
+        }
+        return ret;
+    };
+    auto IMapFindV = [&IMapFind](const pVal &val, const unsigned i) -> pVal {
+        return val->getVTrait()==ValueTrait::ORDINARY_VARIABLE ? IMapFind(val->as<Instruction>(), i) : val;
+    };
+    auto IMapFindAndReplaceOperand = [&IMapFind](const pInst &inst, const pVal &rawv, const unsigned i) {
+        auto result = IMapFind(rawv->as<Instruction>(), i);
+        if (result != rawv) {
+            inst->replaceAllOperands(rawv, result);
+        }
+    };
+    auto BMapFind = [&BMap](pBlock block, const unsigned i) {
+        if (const auto it = BMap.find(block); it != BMap.end()) {
+            return it->second[i];
+        }
+        return block;
+    };
+
+    // Clone instructions and update operands, except phi (empty operand)
+    for (int i = 1; i <= count; i++) {
+        for (const auto &raw_bb : blocks) {
+            auto new_bb = BMap[raw_bb][i];
+
+            // Create new phi
+            for (const auto &raw_phi : raw_bb->phis()) {
+                auto new_phi = std::make_shared<PHIInst>(raw_phi->getName() + "." + std::to_string(peel_name_idx) + "peel" + std::to_string(i), raw_phi->getType());
+                IMap[raw_phi][i] = new_phi;
+                new_bb->addPhiInst(new_phi);
+            }
+
+            // Clone non-phi instructions and update operands
+            for (const auto &raw_inst : *raw_bb) {
+                const auto new_inst = makeClone(raw_inst);
+                new_inst->setName(raw_inst->getName() + "." + std::to_string(peel_name_idx) + "peel" + std::to_string(i));
+                IMap[raw_inst][i] = new_inst;
+                if (raw_inst->getOpcode() == OP::BR) {
+                    for (auto value : raw_inst->operands()) {
+                        if (value->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                            IMapFindAndReplaceOperand(new_inst, value, i);
+                        } else if (value->getVTrait() == ValueTrait::BASIC_BLOCK) {
+                            if (auto new_value = BMapFind(value->as<BasicBlock>(), i); new_value != value) {
+                                new_inst->replaceAllOperands(value, new_value);
+                            }
+                        }
+                    }
+                } else {
+                    for (auto value : raw_inst->operands()) {
+                        if (value->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                            IMapFindAndReplaceOperand(new_inst, value, i);
+                        }
+                    }
+                }
+                new_bb->addInst(new_inst);
+            }
+        }
+    }
+
+    // Change Br inst in pre_header and peeled latch
+    pre_header->getBRInst()->replaceAllOperands(header, BMap[header][1]);
+    for (int i = 1; i < count; i++) {
+        BMap[latch][i]->getBRInst()->replaceAllOperands(BMap[header][i], BMap[header][i+1]);
+    }
+    BMap[latch][count]->getBRInst()->replaceAllOperands(BMap[header][count], header);
+
+    // Drop exit in peeled exiting block
+    for (const auto &exiting : exitings) {
+        for (int i = 1; i <= count; i++) {
+            auto target = BMap[exiting][i]->getBRInst();
+            if (exits.count(target->getFalseDest())) {
+                target->dropFalseDest();
+            } else if (exits.count(target->getTrueDest())) {
+                target->dropTrueDest();
+            } else {
+                Err::unreachable("peel(): Both destinations are not exit!");
+            }
+        }
+    }
+
+    // Update phi oper in peeled and raw header
+    for (const auto &phi : header->phis()) {
+        Err::gassert(phi->getNumOperands() == 4, "peel(): Count of header phi's operands is not 4!");
+        auto value_from_preheader = phi->getValueForBlock(pre_header);
+        auto value_from_latch = phi->getValueForBlock(latch);
+        IMap[phi][1]->as<PHIInst>()->addPhiOper(value_from_preheader, pre_header);
+        for (int i = 2; i <= count; i++) {
+            IMap[phi][i]->as<PHIInst>()->addPhiOper(IMapFindV(value_from_latch, i-1), BMap[latch][i-1]);
+        }
+        phi->replaceAllOperands(value_from_preheader, IMapFindV(value_from_latch, count));
+        phi->replaceAllOperands(pre_header, BMap[latch][count]);
+    }
+
+    // Update phi oper in other peeled block
+    for (const auto &bb : blocks) {
+        if (bb == header) continue;
+        for (const auto& phi : bb->phis()) {
+            for (int i = 1; i <= count; i++) {
+                for (const auto& oper : phi->getPhiOpers()) {
+                    IMap[phi][i]->as<PHIInst>()->addPhiOper(IMapFindV(oper.value, i), BMapFind(oper.block, i));
+                }
+            }
+        }
+    }
+
+    // Add to function
+    auto header_iter = header->getIter();
+    for (int i = 1; i <= count; i++) {
+        for (const auto &bb : blocks) {
+            func.addBlock(header_iter, BMap[bb][i]);
+        }
+    }
+
+    // Update CFG
+    func.updateAndCheckCFG();
+
     return true;
 }
 
@@ -522,7 +851,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         return false;
     }
 
-    name_idx++;
+    unroll_name_idx++;
 
     const auto count = option.unroll_count;
     const auto pre_header = loop->getPreHeader();
@@ -595,9 +924,9 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         BMap[bb] = BV(count + 1, nullptr);
         BMap[bb][0] = bb;
         for (int i = 1; i < count; i++) {
-            BMap[bb][i] = std::make_shared<BasicBlock>(bb->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i));
+            BMap[bb][i] = std::make_shared<BasicBlock>(bb->getName() + "." + std::to_string(unroll_name_idx) + "unroll" + std::to_string(i));
         }
-        BMap[bb][count] = std::make_shared<BasicBlock>(bb->getName() + "." + std::to_string(name_idx) + "remainder");
+        BMap[bb][count] = std::make_shared<BasicBlock>(bb->getName() + "." + std::to_string(unroll_name_idx) + "remainder");
         for (const auto &inst : bb->all_insts()) {
             IMap[inst] = IV(count + 1, nullptr);
             IMap[inst][0] = inst;
@@ -631,9 +960,9 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         for (const auto &inst : *raw) {
             const auto new_inst = makeClone(inst);
             if (i == count) {
-                new_inst->setName(inst->getName() + "." + std::to_string(name_idx) + "remainder");
+                new_inst->setName(inst->getName() + "." + std::to_string(unroll_name_idx) + "remainder");
             } else {
-                new_inst->setName(inst->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i));
+                new_inst->setName(inst->getName() + "." + std::to_string(unroll_name_idx) + "unroll" + std::to_string(i));
             }
             IMap[inst][i] = new_inst;
             if (inst->getOpcode() == OP::BR) {
@@ -695,7 +1024,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             // 如果原始header的phi里的value是常量的话，就无法存到IMap里面了，同时由于其user尚未创建，无法直接把常量传播
             // 故使用 phi [v, b] 形式
             const auto new_phi =
-                std::make_shared<PHIInst>(phi->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i), phi->getType());
+                std::make_shared<PHIInst>(phi->getName() + "." + std::to_string(unroll_name_idx) + "unroll" + std::to_string(i), phi->getType());
             IMap[phi][i] = new_phi;
             if (phi_value_from_loop->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                 // Instruction情况
@@ -726,7 +1055,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             // clone phi
             for (const auto &phi : rb->phis()) {
                 auto new_phi = makeClone(phi);
-                new_phi->setName(phi->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i));
+                new_phi->setName(phi->getName() + "." + std::to_string(unroll_name_idx) + "unroll" + std::to_string(i));
                 IMap[phi][i] = new_phi;
                 cb->addPhiInst(new_phi);
             }
@@ -777,7 +1106,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
             // clone inst and create phi
             for (auto &phi : rh->phis()) {
-                const auto new_phi = std::make_shared<PHIInst>(phi->getName() + "." + std::to_string(name_idx) + "remainder", phi->getType());
+                const auto new_phi = std::make_shared<PHIInst>(phi->getName() + "." + std::to_string(unroll_name_idx) + "remainder", phi->getType());
                 IMap[phi][count] = new_phi;
                 ch->addPhiInst(new_phi);
             }
@@ -794,7 +1123,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             // clone phi
             for (const auto &phi : rb->phis()) {
                 auto new_phi = makeClone(phi);
-                new_phi->setName(phi->getName() + "." + std::to_string(name_idx) + "remainder");
+                new_phi->setName(phi->getName() + "." + std::to_string(unroll_name_idx) + "remainder");
                 IMap[phi][count] = new_phi;
                 cb->addPhiInst(new_phi);
             }
@@ -994,7 +1323,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     }
                     // ADD NEW PHI
                     for (const auto &inst : worklist) {
-                        auto new_phi = std::make_shared<PHIInst>(inst->getName() + "." + std::to_string(name_idx) + "remphi", inst->getType());
+                        auto new_phi = std::make_shared<PHIInst>(inst->getName() + "." + std::to_string(unroll_name_idx) + "remphi", inst->getType());
                         auto remv = IMap[inst][count];
                         // Logger::logDebug("remv: " + remv->getName() + ", new_phi: " + new_phi->getName());
                         {
@@ -1176,16 +1505,39 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
 PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
     bool modified = false;
-    bool last_round_modified = false;
+
+    // NameNormalizePass nnp;
+    // nnp.run(function, fam);
+
+    // Raw loop info
     auto RLI = fam.getResult<LoopAnalysis>(function);
 
     if (RLI.getTopLevelLoops().empty()) {
         return PreserveAll();
     }
 
+    for (const auto &loop : RLI) {
+        PeelOption option;
+        peel_analyze(loop, option, function, fam);
+        const auto peeled = peel(loop, option, function);
+        modified = modified || peeled;
+
+        if (peeled) {
+            fam.invalidate(function, PreserveNone());
+        }
+    }
+
+    RLI = fam.getResult<LoopAnalysis>(function);
+
+    // PrintSCEVPass psp(std::cerr);
+    // psp.run(function, fam);
+    //
+    // PngCFGPass pcp("./cfg");
+    // pcp.run(function, fam);
+
     unsigned all_loop_size = 0;
-    for (auto &toploop : RLI) {
-        all_loop_size += toploop->getInstCount();
+    for (const auto &top_loop : RLI) {
+        all_loop_size += top_loop->getInstCount();
     }
     Logger::logInfo("[LoopUnroll] All loop size: " + std::to_string(all_loop_size));
     if (all_loop_size > 300) {
@@ -1193,23 +1545,23 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
         return PreserveAll();
     }
 
-    for (auto &toploop : RLI) {
-        auto dfvisitor = toploop->getDFVisitor<Util::DFVOrder::PostOrder>();
-        for (auto &rawloop : dfvisitor) {
-            if (!rawloop->isInnermost()) {
-                // TODO: 暂时只处理最内层循环
+    for (const auto &top_loop : RLI) {
+        auto loop_df_visitor = top_loop->getDFVisitor<Util::DFVOrder::PostOrder>();
+        for (const auto &raw_loop : loop_df_visitor) {
+            if (!raw_loop->isInnermost()) {
+                // 只展开最内层循环
                 continue;
             }
+            // New(fresh) loop info
             auto &NLI = fam.getResult<LoopAnalysis>(function);
-            auto loop = NLI.getLoopFor(rawloop->getHeader());
+            // Fresh loop
+            auto loop = NLI.getLoopFor(raw_loop->getHeader());
             UnrollOption option;
-            analyze(loop, option, function, fam);
-            auto peeled = peel(loop, option, function);
-            auto unrolled = unroll(loop, option, function, fam);
-            last_round_modified = peeled || unrolled;
-            modified = modified || last_round_modified;
+            unroll_analyze(loop, option, function, fam);
+            const auto unrolled = unroll(loop, option, function, fam);
+            modified = modified || unrolled;
 
-            if (last_round_modified)
+            if (unrolled)
                 fam.invalidate(function, PreserveNone());
         }
     }

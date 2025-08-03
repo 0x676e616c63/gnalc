@@ -105,6 +105,8 @@ private:
 
         auto for_preheader = cur_blk;
         linkBlock(for_preheader, for_cond);
+        linkBlock(for_cond, for_body);
+        linkBlock(for_cond, for_end);
 
         cur_blk = for_body;
         if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), true))
