@@ -1,12 +1,11 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-// Alias Analysis for SIR
-// TODO: Maybe we should preserve these info in IRGen
-//       rather than analyzing it afterwards.
+// Affine Alias Analysis for SIR
+// Alias Analysis for Affine Fors
 #pragma once
-#ifndef GNALC_SIR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
-#define GNALC_SIR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
+#ifndef GNALC_SIR_PASSES_ANALYSIS_AFFINE_ALIAS_ANALYSIS_HPP
+#define GNALC_SIR_PASSES_ANALYSIS_AFFINE_ALIAS_ANALYSIS_HPP
 
 #include "ir/instructions/control.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
@@ -52,7 +51,7 @@ struct AffineExpr {
     bool knownGreaterOrEqual(const AffineExpr &rhs) const;
 };
 
-// Two induction variables are isomorphic iff they have the base, step, bound and nested depth.
+// Two induction variables are isomorphic iff they have the same base, step, bound and nested depth.
 bool isIndVarIsomorphic(IndVar *lhs, IndVar *rhs);
 
 // Two Affine Exprs are isomorphic iff their `coeffs` are isomorphic and constants are equal.
@@ -113,7 +112,7 @@ struct InstRW {
     std::set<Value *> write;
 };
 
-class LAAResult {
+class AffineAAResult {
 private:
     mutable std::unordered_map<Value *, std::optional<MemoryAccess>> access_cache;
     mutable std::unordered_map<Instruction *, std::optional<InstRW>> inst_rw_cache;
@@ -125,7 +124,7 @@ private:
     LFAM* fam{};
 
 public:
-    LAAResult(LinearFunction *func_, LFAM* fam_) : func(func_), fam(fam_) {}
+    AffineAAResult(LinearFunction *func_, LFAM* fam_) : func(func_), fam(fam_) {}
 
     const std::optional<MemoryAccess> &queryPointer(Value *) const;
     const std::optional<InstRW> &queryInstRW(Instruction *) const;
@@ -147,16 +146,16 @@ public:
     bool isScalarIndependent(Instruction *lhs, Instruction *rhs) const;
 };
 
-class LAliasAnalysis : public PM::AnalysisInfo<LAliasAnalysis> {
+class AffineAliasAnalysis : public PM::AnalysisInfo<AffineAliasAnalysis> {
 public:
-    LAAResult run(LinearFunction &f, LFAM &fam);
+    AffineAAResult run(LinearFunction &f, LFAM &fam);
 
     // For PassManager
 public:
-    using Result = LAAResult;
+    using Result = AffineAAResult;
 
 private:
-    friend AnalysisInfo<LAliasAnalysis>;
+    friend AnalysisInfo<AffineAliasAnalysis>;
     static PM::UniqueKey Key;
 };
 

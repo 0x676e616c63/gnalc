@@ -8,7 +8,7 @@
 
 // Analysis
 #include "sir/passes/analysis/instdom_analysis.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 
 // Transforms
 #include "sir/passes/transforms/early_mem2reg.hpp"
@@ -48,12 +48,15 @@ LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options
 #define FUNCTION_TRANSFORM(name, ...)                                                                                  \
     registerPassForOptInfo(lfpm, options.name, __VA_ARGS__);
 
+    FUNCTION_TRANSFORM(early_inline, EarlyInlinePass())
     FUNCTION_TRANSFORM(early_mem2reg, EarlyPromotePass())
     FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
     FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
     FUNCTION_TRANSFORM(while2for, While2ForPass())
     FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
+    FUNCTION_TRANSFORM(affine_licm, AffineLICMPass())
     FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
+    FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
     // FUNCTION_TRANSFORM(loop_unswitch, LoopUnswitchPass())
     // FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
     // FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
@@ -94,7 +97,7 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(While2ForPass());
     lfpm.addPass(ReshapeFoldPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
-    lfpm.addPass(PrintLAAPass(std::cerr));
+    lfpm.addPass(PrintAffineAAPass(std::cerr));
     lfpm.addPass(AffineLICMPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(EarlyDCEPass());
@@ -116,7 +119,7 @@ void LinearPassBuilder::registerProxies(LFAM &lfam, MAM &mam) {
 void LinearPassBuilder::registerFunctionAnalyses(LFAM &lfam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS) lfam.registerPass([&] { return CREATE_PASS; });
 
-    FUNCTION_ANALYSIS(LAliasAnalysis())
+    FUNCTION_ANALYSIS(AffineAliasAnalysis())
     FUNCTION_ANALYSIS(InstDomAnalysis())
 
 #undef FUNCTION_ANALYSIS

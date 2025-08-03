@@ -33,6 +33,22 @@ GNALC_ENUM_OPERATOR(UnrollAttr)
 using UnrollAttrs = Attr::BitFlagsAttr<UnrollAttr>;
 
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
+public:
+    enum PassOption {
+        // Peel
+        PO_Peel = 1 << 0,
+
+        // Unroll
+        PO_FullyUnroll = 1 << 1,
+        PO_PartiallyUnroll = 1 << 2,
+        PO_RuntimeUnroll = 1 << 3,
+        PO_Unroll = PO_FullyUnroll | PO_PartiallyUnroll | PO_RuntimeUnroll,
+
+        // Default
+        PO_Full = PO_Peel | PO_Unroll,
+    };
+
+private:
     static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT; // 循环剥皮最大次数
     static constexpr unsigned PES = Config::IR::LOOP_UNROLLING_PEEL_SIZE; // 循环剥皮最大大小
     static constexpr unsigned FUS = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_SIZE; // // trip_count*size 小于等于此值次数的循环可能被完全展开
@@ -43,10 +59,6 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT; // 运行时展开最大次数
     static constexpr unsigned MPS = Config::IR::LOOP_UNROLLING_MAX_PROCESS_SIZE; // 执行展开的最大循环大小，至多为上述各个 size 的 1/2
     // TODO: Runtime Unroll 成本控制（最小展开大小等）
-    static constexpr bool ENABLE_PEELING = true;
-    static constexpr bool ENABLE_FULLY_UNROLL = true;
-    static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
-    static constexpr bool ENABLE_RUNTIME_UNROLL = true;
 
     static unsigned unroll_name_idx; // 用于防止跑多次unroll之后value重名
     static unsigned peel_name_idx;
@@ -141,10 +153,10 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     bool peel(const pLoop &loop, const PeelOption &option, Function &func);
     bool unroll(const pLoop &loop, const UnrollOption &option, Function &func, FAM &fam);
 
+    PassOption pass_options;
 public:
-    LoopUnrollPass();
+    explicit LoopUnrollPass(PassOption opt = PO_Full);
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
-
 } // namespace IR
 #endif

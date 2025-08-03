@@ -31,7 +31,7 @@ namespace IR {
 unsigned LoopUnrollPass::unroll_name_idx = 0;
 unsigned LoopUnrollPass::peel_name_idx = 0;
 
-LoopUnrollPass::LoopUnrollPass() {
+LoopUnrollPass::LoopUnrollPass(PassOption opt) : pass_options(opt) {
     // unroll_name_idx++;
     // 日后可添加参数选项以快速调参
 }
@@ -253,7 +253,7 @@ void LoopUnrollPass::unroll_analyze(const pLoop &loop, UnrollOption &option, Fun
         }
 
         // For fully unroll
-        if (ENABLE_FULLY_UNROLL) {
+        if (pass_options & PO_FullyUnroll) {
             if (trip_countN <= FUC && trip_countN*inst_size <= FUS) {
                 Logger::logInfo("[LoopUnroll] Fully unrolling: factor: " + std::to_string(trip_countN));
                 option.enable_fully(trip_countN);
@@ -262,7 +262,7 @@ void LoopUnrollPass::unroll_analyze(const pLoop &loop, UnrollOption &option, Fun
         }
 
         // For partially unroll
-        if (ENABLE_PARTIALLY_UNROLL) {
+        if (pass_options & PO_PartiallyUnroll) {
             // Calculate unroll factor
             auto unroll_factor = calcUnrollFactor(loop, inst_size, PUS, PUC);
 
@@ -362,7 +362,7 @@ void LoopUnrollPass::unroll_analyze(const pLoop &loop, UnrollOption &option, Fun
         return;
     } else {
         // 变量展开策略
-        if (ENABLE_RUNTIME_UNROLL) {
+        if (pass_options & PO_RuntimeUnroll) {
             // Calculate unroll factor
             int unroll_factor = calcUnrollFactor(loop, inst_size, RUS, RUC);
 
@@ -467,7 +467,7 @@ void LoopUnrollPass::unroll_analyze(const pLoop &loop, UnrollOption &option, Fun
 }
 
 void LoopUnrollPass::peel_analyze(const pLoop &loop, PeelOption &option, Function &FC, FAM& fam) {
-    if constexpr (!ENABLE_PEELING) {
+    if (!(pass_options & PO_Peel)) {
         option.disable();
         return;
     }

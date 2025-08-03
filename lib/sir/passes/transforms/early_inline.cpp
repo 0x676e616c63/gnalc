@@ -4,8 +4,8 @@
 #include "sir/passes/transforms/early_inline.hpp"
 #include "config/config.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/instructions/control.hpp"
 #include "sir/clone.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
 #include "sir/visitor.hpp"
 
 namespace SIR {

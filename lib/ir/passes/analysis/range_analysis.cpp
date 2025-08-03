@@ -441,8 +441,11 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             };
 
             auto analyzeAddRec = [&scev, &bb, &res](TREC *trec) {
+                // For constant affine addrec, at least one bound can be determined.
                 if (auto constant_addrec = trec->getConstantAffineAddRec()) {
                     auto [base, step] = *constant_addrec;
+
+                    // If the trip count can be statically determined, compute a more precise range.
                     if (auto trip_count = scev.getTripCount(trec->getLoop())) {
                         int c;
                         if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
@@ -452,18 +455,22 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                                 return IRng(base, m);
                             return IRng(m, base);
                         }
-                    } else {
-                        if (step > 0)
-                            return IRng(base, IRng::MAX);
-                        return IRng(IRng::MIN, base);
                     }
-                } else if (auto addrec = trec->getAffineAddRec()) {
+
+                    // Fallback: unknown trip count
+                    if (step > 0)
+                        return IRng(base, IRng::MAX);
+                    return IRng(IRng::MIN, base);
+                }
+
+                // Fallback: affine addrec, see if they are non-negative
+                if (auto addrec = trec->getAffineAddRec()) {
                     auto [base, step] = *addrec;
                     if (base->isIRValue() && step->isIRValue()) {
                         if (res.knownNonNegative(base->getRawIRValue(), bb) &&
                             res.knownNonNegative(step->getRawIRValue(), bb)) {
                             return IRng(0, IRng::MAX);
-                        }
+                            }
                     }
                 }
                 return IRng();

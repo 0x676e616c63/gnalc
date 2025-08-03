@@ -29,7 +29,7 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(loop_strength_reduce)                                                                      \
     GNALC_SIR_IR_PASS_ENTRY(loopelim)                                                                                  \
     GNALC_SIR_IR_PASS_ENTRY(internalize)                                                                               \
-    GNALC_SIR_IR_PASS_ENTRY(globalize)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(globalize)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(loop_parallel)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(loop_unroll)                                                                               \
     GNALC_SIR_IR_PASS_ENTRY(indvars)                                                                                   \
@@ -41,19 +41,20 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(unify_exits)                                                                               \
     GNALC_SIR_IR_PASS_ENTRY(tree_shaking)                                                                              \
     GNALC_SIR_IR_PASS_ENTRY(store_range)                                                                               \
-    GNALC_SIR_IR_PASS_ENTRY(code_sink)                                                                           \
+    GNALC_SIR_IR_PASS_ENTRY(code_sink)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(codegen_prepare)                                                                           \
     GNALC_SIR_IR_PASS_ENTRY(run_test)                                                                                  \
     GNALC_SIR_IR_PASS_ENTRY(verify)                                                                                    \
     GNALC_SIR_IR_PASS_ENTRY(early_mem2reg)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(while2for)                                                                                 \
-    GNALC_SIR_IR_PASS_ENTRY(early_dce)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(early_dce)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(reshape_fold)                                                                              \
-    GNALC_SIR_IR_PASS_ENTRY(early_inline)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(early_inline)                                                                              \
     GNALC_SIR_IR_PASS_ENTRY(constant_fold)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(loop_unswitch)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(loop_fuse)                                                                                 \
-    GNALC_SIR_IR_PASS_ENTRY(loop_interchange)
+    GNALC_SIR_IR_PASS_ENTRY(loop_interchange)                                                                          \
+    GNALC_SIR_IR_PASS_ENTRY(affine_licm)
 
 struct PMOptions {
 #define GNALC_SIR_IR_PASS_ENTRY(name) bool name;

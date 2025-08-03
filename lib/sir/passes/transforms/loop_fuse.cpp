@@ -4,7 +4,7 @@
 #include "sir/passes/transforms/loop_fuse.hpp"
 #include "ir/instructions/control.hpp"
 #include "sir/base.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "sir/utils.hpp"
 #include "sir/visitor.hpp"
 
@@ -17,7 +17,7 @@ struct FuseCandidate {
     FORInst *for2;
 };
 
-bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
+bool canFuse(AffineAAResult* laa_res, FORInst* for1, FORInst* for2) {
     auto indvar1 = for1->getIndVar();
     auto indvar2 = for2->getIndVar();
 
@@ -89,11 +89,11 @@ bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
 struct FuseVisitor : ContextVisitor {
     using FuseCandidates = std::vector<FuseCandidate>;
     FuseCandidates *candidates{};
-    LAAResult *laa_res;
+    AffineAAResult *laa_res;
     size_t fuse_depth;
     bool depth_hit = false;
 
-    explicit FuseVisitor(FuseCandidates *cadidates_, LAAResult *laa_res_, size_t fuse_depth_)
+    explicit FuseVisitor(FuseCandidates *cadidates_, AffineAAResult *laa_res_, size_t fuse_depth_)
         : candidates(cadidates_), laa_res(laa_res_), fuse_depth(fuse_depth_) {}
 
     void visit(Context ctx, FORInst &for_inst) override {
@@ -128,7 +128,7 @@ struct FuseVisitor : ContextVisitor {
 PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
     bool loop_fuse_modified = false;
 
-    auto &laa_res = lfam.getResult<LAliasAnalysis>(function);
+    auto &laa_res = lfam.getResult<AffineAliasAnalysis>(function);
 
     size_t searching_depth = 0;
     while (true) {
@@ -158,7 +158,7 @@ PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
             IListDel(*ilist, for1);
             Logger::logDebug("[LoopFuse]: Fused two loops");
 
-            laa_res = lfam.getFreshResult<LAliasAnalysis>(function);
+            laa_res = lfam.getFreshResult<AffineAliasAnalysis>(function);
             loop_fuse_modified = true;
 
             // Revisit this depth

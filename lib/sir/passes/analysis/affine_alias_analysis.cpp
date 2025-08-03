@@ -1,7 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/converse.hpp"
@@ -18,7 +18,7 @@
 #include <numeric>
 
 namespace SIR {
-PM::UniqueKey LAliasAnalysis::Key;
+PM::UniqueKey AffineAliasAnalysis::Key;
 
 std::ostream &operator<<(std::ostream &os, const AffineExpr &expr) {
     bool first = true;
@@ -438,7 +438,7 @@ std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction *func) {
     return AffineExpr{.coeffs = {}, .constant = 0, .invariant = expr->as_raw<Value>()};
 }
 
-std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
+std::optional<MemoryAccess> AffineAAResult::analyzePointer(Value *ptr) const {
     auto base_ptr = ptr;
     std::vector<AffineExpr> indices;
     std::map<IndVar *, IterRange> domain;
@@ -486,14 +486,14 @@ std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
     return MemoryAccess(ScalarAccess{.base = base_ptr});
 }
 
-const std::optional<MemoryAccess> &LAAResult::queryPointer(Value *ptr) const {
+const std::optional<MemoryAccess> &AffineAAResult::queryPointer(Value *ptr) const {
     auto it = access_cache.find(ptr);
     if (it != access_cache.end())
         return it->second;
     return access_cache[ptr] = analyzePointer(ptr);
 }
 
-AliasInfo LAAResult::getAliasInfo(Value *ptr1, Value *ptr2) const {
+AliasInfo AffineAAResult::getAliasInfo(Value *ptr1, Value *ptr2) const {
     if (ptr1 == ptr2)
         return AliasInfo::MustAlias;
 
@@ -531,19 +531,19 @@ AliasInfo LAAResult::getAliasInfo(Value *ptr1, Value *ptr2) const {
     return AliasInfo::MayAlias;
 }
 
-const std::optional<InstRW> &LAAResult::queryInstRW(Instruction *inst) const {
+const std::optional<InstRW> &AffineAAResult::queryInstRW(Instruction *inst) const {
     auto it = inst_rw_cache.find(inst);
     if (it != inst_rw_cache.end())
         return it->second;
     return inst_rw_cache[inst] = analyzeInstRW(inst);
 }
 
-const std::optional<MemoryAccess> &LAAResult::queryPointer(const pVal &v) const { return queryPointer(v.get()); }
-const std::optional<InstRW> &LAAResult::queryInstRW(const pInst &inst) const { return queryInstRW(inst.get()); }
+const std::optional<MemoryAccess> &AffineAAResult::queryPointer(const pVal &v) const { return queryPointer(v.get()); }
+const std::optional<InstRW> &AffineAAResult::queryInstRW(const pInst &inst) const { return queryInstRW(inst.get()); }
 
-AliasInfo LAAResult::getAliasInfo(const pVal &lhs, const pVal &rhs) const { return getAliasInfo(lhs.get(), rhs.get()); }
+AliasInfo AffineAAResult::getAliasInfo(const pVal &lhs, const pVal &rhs) const { return getAliasInfo(lhs.get(), rhs.get()); }
 
-std::optional<InstRW> LAAResult::analyzeInstRW(Instruction *inst) const {
+std::optional<InstRW> AffineAAResult::analyzeInstRW(Instruction *inst) const {
     if (auto load = inst->as_raw<LOADInst>())
         return InstRW{.read = {load->getPtr().get()}};
     if (auto store = inst->as_raw<STOREInst>())
@@ -615,7 +615,7 @@ std::optional<InstRW> LAAResult::analyzeInstRW(Instruction *inst) const {
     return InstRW{};
 }
 
-bool LAAResult::isIndependent(Instruction *lhs, Instruction *rhs) const {
+bool AffineAAResult::isIndependent(Instruction *lhs, Instruction *rhs) const {
     auto &rw1 = queryInstRW(lhs);
     auto &rw2 = queryInstRW(rhs);
 
@@ -645,7 +645,7 @@ bool LAAResult::isIndependent(Instruction *lhs, Instruction *rhs) const {
     return true;
 }
 
-bool LAAResult::isScalarIndependent(Instruction *lhs, Instruction *rhs) const {
+bool AffineAAResult::isScalarIndependent(Instruction *lhs, Instruction *rhs) const {
     auto &rw1 = queryInstRW(lhs);
     auto &rw2 = queryInstRW(rhs);
 
@@ -676,11 +676,11 @@ bool LAAResult::isScalarIndependent(Instruction *lhs, Instruction *rhs) const {
     return true;
 }
 
-bool LAAResult::isScalarIndependent(const pInst &lhs, const pInst &rhs) const {
+bool AffineAAResult::isScalarIndependent(const pInst &lhs, const pInst &rhs) const {
     return isIndependent(lhs.get(), rhs.get());
 }
 
-bool LAAResult::isIndependent(const pInst &lhs, const pInst &rhs) const { return isIndependent(lhs.get(), rhs.get()); }
+bool AffineAAResult::isIndependent(const pInst &lhs, const pInst &rhs) const { return isIndependent(lhs.get(), rhs.get()); }
 
-LAAResult LAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return LAAResult(&f, &fam); }
+AffineAAResult AffineAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return AffineAAResult(&f, &fam); }
 } // namespace SIR

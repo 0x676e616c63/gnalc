@@ -6,8 +6,11 @@
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/memory.hpp"
 #include "sir/base.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "sir/visitor.hpp"
+
+#include <optional>
+#include <vector>
 
 namespace SIR {
 // Determine if `src` and `dest` index sequences represent a one-to-one mapping
@@ -76,7 +79,7 @@ struct MemoryInfo {
 using FoldCandidates = std::unordered_map<Value *, MemoryInfo>;
 struct FoldVisitor : ContextVisitor {
     FoldCandidates *candidates;
-    LAAResult *laa_res;
+    AffineAAResult *laa_res;
     bool analyze_failed = false;
 
     void visit(Context ctx, Instruction &inst) override {
@@ -127,11 +130,11 @@ struct FoldVisitor : ContextVisitor {
         ContextVisitor::visit(ctx, inst);
     }
 
-    FoldVisitor(FoldCandidates *candidates_, LAAResult *laa_res_) : candidates(candidates_), laa_res(laa_res_) {}
+    FoldVisitor(FoldCandidates *candidates_, AffineAAResult *laa_res_) : candidates(candidates_), laa_res(laa_res_) {}
 };
 
 PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam) {
-    auto &laa_res = lfam.getResult<LAliasAnalysis>(function);
+    auto &laa_res = lfam.getResult<AffineAliasAnalysis>(function);
 
     FoldCandidates candidates;
     FoldVisitor visitor(&candidates, &laa_res);

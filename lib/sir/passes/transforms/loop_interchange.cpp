@@ -6,7 +6,7 @@
 #include "config/config.hpp"
 #include "ir/block_utils.hpp"
 #include "sir/base.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "sir/visitor.hpp"
 
 namespace SIR {
@@ -50,7 +50,7 @@ bool isArrayAccessOkToInterchange(const ArrayAccess &arr1, const ArrayAccess &ar
 }
 
 // Checks if two loops are safe to interchange
-bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FORInst *inner_for) {
+bool isSafeAndProfitableToInterchange(AffineAAResult *laa_res, FORInst *outer_for, FORInst *inner_for) {
     auto outer_iv = outer_for->getIndVar();
     auto inner_iv = inner_for->getIndVar();
 
@@ -118,7 +118,7 @@ struct InterchangeVisitor : ContextVisitor {
     using ICCandidates = std::vector<std::pair<FORInst *, FORInst *>>;
 
     ICCandidates *candidates;
-    LAAResult *laa_res;
+    AffineAAResult *laa_res;
 
     void visit(Context ctx, FORInst &for_inst) override {
         // Only interchange perfectly nested loops
@@ -136,11 +136,11 @@ struct InterchangeVisitor : ContextVisitor {
         ContextVisitor::visit(ctx, for_inst);
     }
 
-    InterchangeVisitor(LAAResult *laa_res_, ICCandidates *candidates_) : laa_res(laa_res_), candidates(candidates_) {}
+    InterchangeVisitor(AffineAAResult *laa_res_, ICCandidates *candidates_) : laa_res(laa_res_), candidates(candidates_) {}
 };
 
 PM::PreservedAnalyses LoopInterchangePass::run(LinearFunction &function, LFAM &lfam) {
-    auto &laa_res = lfam.getResult<LAliasAnalysis>(function);
+    auto &laa_res = lfam.getResult<AffineAliasAnalysis>(function);
     InterchangeVisitor::ICCandidates candidates;
     InterchangeVisitor visitor(&laa_res, &candidates);
     function.accept(visitor);

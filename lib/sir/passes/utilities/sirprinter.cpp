@@ -4,7 +4,7 @@
 #include "sir/passes/utilities/sirprinter.hpp"
 #include "ir/formatter.hpp"
 #include "sir/base.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 
 namespace SIR {
 void LinearPrinterBase::indent() {
@@ -189,9 +189,9 @@ PM::PreservedAnalyses PrintLinearModulePass::run(Module &module, MAM &mam) {
     return PreserveAll();
 }
 
-PM::PreservedAnalyses PrintLAAPass::run(LinearFunction &lfunc, LFAM &lfam) {
-    auto& laa_res = lfam.getResult<LAliasAnalysis>(lfunc);
-    writeln("LAAResult for ", lfunc.getName(), ":");
+PM::PreservedAnalyses PrintAffineAAPass::run(LinearFunction &lfunc, LFAM &lfam) {
+    auto& laa_res = lfam.getResult<AffineAliasAnalysis>(lfunc);
+    writeln("AffineAAResult for ", lfunc.getName(), ":");
 
     auto print_set = [&](const auto& set) {
         for (const auto& read : set) {

@@ -3,7 +3,7 @@
 
 #include "sir/passes/transforms/affine_licm.hpp"
 
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "sir/utils.hpp"
 #include "sir/visitor.hpp"
 
@@ -38,7 +38,7 @@ struct LICMCandidate {
 
 // If a region doesn't have any use-def or (loop-carried) memory dependency,
 // it produces loop-invariant memory state, and can be hoisted out of the loop.
-bool isInvariantRegion(const Region &region, FORInst *for_inst, LAAResult *laa_res) {
+bool isInvariantRegion(const Region &region, FORInst *for_inst, AffineAAResult *laa_res) {
     const auto &loop_rw = laa_res->queryInstRW(for_inst);
 
     if (!loop_rw)
@@ -162,11 +162,11 @@ bool isInvariantRegion(const Region &region, FORInst *for_inst, LAAResult *laa_r
 struct LICMVisitor : ContextVisitor {
     using Candidates = std::vector<LICMCandidate>;
     Candidates *candidates;
-    LAAResult *laa_res;
+    AffineAAResult *laa_res;
     size_t licm_depth;
     bool depth_hit = false;
 
-    LICMVisitor(Candidates *candidates_, LAAResult *laa_res_, size_t licm_depth_)
+    LICMVisitor(Candidates *candidates_, AffineAAResult *laa_res_, size_t licm_depth_)
         : candidates(candidates_), laa_res(laa_res_), licm_depth(licm_depth_) {}
 
     // For each affine for, investigate if we can find an invariant region of code.
@@ -194,7 +194,7 @@ struct LICMVisitor : ContextVisitor {
 PM::PreservedAnalyses AffineLICMPass::run(LinearFunction &function, LFAM &lfam) {
     bool licm_modified = false;
 
-    auto &laa_res = lfam.getResult<LAliasAnalysis>(function);
+    auto &laa_res = lfam.getResult<AffineAliasAnalysis>(function);
 
     size_t searching_depth = 0;
     while (true) {

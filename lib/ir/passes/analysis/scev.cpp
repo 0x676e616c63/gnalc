@@ -492,8 +492,15 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         auto eval_res = eval(it->second, loop);
         // For a loop invariant, if its value can not be calculated statically,
         // consider it as a runtime constant (or loop invariant, IRValTREC).
-        if (loop->isTriviallyInvariant(val) && !eval_res->isExpr())
+        if (loop->isTriviallyInvariant(val) && !eval_res->isExpr()) {
+            if (!loop->isOutermost()) {
+                // See if it has already been figured out a constant by parent loop.
+                auto parent_evo = getSCEVAtScope(val, loop->getParent().get());
+                if (parent_evo->isExpr())
+                    return parent_evo;
+            }
             return getIRValTREC(val);
+        }
         return eval_res;
     }
 

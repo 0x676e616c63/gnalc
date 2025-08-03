@@ -304,7 +304,9 @@ Value* getPtrBase(Value* ptr) {
 }
 
 pVal getPtrBase(const pVal &ptr) {
-    return getPtrBase(ptr.get())->as<Value>();
+    if (auto base = getPtrBase(ptr.get()))
+        return base->as<Value>();
+    return nullptr;
 }
 
 // Quick path for two disjoint geps
