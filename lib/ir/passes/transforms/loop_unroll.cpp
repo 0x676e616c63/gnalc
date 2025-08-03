@@ -551,6 +551,7 @@ got_iter_var:
         pVal iter_var, init_val;
         if (!GetIterVarAndInitVal(subloop, iter_var, init_val)) {
             Logger::logDebug("[LoopPeel] Case2: GetIterVarAndInitVal failed, skip.");
+            continue;
         }
         Logger::logDebug("[LoopPeel] Case2: Get iter variable: " + IRFormatter::formatValue(*iter_var) + ", init value: " + IRFormatter::formatValue(*init_val));
         auto init_val_trec = SCEVH.getSCEVAtScope(init_val.get(), loop.get());
