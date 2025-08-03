@@ -400,7 +400,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     static constexpr auto gv_prefix = Config::IR::LOOP_PARALLEL_GLOBALVAR_NAME_PREFIX;
     static constexpr auto body_fn_prefix = Config::IR::LOOP_PARALLEL_BODY_FUNCTION_NAME_PREFIX;
 
-    auto &target = fam.getResult<TargetAnalysis>(function);
+    auto target = fam.getResult<TargetAnalysis>(function);
     if (!target->isIntrinsicSupported(IntrinsicID::ParallelForEntry))
         return PreserveAll();
 

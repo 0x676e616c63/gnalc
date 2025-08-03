@@ -190,13 +190,13 @@ PM::PreservedAnalyses PrintLinearModulePass::run(Module &module, MAM &mam) {
 }
 
 PM::PreservedAnalyses PrintAffineAAPass::run(LinearFunction &lfunc, LFAM &lfam) {
-    auto& laa_res = lfam.getResult<AffineAliasAnalysis>(lfunc);
+    auto& affine_aa = lfam.getResult<AffineAliasAnalysis>(lfunc);
     writeln("AffineAAResult for ", lfunc.getName(), ":");
 
     auto print_set = [&](const auto& set) {
         for (const auto& read : set) {
             write("    ", read->getName(), " = ");
-            const auto& ptr = laa_res.queryPointer(read);
+            const auto& ptr = affine_aa.queryPointer(read);
             if (!ptr)
                 write("Unknown");
             else if (ptr->isArray()) {
@@ -213,7 +213,7 @@ PM::PreservedAnalyses PrintAffineAAPass::run(LinearFunction &lfunc, LFAM &lfam) 
 
     for (const auto& inst : lfunc.nested_insts()) {
         if (auto for_inst = inst->as<FORInst>()) {
-            const auto& rw = laa_res.queryInstRW(for_inst);
+            const auto& rw = affine_aa.queryInstRW(for_inst);
             if (!rw)
                 continue;
             writeln("FORInst: ", for_inst->getIndVar()->getName(), ":");
@@ -222,7 +222,7 @@ PM::PreservedAnalyses PrintAffineAAPass::run(LinearFunction &lfunc, LFAM &lfam) 
             writeln("  Write:");
             print_set(rw->write);
         } else if (auto call_inst = inst->as<CALLInst>()) {
-            const auto& rw = laa_res.queryInstRW(call_inst);
+            const auto& rw = affine_aa.queryInstRW(call_inst);
             if (!rw)
                 continue;
             writeln("CALLInst: ", call_inst->getName(), " '", call_inst->getFuncName(), "':");

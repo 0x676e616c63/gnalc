@@ -12,6 +12,9 @@ constexpr auto LOOP_INTERCHANGE_BENEFIT_THRESHOLD = 0;
 
 // Early Inline
 constexpr auto EARLY_INLINE_INST_THRESHOLD = 64;
+
+// Relayout
+constexpr auto RELAYOUT_TRANSPOSE_COST_THRESHOLD = -1;
 }
 
 namespace Config::IR {

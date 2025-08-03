@@ -164,6 +164,28 @@ struct FuncRW {
     std::set<Value *> write;
 };
 std::optional<FuncRW> queryFuncRW(LFAM* lfam, LinearFunction* func);
+
+class AccessSynthesizer {
+    ConstantPool *pool{};
+    IList* ilist{};
+    LInstIter iter{};
+
+public:
+    explicit AccessSynthesizer(ConstantPool* cpool_) : pool(cpool_) {}
+    AccessSynthesizer(ConstantPool* cpool_, IList* ilist_, LInstIter iter_)
+        : pool(cpool_), ilist(ilist_), iter(iter_) {}
+
+    void setInsertPoint(IList* ilist_, LInstIter iter_) {
+        ilist = ilist_;
+        iter = iter_;
+    }
+
+    [[nodiscard]] pVal synthesize(const MemoryAccess& access) const;
+    [[nodiscard]] pVal synthesize(const pVal& base, const std::vector<AffineExpr>& indices) const;
+    [[nodiscard]] pVal synthesize(const ArrayAccess& access) const;
+    [[nodiscard]] pVal synthesize(const ScalarAccess& access) const;
+    [[nodiscard]] pVal synthesize(const AffineExpr& expr) const;
+};
 } // namespace SIR
 
 

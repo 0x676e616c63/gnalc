@@ -74,6 +74,7 @@ public:
 
     STOCLASS getStorageClass() const;
     const pType &getVarType() const;
+    void setVarType(const pType& ty);
     bool isArray() const;
     const GVIniter &getIniter() const;
     void setIniter(GVIniter _initer);

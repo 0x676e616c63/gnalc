@@ -21,6 +21,7 @@
 #include "sir/passes/transforms/early_inline.hpp"
 #include "sir/passes/transforms/loop_interchange.hpp"
 #include "sir/passes/transforms/affine_licm.hpp"
+#include "sir/passes/transforms/relayout.hpp"
 
 // Utilities
 #include "sir/passes/utilities/sirprinter.hpp"
@@ -56,8 +57,8 @@ LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options
     FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
     FUNCTION_TRANSFORM(affine_licm, AffineLICMPass())
     FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
-    FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
     // FUNCTION_TRANSFORM(loop_unswitch, LoopUnswitchPass())
+    FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
     // FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
     // FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
 
@@ -68,6 +69,8 @@ LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options
 MPM LinearPassBuilder::buildModuleFixedPointPipeline(const PMOptions& options) {
     MPM mpm;
     mpm.addPass(makeLinearModulePass(buildFunctionFixedPointPipeline(options)));
+    if (options.relayout)
+        mpm.addPass(RelayoutPass());
     return mpm;
 }
 
@@ -96,19 +99,18 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(EarlyDCEPass());
     lfpm.addPass(While2ForPass());
     lfpm.addPass(ReshapeFoldPass());
-    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintAffineAAPass(std::cerr));
     lfpm.addPass(AffineLICMPass());
-    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(EarlyDCEPass());
-    lfpm.addPass(ReshapeFoldPass());
-    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     return lfpm;
 }
 
 MPM LinearPassBuilder::buildModuleDebugPipeline() {
     MPM mpm;
     mpm.addPass(makeLinearModulePass(buildFunctionDebugPipeline()));
+    mpm.addPass(PrintLinearModulePass(std::cerr));
+    mpm.addPass(RelayoutPass());
+    mpm.addPass(PrintLinearModulePass(std::cerr));
     return mpm;
 }
 

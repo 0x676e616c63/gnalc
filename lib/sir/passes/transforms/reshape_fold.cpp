@@ -79,7 +79,7 @@ struct MemoryInfo {
 using FoldCandidates = std::unordered_map<Value *, MemoryInfo>;
 struct FoldVisitor : ContextVisitor {
     FoldCandidates *candidates;
-    AffineAAResult *laa_res;
+    AffineAAResult *affine_aa;
     bool analyze_failed = false;
 
     void visit(Context ctx, Instruction &inst) override {
@@ -87,7 +87,7 @@ struct FoldVisitor : ContextVisitor {
             return;
 
         if (auto store = inst.as<STOREInst>()) {
-            const auto &aa = laa_res->queryPointer(store->getPtr());
+            const auto &aa = affine_aa->queryPointer(store->getPtr());
             if (!aa) {
                 analyze_failed = true;
                 return;
@@ -102,7 +102,7 @@ struct FoldVisitor : ContextVisitor {
         }
         // If there are untracked LOADInst, give up. Since we need to rewrite every load to apply mask.
         else if (auto load = inst.as<LOADInst>()) {
-            const auto &aa = laa_res->queryPointer(load->getPtr());
+            const auto &aa = affine_aa->queryPointer(load->getPtr());
             if (!aa) {
                 analyze_failed = true;
                 return;
@@ -115,7 +115,7 @@ struct FoldVisitor : ContextVisitor {
             if (!call->getFunc()->hasFnAttr(FuncAttr::builtinMemReadOnly)) {
                 for (auto &arg : call_args) {
                     if (arg->getType()->is<PtrType>()) {
-                        auto aa = laa_res->queryPointer(arg);
+                        auto aa = affine_aa->queryPointer(arg);
                         if (!aa) {
                             analyze_failed = true;
                             return;
@@ -130,14 +130,14 @@ struct FoldVisitor : ContextVisitor {
         ContextVisitor::visit(ctx, inst);
     }
 
-    FoldVisitor(FoldCandidates *candidates_, AffineAAResult *laa_res_) : candidates(candidates_), laa_res(laa_res_) {}
+    FoldVisitor(FoldCandidates *candidates_, AffineAAResult *affine_aa_) : candidates(candidates_), affine_aa(affine_aa_) {}
 };
 
 PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam) {
-    auto &laa_res = lfam.getResult<AffineAliasAnalysis>(function);
+    auto &affine_aa = lfam.getResult<AffineAliasAnalysis>(function);
 
     FoldCandidates candidates;
-    FoldVisitor visitor(&candidates, &laa_res);
+    FoldVisitor visitor(&candidates, &affine_aa);
     function.accept(visitor);
 
     if (visitor.analyze_failed || candidates.empty())
@@ -168,7 +168,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
         if (!src_load)
             continue;
         auto src_ptr = src_load->getPtr();
-        const auto &src_aa_res = laa_res.queryPointer(src_ptr);
+        const auto &src_aa_res = affine_aa.queryPointer(src_ptr);
 
         // Only array accesses are considered as Copy/Shuffle.
         if (!src_aa_res || !src_aa_res->isArray())
@@ -177,7 +177,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
         const auto &src_access = src_aa_res->array();
         auto src_mem = src_access.base;
         // We've ensured dest access is an array.
-        const auto &dest_access = laa_res.queryPointer(store->getPtr())->array();
+        const auto &dest_access = affine_aa.queryPointer(store->getPtr())->array();
 
         // When a single store transfers data from one array access to another,
         // the destination view is simply a reshaped version of the source.
@@ -189,7 +189,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
 
         std::vector<std::pair<MemoryInfo::LoadInfo, std::vector<AffineExpr>>> masked_loads;
         for (const auto &info : loads) {
-            const auto &ld_aa_res = laa_res.queryPointer(info.load->getPtr());
+            const auto &ld_aa_res = affine_aa.queryPointer(info.load->getPtr());
             Err::gassert(ld_aa_res && ld_aa_res->isArray(), "Bad MemoryInfo.");
             const auto &ld_access = ld_aa_res->array();
             // Skip untracked load
@@ -210,23 +210,11 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
         // Now apply the mask.
         static size_t name_cnt = 0;
         auto i32_zero = function.getConst(0);
+        AccessSynthesizer synthesizer(&function.getConstantPool());
         for (const auto &[info, access] : masked_loads) {
-            auto base = src_mem->as<Value>();
-            for (const auto &expr : access) {
-                auto [coe, iv] = expr.getLinear();
-                pVal subscript = iv->as<Value>();
-                if (coe != 1) {
-                    auto bin = std::make_shared<BinaryInst>("%reshape." + std::to_string(name_cnt++), OP::MUL, subscript,
-                                                            function.getConst(coe));
-                    info.ilist->insert(info.iter, bin);
-                    subscript = bin;
-                }
-                auto gep =
-                    std::make_shared<GEPInst>("%reshape." + std::to_string(name_cnt++), base, i32_zero, subscript);
-                info.ilist->insert(info.iter, gep);
-                base = gep;
-            }
-            info.load->replaceAllOperands(info.load->getPtr(), base);
+            synthesizer.setInsertPoint(info.ilist, info.iter);
+            auto gep = synthesizer.synthesize(src_mem->as<Value>(), access);
+            info.load->replaceAllOperands(info.load->getPtr(), gep);
             Logger::logDebug("[ReshapeFold]: Masked load '", info.load->getName(), "'.");
         }
 

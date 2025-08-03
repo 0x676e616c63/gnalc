@@ -197,6 +197,8 @@ int main(int argc, char **argv) {
         OPT_ARG("--affinelicm", "--no-affinelicm", affine_licm)
         // IR Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
+        // SIR Module Transforms
+        OPT_ARG("--relayout", "--no-relayout", relayout)
 #undef OPT_ARG
         // Debug options:
         else if (arg == "-fuzz") fuzz_testing = true;
@@ -341,6 +343,7 @@ Optimizations Flags:
   --codesink           - Code Sink
   --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables
+  --relayout           - Data space layout optimization
 
 Backend options:
   -fno-PreRaCFGsimp     - Disable PreRa CFG simplification

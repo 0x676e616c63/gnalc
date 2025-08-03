@@ -17,7 +17,7 @@ struct FuseCandidate {
     FORInst *for2;
 };
 
-bool canFuse(AffineAAResult* laa_res, FORInst* for1, FORInst* for2) {
+bool canFuse(AffineAAResult* affine_aa, FORInst* for1, FORInst* for2) {
     auto indvar1 = for1->getIndVar();
     auto indvar2 = for2->getIndVar();
 
@@ -29,13 +29,13 @@ bool canFuse(AffineAAResult* laa_res, FORInst* for1, FORInst* for2) {
         return false;
 
     // Scalars can't be fused
-    if (!laa_res->isScalarIndependent(for1, for2)) {
+    if (!affine_aa->isScalarIndependent(for1, for2)) {
         Logger::logDebug("[LoopFuse]: Skipped two loops because unresolved scalar dependency.");
         return false;
     }
 
-    const auto& rw1 = laa_res->queryInstRW(for1);
-    const auto& rw2 = laa_res->queryInstRW(for2);
+    const auto& rw1 = affine_aa->queryInstRW(for1);
+    const auto& rw2 = affine_aa->queryInstRW(for2);
     if (!rw1 || !rw2) {
         Logger::logDebug("[LoopFuse]: Skipped two loops because failed to analyze RWInfo.");
         return false;
@@ -43,14 +43,14 @@ bool canFuse(AffineAAResult* laa_res, FORInst* for1, FORInst* for2) {
 
     auto has_dep = [&](const std::set<Value*>& set1, const std::set<Value*>& set2) {
         for (const auto& s1 : set1) {
-            const auto& a1 = laa_res->queryPointer(s1);
+            const auto& a1 = affine_aa->queryPointer(s1);
             if (!a1)
                 return true;
 
             if (!a1->isArray())
                 continue;
             for (const auto& s2 : set2) {
-                const auto& a2 = laa_res->queryPointer(s2);
+                const auto& a2 = affine_aa->queryPointer(s2);
                 if (!a2)
                     return true;
 
@@ -89,12 +89,12 @@ bool canFuse(AffineAAResult* laa_res, FORInst* for1, FORInst* for2) {
 struct FuseVisitor : ContextVisitor {
     using FuseCandidates = std::vector<FuseCandidate>;
     FuseCandidates *candidates{};
-    AffineAAResult *laa_res;
+    AffineAAResult *affine_aa;
     size_t fuse_depth;
     bool depth_hit = false;
 
-    explicit FuseVisitor(FuseCandidates *cadidates_, AffineAAResult *laa_res_, size_t fuse_depth_)
-        : candidates(cadidates_), laa_res(laa_res_), fuse_depth(fuse_depth_) {}
+    explicit FuseVisitor(FuseCandidates *cadidates_, AffineAAResult *affine_aa_, size_t fuse_depth_)
+        : candidates(cadidates_), affine_aa(affine_aa_), fuse_depth(fuse_depth_) {}
 
     void visit(Context ctx, FORInst &for_inst) override {
         if (ctx.depth == fuse_depth) {
@@ -107,7 +107,7 @@ struct FuseVisitor : ContextVisitor {
             for (; it != ilist->end(); ++it) {
                 if (auto for_inst2 = (*it)->as_raw<FORInst>()) {
                     // Now we've found two consecutive FORInst, see if we can fuse them
-                    if (canFuse(laa_res, &for_inst, for_inst2)) {
+                    if (canFuse(affine_aa, &for_inst, for_inst2)) {
                         candidates->emplace_back(FuseCandidate{
                             .ilist = ilist,
                             .for1 = &for_inst,
@@ -116,7 +116,7 @@ struct FuseVisitor : ContextVisitor {
                     }
                     break;
                 }
-                if (!laa_res->isIndependent(&for_inst, it->get()))
+                if (!affine_aa->isIndependent(&for_inst, it->get()))
                     break;
             }
         }
@@ -128,12 +128,12 @@ struct FuseVisitor : ContextVisitor {
 PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
     bool loop_fuse_modified = false;
 
-    auto &laa_res = lfam.getResult<AffineAliasAnalysis>(function);
+    auto &affine_aa = lfam.getResult<AffineAliasAnalysis>(function);
 
     size_t searching_depth = 0;
     while (true) {
         FuseVisitor::FuseCandidates fuse_candidates;
-        FuseVisitor visitor{&fuse_candidates, &laa_res, ++searching_depth};
+        FuseVisitor visitor{&fuse_candidates, &affine_aa, ++searching_depth};
         function.accept(visitor);
 
         if (!visitor.depth_hit)
@@ -158,7 +158,7 @@ PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
             IListDel(*ilist, for1);
             Logger::logDebug("[LoopFuse]: Fused two loops");
 
-            laa_res = lfam.getFreshResult<AffineAliasAnalysis>(function);
+            affine_aa = lfam.getFreshResult<AffineAliasAnalysis>(function);
             loop_fuse_modified = true;
 
             // Revisit this depth

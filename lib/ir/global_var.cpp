@@ -90,6 +90,7 @@ GlobalVariable::GlobalVariable(STOCLASS _sc, pType _ty, std::string _name, GVIni
 STOCLASS GlobalVariable::getStorageClass() const { return storage_class; }
 
 const pType &GlobalVariable::getVarType() const { return vtype; }
+void GlobalVariable::setVarType(const pType &ty) { vtype = ty; }
 
 bool GlobalVariable::isArray() const { return vtype->getTrait() == IRCTYPE::ARRAY; }
 

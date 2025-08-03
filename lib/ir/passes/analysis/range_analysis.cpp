@@ -11,9 +11,9 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
+#include "ir/match.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/match.hpp"
 #include "match/match.hpp"
 #include "utils/logger.hpp"
 
@@ -362,7 +362,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             }
         }
         // Induction variables
-        for (const auto& phi : bb->phis()) {
+        for (const auto &phi : bb->phis()) {
             worklist.emplace_back(phi.get(), bb.get());
             in_worklist.emplace(phi.get(), bb.get());
         }
@@ -470,8 +470,30 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                         if (res.knownNonNegative(base->getRawIRValue(), bb) &&
                             res.knownNonNegative(step->getRawIRValue(), bb)) {
                             return IRng(0, IRng::MAX);
-                            }
+                        }
                     }
+                }
+                return IRng();
+            };
+
+            auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
+                auto first_rng = analyzeSCEVExpr(trec->getFirst());
+                if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+                    int trip_cnt_ci;
+                    if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
+                        if (trip_cnt_ci <= 1)
+                            return first_rng;
+                    }
+                }
+
+                auto rest = trec->getRest();
+                if (rest->isExpr()) {
+                    auto rng = analyzeSCEVExpr(rest->getExpr());
+                    return merge(IRng(first_rng), rng);
+                }
+                if (rest->isAddRec()) {
+                    auto rng = analyzeAddRec(rest);
+                    return merge(IRng(first_rng), rng);
                 }
                 return IRng();
             };
@@ -484,26 +506,8 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 if (updateContextualInt(inst, bb, analyzeAddRec(trec)))
                     continue;
             } else if (trec->isPeeled()) {
-                int first_ci;
-                if (trec->getFirst()->isIRValue() && match(trec->getFirst()->getIRValue(), M::Bind(first_ci))) {
-                    if (auto trip_count = scev.getTripCount(trec->getLoop())) {
-                        int trip_cnt_ci;
-                        if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
-                            if (trip_cnt_ci > 1) {
-                                auto rest = trec->getRest();
-                                if (rest->isExpr()) {
-                                    auto rng = analyzeSCEVExpr(rest->getExpr());
-                                    if (updateContextualInt(inst, bb, merge(IRng(first_ci), rng)))
-                                        continue;
-                                } else if (rest->isAddRec()) {
-                                    auto rng = analyzeAddRec(rest);
-                                    if (updateContextualInt(inst, bb, merge(IRng(first_ci), rng)))
-                                        continue;
-                                }
-                            }
-                        }
-                    }
-                }
+                if (updateContextualInt(inst, bb, analyzePeeledTREC(trec)))
+                    continue;
             }
         }
 

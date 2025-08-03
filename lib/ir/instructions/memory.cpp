@@ -16,6 +16,8 @@ void ALLOCAInst::setAlign(int a) { align = a; }
 bool ALLOCAInst::isArray() const { return basetype->getTrait() == IRCTYPE::ARRAY; }
 
 pType ALLOCAInst::getBaseType() const { return basetype; }
+void ALLOCAInst::setBaseType(const pType &btype) { basetype = btype; }
+
 
 LOADInst::LOADInst(NameRef name, const pVal &_ptr, int _align)
     : Instruction(OP::LOAD, name, getElm(_ptr->getType())), align(_align) {
@@ -27,6 +29,7 @@ LOADInst::LOADInst(NameRef name, size_t n, const pVal &_ptr, int _align)
 }
 
 pVal LOADInst::getPtr() const { return getOperand(0)->getValue(); }
+void LOADInst::setPtr(const pVal &ptr) { setOperand(0, ptr); }
 
 int LOADInst::getAlign() const { return align; }
 void LOADInst::setAlign(int a) {
@@ -55,6 +58,8 @@ pType STOREInst::getBaseType() const { return getValue()->getType(); }
 pVal STOREInst::getValue() const { return getOperand(0)->getValue(); }
 
 pVal STOREInst::getPtr() const { return getOperand(1)->getValue(); }
+
+void STOREInst::setPtr(const pVal &ptr) { setOperand(1, ptr); }
 
 int STOREInst::getAlign() const { return align; }
 void STOREInst::setAlign(int a) {
@@ -105,6 +110,13 @@ std::vector<pVal> GEPInst::getIdxs() const {
         ret.emplace_back(*it);
     return ret;
 }
+
+void GEPInst::setIdxs(const std::vector<pVal> &idxs) {
+    Err::gassert(isSameType(getGEPType(getPtr()->getType(), idxs.size()), getType()), "Type mismatched.");
+    for (size_t i = 0; i < idxs.size(); ++i)
+        setOperand(i + 1, idxs[i]);
+}
+
 bool GEPInst::isConstantOffset() const {
     auto idx = getIdxs();
     return std::all_of(idx.cbegin(), idx.cend(),

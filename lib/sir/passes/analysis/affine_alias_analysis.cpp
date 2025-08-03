@@ -61,8 +61,8 @@ std::ostream &operator<<(std::ostream &os, const IterRange &r) {
 std::ostream &operator<<(std::ostream &os, const ArrayAccess &access) {
     os << access.base->getName();
 
-    for (size_t i = 0; i < access.indices.size(); ++i)
-        os << "[" << access.indices[i] << "]";
+    for (const auto &indice : access.indices)
+        os << "[" << indice << "]";
 
     if (!access.domain.empty()) {
         os << " where { ";
@@ -93,10 +93,7 @@ int AffineExpr::coe(IndVar *i) const {
     return it == coeffs.end() ? 0 : it->second;
 }
 
-int AffineExpr::coe(const pIndVar &i) const {
-    return coe(i.get());
-}
-
+int AffineExpr::coe(const pIndVar &i) const { return coe(i.get()); }
 
 bool AffineExpr::isLinear() const { return coeffs.size() == 1 && constant == 0 && invariant == nullptr; }
 
@@ -383,7 +380,6 @@ bool MemoryAccess::overlaps(const MemoryAccess &other) const {
     return scalar().base == other.scalar().base;
 }
 
-
 std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction *func) {
     if (auto ci32 = expr->as_raw<ConstantInt>())
         return AffineExpr{.coeffs = {}, .constant = ci32->getVal()};
@@ -480,7 +476,7 @@ std::optional<MemoryAccess> AffineAAResult::analyzePointer(Value *ptr) const {
     }
 
     Err::gassert(base_ptr->getType()->is<PtrType>());
-    if (getElm(ptr->getType())->is<ArrayType>())
+    if (!indices.empty() || getElm(ptr->getType())->is<ArrayType>())
         return MemoryAccess(ArrayAccess{.base = base_ptr, .indices = std::move(indices), .domain = std::move(domain)});
 
     return MemoryAccess(ScalarAccess{.base = base_ptr});
@@ -541,7 +537,9 @@ const std::optional<InstRW> &AffineAAResult::queryInstRW(Instruction *inst) cons
 const std::optional<MemoryAccess> &AffineAAResult::queryPointer(const pVal &v) const { return queryPointer(v.get()); }
 const std::optional<InstRW> &AffineAAResult::queryInstRW(const pInst &inst) const { return queryInstRW(inst.get()); }
 
-AliasInfo AffineAAResult::getAliasInfo(const pVal &lhs, const pVal &rhs) const { return getAliasInfo(lhs.get(), rhs.get()); }
+AliasInfo AffineAAResult::getAliasInfo(const pVal &lhs, const pVal &rhs) const {
+    return getAliasInfo(lhs.get(), rhs.get());
+}
 
 std::optional<InstRW> AffineAAResult::analyzeInstRW(Instruction *inst) const {
     if (auto load = inst->as_raw<LOADInst>())
@@ -680,7 +678,69 @@ bool AffineAAResult::isScalarIndependent(const pInst &lhs, const pInst &rhs) con
     return isIndependent(lhs.get(), rhs.get());
 }
 
-bool AffineAAResult::isIndependent(const pInst &lhs, const pInst &rhs) const { return isIndependent(lhs.get(), rhs.get()); }
+bool AffineAAResult::isIndependent(const pInst &lhs, const pInst &rhs) const {
+    return isIndependent(lhs.get(), rhs.get());
+}
 
 AffineAAResult AffineAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return AffineAAResult(&f, &fam); }
+
+pVal AccessSynthesizer::synthesize(const MemoryAccess &access) const {
+    if (access.isScalar())
+        return synthesize(access.scalar());
+
+    return synthesize(access.array());
+}
+
+pVal AccessSynthesizer::synthesize(const pVal &base, const std::vector<AffineExpr> &indices) const {
+    static size_t name_cnt = 0;
+    pVal curr = base->as<Value>();
+    for (const auto &index : indices) {
+        auto index_val = synthesize(index);
+        pGep gep;
+        if (curr->is<FormalParam>()) {
+            gep = std::make_shared<GEPInst>("%acsyn.a" + std::to_string(name_cnt++), curr, index_val);
+        } else {
+            gep = std::make_shared<GEPInst>("%acsyn.a" + std::to_string(name_cnt++),
+                curr, pool->getConst(0), index_val);
+        }
+        ilist->insert(iter, gep);
+        curr = gep;
+    }
+    return curr;
+}
+
+pVal AccessSynthesizer::synthesize(const ArrayAccess &access) const {
+    return synthesize(access.base->as<Value>(), access.indices);
+}
+
+pVal AccessSynthesizer::synthesize(const ScalarAccess &access) const { return access.base->as<Value>(); }
+pVal AccessSynthesizer::synthesize(const AffineExpr &expr) const {
+    static size_t name_cnt = 0;
+    pVal curr;
+    if (expr.invariant == nullptr)
+        curr = pool->getConst(expr.constant);
+    else if (expr.constant == 0)
+        curr = expr.invariant->as<Value>();
+    else {
+        auto bin = std::make_shared<BinaryInst>("%acsyn.e" + std::to_string(name_cnt++), OP::ADD,
+                                                pool->getConst(expr.constant), expr.invariant->as<Value>());
+        ilist->insert(iter, bin);
+        curr = bin;
+    }
+
+    for (const auto &[iv, coe] : expr.coeffs) {
+        pVal iv_expr = iv->as<Value>();
+        if (coe != 1) {
+            auto bin = std::make_shared<BinaryInst>("%acsyn.e" + std::to_string(name_cnt++), OP::MUL,
+                                                    pool->getConst(coe), iv->as<Value>());
+            ilist->insert(iter, bin);
+            iv_expr = bin;
+        }
+        auto bin = std::make_shared<BinaryInst>("%acsyn.e" + std::to_string(name_cnt++), OP::ADD, curr, iv_expr);
+        ilist->insert(iter, bin);
+        curr = bin;
+    }
+
+    return curr;
+}
 } // namespace SIR
