@@ -524,7 +524,11 @@ void LoopUnrollPass::peel_analyze(const pLoop &loop, PeelOption &option, Functio
 got_iter_var:
         if (_iter_variable->is<PHIInst>()) {
             // while loop
-            _init_val = _iter_variable->as<PHIInst>()->getValueForBlock(_loop->getPreHeader());
+            if (_iter_variable->as<Instruction>()->getParent() == _loop->getHeader()) {
+                _init_val = _iter_variable->as<PHIInst>()->getValueForBlock(_loop->getPreHeader());
+            } else {
+                Logger::logDebug("[LoopPeel] GetIterVarAndInitVal: Need implement.");
+            }
         } else {
             // dowhile loop
             for (auto &phi : _loop->getHeader()->phis()) {
