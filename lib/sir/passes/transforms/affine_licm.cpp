@@ -3,6 +3,7 @@
 
 #include "sir/passes/transforms/affine_licm.hpp"
 
+#include "ir/instructions/memory.hpp"
 #include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "sir/utils.hpp"
 #include "sir/visitor.hpp"
@@ -36,6 +37,25 @@ struct LICMCandidate {
     Region region;
 };
 
+bool isLoopInvariantWrite(FORInst *for_inst, Value* ptr, const MemoryAccess& access) {
+    if (access.isScalar())
+        return true;
+
+    if (!access.array().isLoopInvariant())
+        return false;
+
+    const auto& body = for_inst->getBodyInsts();
+    for (const auto& user : ptr->inst_users()) {
+        if (auto store = user->as<STOREInst>()) {
+            if (auto inst_val = store->getValue()->as<Instruction>())
+                if (IListContainsRecursive(body, inst_val))
+                    return false;
+        } else
+            return false;
+    }
+    return true;
+}
+
 // If a region doesn't have any use-def or (loop-carried) memory dependency,
 // it produces loop-invariant memory state, and can be hoisted out of the loop.
 bool isInvariantRegion(const Region &region, FORInst *for_inst, AffineAAResult *affine_aa) {
@@ -60,6 +80,7 @@ bool isInvariantRegion(const Region &region, FORInst *for_inst, AffineAAResult *
     // Considering the region as a whole, collect the read/write info.
     std::vector<MemoryAccess> region_read;
     std::vector<MemoryAccess> region_write;
+    std::vector<MemoryAccess> variant_region_write;
     for (auto it = region.beg; it != region.end; ++it) {
         if (hasNonMemorySideEffect(*it))
             return false;
@@ -105,6 +126,15 @@ bool isInvariantRegion(const Region &region, FORInst *for_inst, AffineAAResult *
             if (!write_access)
                 return false;
             region_write.emplace_back(*write_access);
+
+            // If the region starts from the beginning of the affine for, invariant writes
+            // in them can't have dependency with any read, since all reads are behind that write.
+            // But it can have dependency with writes, since we must ensure the memory state
+            // after each iteration doesn't change.
+            // `region.beg != for_inst->body_begin()` can be extended to check if there is no reads
+            // proceed the invariant write. But that would be time-consuming.
+            if (region.beg != for_inst->body_begin() && !isLoopInvariantWrite(for_inst, write_ptr, *write_access))
+                variant_region_write.emplace_back(*write_access);
         }
     }
 
@@ -153,7 +183,8 @@ bool isInvariantRegion(const Region &region, FORInst *for_inst, AffineAAResult *
         return false;
     };
 
-    if (has_dep(region_read, outer_write) || has_dep(region_write, outer_read) || has_dep(region_write, outer_write))
+    if (has_dep(region_read, outer_write) || has_dep(variant_region_write, outer_read)
+        || has_dep(region_write, outer_write))
         return false;
 
     return true;
@@ -174,15 +205,16 @@ struct LICMVisitor : ContextVisitor {
         if (ctx.depth == licm_depth) {
             depth_hit = true;
 
-            auto head = for_inst.body_begin();
-            for (auto it = head; it != for_inst.body_end(); ++it) {
-                auto region = Region{head, std::next(it)};
-                if (isInvariantRegion(region, &for_inst, affine_aa)) {
-                    candidates->emplace_back(LICMCandidate{.outer_ilist = ctx.iList(),
-                                                           .inner_ilist = &for_inst.getBodyInsts(),
-                                                           .for_iter = ctx.iter,
-                                                           .region = region});
-                    break;
+            for (auto region_beg = for_inst.body_begin(); region_beg != for_inst.body_end(); ++region_beg) {
+                for (auto it = region_beg; it != for_inst.body_end(); ++it) {
+                    auto region = Region{region_beg, std::next(it)};
+                    if (isInvariantRegion(region, &for_inst, affine_aa)) {
+                        candidates->emplace_back(LICMCandidate{.outer_ilist = ctx.iList(),
+                                                               .inner_ilist = &for_inst.getBodyInsts(),
+                                                               .for_iter = ctx.iter,
+                                                               .region = region});
+                        return;
+                    }
                 }
             }
         }

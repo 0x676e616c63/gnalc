@@ -184,6 +184,11 @@ struct NonMemoryPurityVisitor : Visitor {
             }
         }
 
+        if (inst.is<BREAKInst, CONTINUEInst, RETInst>()) {
+            is_pure = false;
+            return;
+        }
+
         Visitor::visit(inst);
     }
 };
@@ -191,6 +196,9 @@ struct NonMemoryPurityVisitor : Visitor {
 bool hasNonMemorySideEffect(Instruction *inst) {
     if (auto call = inst->as_raw<CALLInst>())
         return !call->getFunc()->hasFnAttr(FuncAttr::builtinPure);
+
+    if (inst->is<BREAKInst, CONTINUEInst, RETInst>())
+        return true;
 
     if (auto helper = inst->as_raw<HELPERInst>()) {
         NonMemoryPurityVisitor pv;

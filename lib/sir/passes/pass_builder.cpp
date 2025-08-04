@@ -99,6 +99,7 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(EarlyDCEPass());
     lfpm.addPass(While2ForPass());
     lfpm.addPass(ReshapeFoldPass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintAffineAAPass(std::cerr));
     lfpm.addPass(AffineLICMPass());
     lfpm.addPass(EarlyDCEPass());

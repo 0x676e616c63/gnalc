@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 // Automatic function memoization
-// Note that this it's not a typo. The term is indeed "memoization", not "memorization".
-// https://en.wikipedia.org/wiki/Memoization
+// Reference:
+//   - Clava: https://github.com/specs-feup/clava
+//   - "A framework for automatic and parameterizable memoization"
+//       https://www.sciencedirect.com/science/article/pii/S2352711018301559
+//   - "A methodology and framework for software memoization of functions."
+//       https://doi.org/10.1145/3457388.3458668
+//   - Wikipedia: https://en.wikipedia.org/wiki/Memoization
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_MEMOIZATION_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_MEMOIZATION_HPP
