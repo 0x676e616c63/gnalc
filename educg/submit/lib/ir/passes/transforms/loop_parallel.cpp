@@ -57,7 +57,6 @@ bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const 
         }
     }
 
-    // For MustAlias and NoAlias, they can't have loop-carried dependencies.
     for (const auto &load : loads) {
         auto rp = loop_aa->getBase(load->getPtr());
         for (const auto &store : stores) {

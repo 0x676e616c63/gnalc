@@ -108,8 +108,6 @@ struct TransposeVisitor : ContextVisitor {
             auto call_args = call->getArgs();
             auto callee_def = call->getFunc()->as<LinearFunction>().get();
 
-            // Handling recursive functions will make the visiting order complicated.
-            // Since we're trying to merge the candidate in place.
             if (callee_def) {
                 const auto &formal_params = callee_def->getParams();
                 for (size_t i = 0; i < call_args.size(); i++) {

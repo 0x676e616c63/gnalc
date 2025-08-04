@@ -160,7 +160,6 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
             Logger::logWarning("[ReshapeFold]: Uninitialized local array '", dest_mem->getName(), "'");
             continue;
         }
-        // There can only be one store in Copy/Shuffle.
         if (store_cnt != 1)
             continue;
 
@@ -170,7 +169,6 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
         auto src_ptr = src_load->getPtr();
         const auto &src_aa_res = affine_aa.queryPointer(src_ptr);
 
-        // Only array accesses are considered as Copy/Shuffle.
         if (!src_aa_res || !src_aa_res->isArray())
             continue;
 
@@ -182,7 +180,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
         // When a single store transfers data from one array access to another,
         // the destination view is simply a reshaped version of the source.
         // Here we compute a shuffle mask and try to replace subsequent destination accesses
-        // with direct source accesses, thus eliminating the temporary reshaped.
+        // with direct source accesses, thus eliminating the temporary reshape.
         auto mask = calculateMask(src_access.indices, dest_access.indices);
         if (!mask)
             continue;
@@ -214,7 +212,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
         for (const auto &[info, access] : masked_loads) {
             synthesizer.setInsertPoint(info.ilist, info.iter);
             auto gep = synthesizer.synthesize(src_mem->as<Value>(), access);
-            info.load->replaceAllOperands(info.load->getPtr(), gep);
+            info.load->setPtr(gep);
             Logger::logDebug("[ReshapeFold]: Masked load '", info.load->getName(), "'.");
         }
 

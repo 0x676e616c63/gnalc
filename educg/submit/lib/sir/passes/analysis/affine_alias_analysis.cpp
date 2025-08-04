@@ -344,6 +344,12 @@ bool ArrayAccess::overlaps(const ArrayAccess &other) const {
         return true;
 
     for (size_t i = 0; i < indices.size(); i++) {
+        if (indices[i].isConstant() && other.indices[i].isConstant()) {
+            if (indices[i].getConstant() == other.indices[i].getConstant())
+                return true;
+            continue;
+        }
+
         if (!indices[i].isLinear() || !other.indices[i].isLinear())
             return true;
 
@@ -359,6 +365,14 @@ bool ArrayAccess::overlaps(const ArrayAccess &other) const {
 
     return false;
 }
+
+bool ArrayAccess::isLoopInvariant() const {
+    return std::all_of(indices.begin(), indices.end(), [](const AffineExpr &expr) {
+        // Only constant or loop-invariant indices
+        return expr.coeffs.empty();
+    });
+}
+
 
 bool MemoryAccess::covers(const MemoryAccess &other) const {
     if (type() != other.type())

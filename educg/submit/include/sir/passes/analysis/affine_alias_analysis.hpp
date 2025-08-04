@@ -82,6 +82,7 @@ struct ArrayAccess {
     std::map<IndVar*, IterRange> domain;
     bool covers(const ArrayAccess &other) const;
     bool overlaps(const ArrayAccess &other) const;
+    bool isLoopInvariant() const;
 };
 
 std::ostream& operator<<(std::ostream &os, const AffineExpr &expr);

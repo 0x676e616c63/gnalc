@@ -212,25 +212,23 @@ PM::PreservedAnalyses PrintAffineAAPass::run(LinearFunction &lfunc, LFAM &lfam) 
     };
 
     for (const auto& inst : lfunc.nested_insts()) {
-        if (auto for_inst = inst->as<FORInst>()) {
-            const auto& rw = affine_aa.queryInstRW(for_inst);
-            if (!rw)
-                continue;
-            writeln("FORInst: ", for_inst->getIndVar()->getName(), ":");
-            writeln("  Read:");
-            print_set(rw->read);
-            writeln("  Write:");
-            print_set(rw->write);
-        } else if (auto call_inst = inst->as<CALLInst>()) {
-            const auto& rw = affine_aa.queryInstRW(call_inst);
-            if (!rw)
-                continue;
-            writeln("CALLInst: ", call_inst->getName(), " '", call_inst->getFuncName(), "':");
-            writeln("  Read:");
-            print_set(rw->read);
-            writeln("  Write:");
-            print_set(rw->write);
-        }
+        auto getPrintName = [&](const pVal& val) {
+            if (auto for_inst = val->as<FORInst>())
+                return "For<" + for_inst->getIndVar()->getName() + ">";
+
+            if (auto call_inst = val->as<CALLInst>())
+                return "Call<" + call_inst->getFuncName() + ">";
+
+            return val->getName();
+        };
+        const auto& rw = affine_aa.queryInstRW(inst);
+        if (!rw)
+            continue;
+        writeln(getPrintName(inst), ":");
+        writeln("  Read:");
+        print_set(rw->read);
+        writeln("  Write:");
+        print_set(rw->write);
     }
     return PreserveAll();
 }
