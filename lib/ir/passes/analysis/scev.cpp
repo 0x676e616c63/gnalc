@@ -675,9 +675,11 @@ TREC *SCEVHandle::instantiateEvolution(TREC *trec, const Loop *loop) {
 
 TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::vector<std::unordered_set<TREC *>> &instantiated) {
     // If trec is a constant c Then
-    if (trec->isExpr() && trec->getExpr()->isIRValue() &&
-        trec->getExpr()->getRawIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL)
-        return trec;
+    if (trec->isExpr() && trec->getExpr()->isIRValue()) {
+        auto inst = trec->getExpr()->getRawIRValue()->as_raw<Instruction>();
+        if (!inst || loop->isTriviallyInvariant(inst))
+            return trec;
+    }
 
     if (trec->isExpr()) {
         // Else If trec is a variable already instantiated Then

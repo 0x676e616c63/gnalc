@@ -14,6 +14,7 @@
 #include "ir/match.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
+#include "legacy_mir/instructions/copy.hpp"
 #include "match/match.hpp"
 #include "utils/logger.hpp"
 
@@ -22,20 +23,6 @@
 
 namespace IR {
 PM::UniqueKey RangeAnalysis::Key;
-
-IRng RangeResult::getIntRange(Value *val) const {
-    if (auto ci32 = val->as<ConstantInt>())
-        return IRng(ci32->getVal());
-    if (auto ci1 = val->as<ConstantI1>())
-        return IRng(ci1->getVal());
-    if (auto ci8 = val->as<ConstantI8>())
-        return IRng(ci8->getVal());
-    auto it = int_range_map.find(val);
-    if (it == int_range_map.end())
-        return IRng();
-    return it->second.getGlobal();
-}
-IRng RangeResult::getIntRange(const pVal &val) const { return getIntRange(val.get()); }
 
 IRng RangeResult::getIntRange(Value *val, BasicBlock *bb) const {
     if (auto ci32 = val->as<ConstantInt>())
@@ -47,20 +34,11 @@ IRng RangeResult::getIntRange(Value *val, BasicBlock *bb) const {
     auto it = int_range_map.find(val);
     if (it == int_range_map.end())
         return IRng();
-    return it->second.getContextual(bb);
-}
-IRng RangeResult::getIntRange(const pVal &val, const pBlock &bb) const { return getIntRange(val.get(), bb.get()); }
-
-FRng RangeResult::getFloatRange(Value *val) const {
-    if (auto ci32 = val->as<ConstantFloat>())
-        return FRng(ci32->getVal());
-
-    auto it = float_range_map.find(val);
-    if (it == float_range_map.end())
-        return FRng();
+    if (bb)
+        return it->second.getContextual(bb);
     return it->second.getGlobal();
 }
-FRng RangeResult::getFloatRange(const pVal &val) const { return getFloatRange(val.get()); }
+IRng RangeResult::getIntRange(const pVal &val, const pBlock &bb) const { return getIntRange(val.get(), bb.get()); }
 
 FRng RangeResult::getFloatRange(Value *val, BasicBlock *bb) const {
     if (auto ci32 = val->as<ConstantFloat>())
@@ -69,33 +47,12 @@ FRng RangeResult::getFloatRange(Value *val, BasicBlock *bb) const {
     auto it = float_range_map.find(val);
     if (it == float_range_map.end())
         return FRng();
-    return it->second.getContextual(bb);
+    if (bb)
+        return it->second.getContextual(bb);
+    return it->second.getGlobal();
 }
 FRng RangeResult::getFloatRange(const pVal &val, const pBlock &bb) const { return getFloatRange(val.get(), bb.get()); }
 
-bool RangeResult::knownNonNegative(Value *val) const {
-    if (auto ci32 = val->as<ConstantInt>())
-        return ci32->getVal() >= 0;
-    if (auto ci8 = val->as<ConstantI8>())
-        return ci8->getVal() >= 0;
-    if (auto ci1 = val->as<ConstantI1>())
-        return true;
-    if (auto cf32 = val->as<ConstantFloat>())
-        return cf32->getVal() >= 0.0f;
-
-    if (isSameType(val->getType(), makeBType(IRBTYPE::I32))) {
-        auto rng = getIntRange(val);
-        if (rng.min != IRng::MIN && rng.min >= 0)
-            return true;
-    }
-    if (isSameType(val->getType(), makeBType(IRBTYPE::FLOAT))) {
-        auto rng = getFloatRange(val);
-        if (rng.min != FRng::MIN && rng.min >= 0.0f)
-            return true;
-    }
-    return false;
-}
-bool RangeResult::knownNonNegative(const pVal &val) const { return knownNonNegative(val.get()); }
 bool RangeResult::knownNonNegative(Value *val, BasicBlock *bb) const {
     if (auto ci32 = val->as<ConstantInt>())
         return ci32->getVal() >= 0;
@@ -106,12 +63,12 @@ bool RangeResult::knownNonNegative(Value *val, BasicBlock *bb) const {
     if (auto cf32 = val->as<ConstantFloat>())
         return cf32->getVal() >= 0.0f;
 
-    if (isSameType(val->getType(), makeBType(IRBTYPE::I32))) {
+    if (val->getType()->isInteger()) {
         auto rng = getIntRange(val, bb);
         if (rng.min != IRng::MIN && rng.min >= 0)
             return true;
     }
-    if (isSameType(val->getType(), makeBType(IRBTYPE::FLOAT))) {
+    if (val->getType()->isFloatingPoint()) {
         auto rng = getFloatRange(val, bb);
         if (rng.min != FRng::MIN && rng.min >= 0.0f)
             return true;
@@ -190,6 +147,115 @@ void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) 
     }
 }
 
+std::tuple<unsigned, unsigned, unsigned> countOperSign(RangeResult &res, PHIInst *phi) {
+    unsigned known_negative = 0;
+    unsigned zero = 0;
+    unsigned known_positive = 0;
+    if (phi->getType()->isInteger()) {
+        for (const auto &[val, bb] : phi->incomings()) {
+            auto rng = res.getIntRange(val, bb);
+            if (rng.min > 0)
+                known_positive++;
+            if (rng.max < 0)
+                known_negative++;
+            if (rng.min == 0 && rng.max == 0)
+                zero++;
+        }
+    } else if (phi->getType()->isFloatingPoint()) {
+        for (const auto &[val, bb] : phi->incomings()) {
+            auto rng = res.getFloatRange(val, bb);
+            if (rng.min > 0.0f)
+                known_positive++;
+            if (rng.max < 0.0f)
+                known_negative++;
+            if (rng.min == 0.0f && rng.max == 0.0f)
+                zero++;
+        }
+    }
+    return {known_negative, zero, known_positive};
+}
+
+enum class PhiOperSign {
+    Same,
+    PositiveIfPositive,
+    NegativeIfNegative,
+    Determined,
+    Unknown
+};
+PhiOperSign analyzePhiOperSign(RangeResult &res, PHIInst *phi, Value *oper, BasicBlock *oper_bb = nullptr) {
+    if (phi->getType()->isInteger()) {
+        auto rng = res.getIntRange(oper, oper_bb);
+        if (rng.min >= 0 || rng.max <= 0)
+            return PhiOperSign::Determined;
+    } else if (phi->getType()->isFloatingPoint()) {
+        for (const auto &[val, bb] : phi->incomings()) {
+            auto rng = res.getFloatRange(val, bb);
+            if (rng.min >= 0.0f || rng.max <= 0.0f)
+                return PhiOperSign::Determined;
+        }
+    }
+
+    auto binary = oper->as<BinaryInst>();
+    if (!binary)
+        return PhiOperSign::Unknown;
+
+    auto lhs = binary->getLHS().get();
+    auto rhs = binary->getRHS().get();
+
+    if ((lhs != phi && rhs != phi) || (lhs == phi && rhs == phi))
+        return PhiOperSign::Unknown;
+
+    auto opcode = binary->getOpcode();
+    auto non_phi_oper = lhs == phi ? rhs : lhs;
+
+    if (res.knownNonNegative(non_phi_oper, oper_bb)) {
+        if (opcode == OP::MUL || opcode == OP::DIV || opcode == OP::FMUL || opcode == OP::FDIV)
+            return PhiOperSign::Same;
+
+        if (opcode == OP::ADD || opcode == OP::FADD)
+            return PhiOperSign::PositiveIfPositive;
+
+        if ((opcode == OP::SUB || opcode == OP::FSUB) && non_phi_oper == rhs)
+            return PhiOperSign::NegativeIfNegative;
+    }
+    return PhiOperSign::Unknown;
+}
+
+enum class PhiSign { NonNegative, NonPositive, Zero, Unknown };
+PhiSign analyzePhiSign(RangeResult &res, PHIInst *phi) {
+    auto [negative, zero, positive] = countOperSign(res, phi);
+    if (negative == 0 && positive == 0 && zero == 0)
+        return PhiSign::Unknown;
+
+    for (const auto &[val, bb] : phi->incomings()) {
+        switch (analyzePhiOperSign(res, phi, val.get(), bb.get())) {
+        case PhiOperSign::Same:
+        case PhiOperSign::Determined:
+            continue;
+        case PhiOperSign::Unknown:
+            return PhiSign::Unknown;
+        case PhiOperSign::PositiveIfPositive:
+            if (negative != 0)
+                return PhiSign::Unknown;
+            break;
+        case PhiOperSign::NegativeIfNegative:
+            if (positive != 0)
+                return PhiSign::Unknown;
+            break;
+        default:
+            Err::unreachable();
+        }
+    }
+
+    if (negative == 0)
+        return PhiSign::NonNegative;
+
+    if (positive == 0)
+        return PhiSign::NonPositive;
+
+    return PhiSign::Zero;
+}
+
 void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
     auto bbdfv = func->getDFVisitor();
 
@@ -215,7 +281,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
     };
 
     auto updateInt = [&](Value *v, const IRng &rng) {
-        if (!v->is<Instruction>())
+        if (!v->is<Instruction, FormalParam>())
             return;
 
         if (res.update(v, rng))
@@ -223,7 +289,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
     };
 
     auto updateFloat = [&](Value *v, const FRng &rng) {
-        if (!v->is<Instruction>())
+        if (!v->is<Instruction, FormalParam>())
             return;
 
         if (res.update(v, rng))
@@ -303,15 +369,50 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
             updateInt(sext, vrng);
         } else if (auto phi = inst->as_raw<PHIInst>()) {
             auto phi_opers = phi->getPhiOpers();
+            auto phi_sign = analyzePhiSign(res, phi);
             if (is_int) {
                 auto base = res.getIntRange(phi_opers[0].value);
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getIntRange(phi_opers[i].value));
+
+                switch (phi_sign) {
+                case PhiSign::Zero:
+                    base.intersect(IRng(0, 0));
+                    break;
+                case PhiSign::NonNegative:
+                    base.intersect(IRng(0, IRng::MAX));
+                    break;
+                case PhiSign::NonPositive:
+                    base.intersect(IRng(IRng::MIN, 0));
+                    break;
+                case PhiSign::Unknown:
+                    break;
+                default:
+                    Err::unreachable();
+                }
+
                 updateInt(phi, base);
             } else if (is_float) {
                 auto base = res.getFloatRange(phi_opers[0].value);
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getFloatRange(phi_opers[i].value));
+
+                switch (phi_sign) {
+                case PhiSign::Zero:
+                    base.intersect(FRng(0.0f, 0.0f));
+                    break;
+                case PhiSign::NonNegative:
+                    base.intersect(FRng(0.0f, FRng::MAX));
+                    break;
+                case PhiSign::NonPositive:
+                    base.intersect(FRng(FRng::MIN, 0.0f));
+                    break;
+                case PhiSign::Unknown:
+                    break;
+                default:
+                    Err::unreachable();
+                }
+
                 updateFloat(phi, base);
             }
         } else if (auto select = inst->as_raw<SELECTInst>()) {
@@ -381,7 +482,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         }
     };
     auto updateContextualInt = [&](Value *v, BasicBlock *bb, const IRng &rng) {
-        if (!v->is<Instruction>())
+        if (!v->is<Instruction, FormalParam>())
             return false;
 
         auto domdfv = domtree[bb]->getBFVisitor();
@@ -395,7 +496,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
     };
 
     auto updateContextualFloat = [&](Value *v, BasicBlock *bb, const FRng &rng) {
-        if (!v->is<Instruction>())
+        if (!v->is<Instruction, FormalParam>())
             return false;
 
         auto domdfv = domtree[bb]->getBFVisitor();
@@ -419,9 +520,8 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         auto inst = pair.first;
         auto bb = pair.second;
 
-        bool is_btype = inst->getType()->is<BType>();
-        bool is_int = is_btype && inst->getType()->isInteger();
-        bool is_float = is_btype && inst->getType()->isFloatingPoint();
+        bool is_int = inst->getType()->isInteger();
+        bool is_float = inst->getType()->isFloatingPoint();
 
         // Check SCEV
         // FIXME: SCEV cannot figure out complex induction variables, since its goal
@@ -431,7 +531,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         //        For example, writing a SCEV-like algorithm that only figures out whether
         //        its expression is non-negative, rather than getting a `Untracked` result too early.
         // TODO: Extend SCEV or implement it in place.
-        if (is_int) {
+        if (inst->getType()->isI32()) {
             auto analyzeSCEVExpr = [](SCEVExpr *expr) {
                 if (!expr->isIRValue())
                     return IRng();
@@ -574,15 +674,51 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             updateContextualInt(sext, bb, vrng);
         } else if (auto phi = inst->as_raw<PHIInst>()) {
             auto phi_opers = phi->getPhiOpers();
+            auto phi_sign = analyzePhiSign(res, phi);
+
             if (is_int) {
                 auto base = res.getIntRange(phi_opers[0].value, phi_opers[0].block);
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getIntRange(phi_opers[i].value, phi_opers[i].block));
+
+                switch (phi_sign) {
+                case PhiSign::Zero:
+                    base.intersect(IRng(0, 0));
+                    break;
+                case PhiSign::NonNegative:
+                    base.intersect(IRng(0, IRng::MAX));
+                    break;
+                case PhiSign::NonPositive:
+                    base.intersect(IRng(IRng::MIN, 0));
+                    break;
+                case PhiSign::Unknown:
+                    break;
+                default:
+                    Err::unreachable();
+                }
+
                 updateContextualInt(phi, bb, base);
             } else if (is_float) {
                 auto base = res.getFloatRange(phi_opers[0].value, phi_opers[0].block);
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getFloatRange(phi_opers[i].value, phi_opers[i].block));
+
+                switch (phi_sign) {
+                case PhiSign::Zero:
+                    base.intersect(FRng(0.0f, 0.0f));
+                    break;
+                case PhiSign::NonNegative:
+                    base.intersect(FRng(0.0f, FRng::MAX));
+                    break;
+                case PhiSign::NonPositive:
+                    base.intersect(FRng(FRng::MIN, 0.0f));
+                    break;
+                case PhiSign::Unknown:
+                    break;
+                default:
+                    Err::unreachable();
+                }
+
                 updateContextualFloat(phi, bb, base);
             }
         } else if (auto select = inst->as_raw<SELECTInst>()) {
