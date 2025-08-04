@@ -189,10 +189,10 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
     writeln("Range Analysis Result: ");
     writeln("Global Ranges: ");
     for (const auto &param : function.getParams()) {
-        if (isSameType(param->getType(), makeBType(IRBTYPE::I32))) {
+        if (param->getType()->isI32()) {
             auto r = ranges.getIntRange(param);
             writeln(param->getName(), ": ", r);
-        } else if (isSameType(param->getType(), makeBType(IRBTYPE::FLOAT))) {
+        } else if (param->getType()->isF32()) {
             auto r = ranges.getFloatRange(param);
             writeln(param->getName(), ": ", r);
         }
@@ -202,7 +202,7 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
             if (inst->getType()->isI32()) {
                 auto r = ranges.getIntRange(inst);
                 writeln(inst->getName(), ": ", r);
-            } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
+            } else if (inst->getType()->isF32()) {
                 auto r = ranges.getFloatRange(inst);
                 writeln(inst->getName(), ": ", r);
             }
@@ -211,6 +211,23 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
 
     const DomTree &domtree = manager.getResult<DomTreeAnalysis>(function);
     writeln("Contextual Ranges: ");
+    for (const auto &param : function.getParams()) {
+        if (param->getType()->isI32()) {
+            for (const auto &range_block : function) {
+                auto context_r = ranges.getIntRange(param, range_block);
+                auto r = ranges.getIntRange(param);
+                if (r != context_r)
+                    writeln(param->getName(), " at block '", range_block->getName(), "': ", context_r);
+            }
+        } else if (param->getType()->isF32()) {
+            for (const auto &range_block : function) {
+                auto context_r = ranges.getFloatRange(param, range_block);
+                auto r = ranges.getFloatRange(param);
+                if (r != context_r)
+                    writeln(param->getName(), " at block '", range_block->getName(), "': ", context_r);
+            }
+        }
+    }
     for (const auto &bb : function) {
         for (const auto &inst : bb->all_insts()) {
             if (inst->getType()->isI32()) {
@@ -222,7 +239,7 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
                     if (r != context_r)
                         writeln(inst->getName(), " at block '", range_block->getName(), "': ", context_r);
                 }
-            } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
+            } else if (inst->getType()->isF32()) {
                 for (const auto &range_block : function) {
                     if (!domtree.ADomB(bb, range_block))
                         continue;

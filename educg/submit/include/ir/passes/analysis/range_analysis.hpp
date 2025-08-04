@@ -431,21 +431,13 @@ class RangeResult {
 public:
     RangeResult() = default;
 
-    IRng getIntRange(Value *val) const;
-    IRng getIntRange(const pVal &val) const;
+    IRng getIntRange(Value *val, BasicBlock *bb = nullptr) const;
+    IRng getIntRange(const pVal &val, const pBlock &bb = nullptr) const;
+    FRng getFloatRange(Value *val, BasicBlock *bb = nullptr) const;
+    FRng getFloatRange(const pVal &val, const pBlock &bb = nullptr) const;
 
-    IRng getIntRange(Value *val, BasicBlock *bb) const;
-    IRng getIntRange(const pVal &val, const pBlock &bb) const;
-    FRng getFloatRange(Value *val) const;
-    FRng getFloatRange(const pVal &val) const;
-
-    FRng getFloatRange(Value *val, BasicBlock *bb) const;
-    FRng getFloatRange(const pVal &val, const pBlock &bb) const;
-
-    bool knownNonNegative(Value *val) const;
-    bool knownNonNegative(const pVal &val) const;
-    bool knownNonNegative(Value *val, BasicBlock *bb) const;
-    bool knownNonNegative(const pVal &val, const pBlock &bb) const;
+    bool knownNonNegative(Value *val, BasicBlock *bb = nullptr) const;
+    bool knownNonNegative(const pVal &val, const pBlock &bb = nullptr) const;
 
 private:
     bool update(Value *val, const IRng &range);

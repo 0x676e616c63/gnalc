@@ -1,6 +1,6 @@
 # 0x676e616c63 - gnalc arm
 
-- Sync on: 2025-08-04 19:05:37
+- Sync on: 2025-08-04 23:01:57
 - Source Branch: main
-- Source Commit SHA: b94d0975ce5f38c9454e1295c1049d34d3419208
-- Source Commit Message: IR: Enhanced AffineLICM.
+- Source Commit SHA: b45b6a292a03a8fb657edec9e554e89576c7fb1d
+- Source Commit Message: IR: Fix SCEV and Enhanced RangeAnalysis.
