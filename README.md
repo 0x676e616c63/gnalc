@@ -5,7 +5,7 @@
 [![Pipeline Fuzz](https://github.com/Althra/gnalc/actions/workflows/fuzz.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/fuzz.yml)
 [![Backend Test](https://github.com/Althra/gnalc/actions/workflows/backend-test.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/backend-test.yml)
 
-## Architecture
+## 总体架构
 
 ```mermaid
 graph LR
@@ -1066,8 +1066,7 @@ P["BB P:
 cmp %0, %1
 beq S
 b R"]
-P -- fallthrough
-avaliable --> R["BB R:
+P -- fallthrough avaliable --> R["BB R:
 ..."]
 P --> S["BB S:
 ..."]
@@ -1180,7 +1179,7 @@ int main()
 
 # Test Suite
 
-![workflow](/docs/images/workflow.svg)
+![workflow](/docs/images/workflow.png)
 
 以下内容的配置方法在 [这里](/docs/testsuite.md)。
 
