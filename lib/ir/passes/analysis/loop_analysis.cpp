@@ -277,6 +277,20 @@ pBlock Loop::getPreHeader() const {
 }
 bool Loop::isLatch(const pBlock &bb) const { return isLatch(bb.get()); }
 bool Loop::isExiting(const pBlock &bb) const { return isExiting(bb.get()); }
+bool Loop::hasSingleExit() const {
+    bool seen = false;
+    for (const auto &bb : loop_blocks) {
+        if (isExiting(bb)) {
+            if (seen)
+                return false;
+            seen = true;
+        }
+    }
+    return true;
+}
+bool Loop::isHeaderExiting() const {
+    return isExiting(getRawHeader());
+}
 bool Loop::isExit(const pBlock &bb) const { return isExit(bb.get()); }
 std::set<pBlock> Loop::getExitingBlocks() const {
     auto res = getRawExitingBlocks();

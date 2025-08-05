@@ -108,63 +108,31 @@ bool isMemoryInvariantTo(const pVal& val, const pVal& item) {
     return isMemoryInvariantTo(val.get(), item.get());
 }
 
-enum class InvariantType {
-    Must, MustNot, DontKnow
-};
-InvariantType analyzeValInvariant(Value* val, HELPERInst* loop) {
-    if (val->is<LOADInst, STOREInst>())
-        return InvariantType::MustNot;
-
-    auto inst = val->as<Instruction>();
-    if (!inst)
-        return InvariantType::Must;
-
-    if (auto indvar = inst->as<IndVar>()) {
-        auto for_inst = loop->as<FORInst>();
-        if (!for_inst || for_inst->getIndVar() == indvar)
-            return InvariantType::MustNot;
-        if (for_inst->getIndVar()->getDepth() < indvar->getDepth())
-            return InvariantType::Must;
-        return InvariantType::MustNot;
-    }
-
-    return InvariantType::DontKnow;
-}
-
-bool isLoopInvariant(Value* val, HELPERInst* loop) {
-    Err::gassert(!val->getType()->is<PtrType>());
-
-    auto inst_info = analyzeValInvariant(val, loop);
-    if (inst_info == InvariantType::Must)
-        return true;
-
-    if (inst_info == InvariantType::MustNot)
+bool containsInLoop(const std::unordered_set<pVal>& vals, HELPERInst* loop) {
+    if (vals.empty())
         return false;
 
-    auto operands = collectOperands(val->as<Instruction>());
-
-    for (auto it = operands.begin(); it != operands.end();) {
-        auto oper_info = analyzeValInvariant(it->get(), loop);
-        if (oper_info == InvariantType::Must)
-            it = operands.erase(it);
-        else if (oper_info == InvariantType::MustNot)
-            return false;
-        else
-            ++it;
-    }
-
-    auto set = std::unordered_set<pVal>{operands.begin(), operands.end()};
-
     if (auto for_loop = loop->as<FORInst>())
-        return !IListContainsRecursive(for_loop->getBodyInsts(), set);
+        return IListContainsRecursive(for_loop->getBodyInsts(), vals);
     if (auto while_loop = loop->as<WHILEInst>())
-        return !IListContainsRecursive(while_loop->getBodyInsts(), set) &&
-            !IListContainsRecursive(while_loop->getCondInsts(), set);
+        return IListContainsRecursive(while_loop->getBodyInsts(), vals) ||
+            IListContainsRecursive(while_loop->getCondInsts(), vals);
 
+    Err::unreachable("contains in what?");
     return true;
 }
-bool isLoopInvariant(const pVal& val, const pHelper& loop) {
-    return isLoopInvariant(val.get(), loop.get());
+
+bool isUseDefInvariantTo(Value* val, HELPERInst* loop) {
+    Err::gassert(!val->is<HELPERInst>());
+
+    auto inst = val->as_raw<Instruction>();
+    if (!inst)
+        return true;
+    auto set = std::unordered_set<pVal>{inst->operand_begin(), inst->operand_end()};
+    return !containsInLoop(set, loop);
+}
+bool isUseDefInvariantTo(const pVal& val, const pHelper& loop) {
+    return isUseDefInvariantTo(val.get(), loop.get());
 }
 
 // SIR has no phi, so a simple recursive search is enough.
@@ -198,5 +166,50 @@ bool isTriviallyIdentical(const pVal &lhs, const pVal &rhs) {
     Err::gassert(lhs_i->getNumOperands() == 2);
     return (isTriviallyIdentical(lhs_i->getOperand(0)->getValue(), rhs_i->getOperand(1)->getValue()) &&
             isTriviallyIdentical(lhs_i->getOperand(1)->getValue(), rhs_i->getOperand(0)->getValue()));
+}
+bool isTriviallyIdentical(Value* lhs, Value* rhs) {
+    return isTriviallyIdentical(lhs->as<Value>(), rhs->as<Value>());
+}
+
+struct NonMemoryPurityVisitor : Visitor {
+    bool is_pure = true;
+    void visit(Instruction &inst) override {
+        if (!is_pure)
+            return;
+
+        if (auto call = inst.as<CALLInst>()) {
+            if (!call->getFunc()->hasFnAttr(FuncAttr::builtinPure)) {
+                is_pure = false;
+                return;
+            }
+        }
+
+        if (inst.is<BREAKInst, CONTINUEInst, RETInst>()) {
+            is_pure = false;
+            return;
+        }
+
+        Visitor::visit(inst);
+    }
+};
+
+bool hasNonMemorySideEffect(Instruction *inst) {
+    if (auto call = inst->as_raw<CALLInst>())
+        return !call->getFunc()->hasFnAttr(FuncAttr::builtinPure);
+
+    if (inst->is<BREAKInst, CONTINUEInst, RETInst>())
+        return true;
+
+    if (auto helper = inst->as_raw<HELPERInst>()) {
+        NonMemoryPurityVisitor pv;
+        helper->accept(pv);
+        return !pv.is_pure;
+    }
+
+    return false;
+}
+
+bool hasNonMemorySideEffect(const pInst &inst) {
+    return hasNonMemorySideEffect(inst.get());
 }
 } // namespace SIR

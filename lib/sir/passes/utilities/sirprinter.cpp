@@ -4,7 +4,7 @@
 #include "sir/passes/utilities/sirprinter.hpp"
 #include "ir/formatter.hpp"
 #include "sir/base.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 
 namespace SIR {
 void LinearPrinterBase::indent() {
@@ -189,51 +189,46 @@ PM::PreservedAnalyses PrintLinearModulePass::run(Module &module, MAM &mam) {
     return PreserveAll();
 }
 
-PM::PreservedAnalyses PrintLAAPass::run(LinearFunction &lfunc, LFAM &lfam) {
-    auto& laa_res = lfam.getResult<LAliasAnalysis>(lfunc);
-    writeln("LAAResult for ", lfunc.getName(), ":");
-    for (const auto& inst : lfunc.nested_insts()) {
-        if (auto for_inst = inst->as<FORInst>()) {
-            const auto& rw = laa_res.queryInstRW(for_inst);
-            if (!rw)
-                continue;
-            writeln("FORInst: ", for_inst->getIndVar()->getName(), ":");
-            auto print_set = [&](const auto& set) {
-                for (const auto& read : set) {
-                    write("    ", read->getName(), " = ");
-                    const auto& ptr = laa_res.queryPointer(read);
-                    if (!ptr)
-                        write("Unknown");
-                    else if (ptr->isArray()) {
-                        auto arr = ptr->array();
-                        write(arr.base->getName());
-                        Err::gassert(!arr.indices.empty());
-                        for (const auto& idx : arr.indices) {
-                            write("[");
-                            for (const auto& coeff : idx.coeffs) {
-                                if (coeff.second != 1)
-                                    write(coeff.second, " * ");
-                                write(coeff.first->getName());
-                            }
-                            if (idx.constant != 0)
-                                write(idx.coeffs.empty() ? "" : " + ", idx.constant);
-                            if (idx.invariant != nullptr)
-                                write(idx.coeffs.empty() ? "" : " + ", idx.invariant->getName());
-                            write("]");
-                        }
-                    }
-                    else if (ptr->isScalar()) {
-                        write(ptr->scalar().base->getName());
-                    }
-                    else Err::unreachable();
-                    writeln("");
-                }
-            };
-            writeln("  Read:");
-            print_set(rw->read);
-            writeln("  Write:");
-            print_set(rw->write);
+PM::PreservedAnalyses PrintAffineAAPass::run(LinearFunction &lfunc, LFAM &lfam) {
+    auto& affine_aa = lfam.getResult<AffineAliasAnalysis>(lfunc);
+    writeln("AffineAAResult for ", lfunc.getName(), ":");
+
+    auto print_set = [&](const auto& set) {
+        for (const auto& read : set) {
+            write("    ", read->getName(), " = ");
+            const auto& ptr = affine_aa.queryPointer(read);
+            if (!ptr)
+                write("Unknown");
+            else if (ptr->isArray()) {
+                auto arr = ptr->array();
+                write(arr);
+            }
+            else if (ptr->isScalar()) {
+                write(ptr->scalar().base->getName());
+            }
+            else Err::unreachable();
+            writeln("");
         }
+    };
+
+    for (const auto& inst : lfunc.nested_insts()) {
+        auto getPrintName = [&](const pVal& val) {
+            if (auto for_inst = val->as<FORInst>())
+                return "For<" + for_inst->getIndVar()->getName() + ">";
+
+            if (auto call_inst = val->as<CALLInst>())
+                return "Call<" + call_inst->getFuncName() + ">";
+
+            return val->getName();
+        };
+        const auto& rw = affine_aa.queryInstRW(inst);
+        if (!rw)
+            continue;
+        writeln(getPrintName(inst), ":");
+        writeln("  Read:");
+        print_set(rw->read);
+        writeln("  Write:");
+        print_set(rw->write);
     }
     return PreserveAll();
 }

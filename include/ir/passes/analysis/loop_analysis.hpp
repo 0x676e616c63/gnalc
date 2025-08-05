@@ -103,6 +103,10 @@ public:
     bool isExiting(const BasicBlock *bb) const;
     bool isExiting(const pBlock &bb) const;
 
+    bool hasSingleExit() const;
+
+    bool isHeaderExiting() const;
+
     // Note that the exit block is not a part of the loop.
     bool isExit(const BasicBlock *bb) const;
     bool isExit(const pBlock &bb) const;

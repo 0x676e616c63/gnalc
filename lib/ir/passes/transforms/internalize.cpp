@@ -59,8 +59,8 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
 
             // Already internalized
             if (auto call = inst_user->as<CALLInst>()) {
-                if (call->getFunc()->hasFnAttr(FuncAttr::isMemcpyIntrinsic) ||
-                    call->getFunc()->hasFnAttr(FuncAttr::isMemsetIntrinsic)) {
+                if (call->getFunc()->getIntrinsicID() == IntrinsicID::Memcpy ||
+                    call->getFunc()->getIntrinsicID() == IntrinsicID::Memset) {
                     safe_to_internalize = false;
                     break;
                 }

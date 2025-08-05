@@ -61,7 +61,6 @@ PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam
                 Err::unreachable("Bad scalar user");
         }
 
-        // TODO: Extend to more stores
         if (store_cnt == 0) {
             if (auto gv = mem->as<GlobalVariable>()) {
                 pVal init_value;

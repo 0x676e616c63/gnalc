@@ -12,7 +12,7 @@ namespace SIR {
 struct CloneVisitor : Visitor {
     pVal curr_val = nullptr;
     std::stack<IList *> ilist_stack;
-    size_t name_cnt = 0;
+    std::stack<std::vector<pHelper>> break_continue_stack;
 
     // SIR has no phi. Therefore, if we do a pre-order traversal, one's operands
     // will become visible before cloning the user.
@@ -47,7 +47,7 @@ struct CloneVisitor : Visitor {
     }
 
     void visit(Instruction &inst) override {
-        if (inst.is<HELPERInst, CONDValue>()) {
+        if (inst.is<IFInst, WHILEInst, FORInst, CONDValue>()) {
             Visitor::visit(inst);
             return;
         }
@@ -60,16 +60,20 @@ struct CloneVisitor : Visitor {
             auto oper = inst.getOperand(i)->getValue();
             cloned->getOperand(i)->setValue(remapValue(oper));
         }
+
+        static size_t name_cnt = 0;
         cloned->setName(inst.getName() + ".dup" + std::to_string(name_cnt++));
         if (!ilist_stack.empty())
             ilist_stack.top()->emplace_back(cloned);
         curr_val = cloned;
+
+        if (cloned->is<BREAKInst, CONTINUEInst>())
+            break_continue_stack.top().push_back(cloned->as<HELPERInst>());
     }
 
     // Cond value
     void visit(CONDValue &cond) override {
-        visit(*cond.getLHS());
-        auto new_lhs = curr_val;
+        auto new_lhs = remapValue(cond.getLHS());
 
         IList new_rhs_insts;
         ilist_stack.push(&new_rhs_insts);
@@ -77,8 +81,7 @@ struct CloneVisitor : Visitor {
             visit(*ri);
         ilist_stack.pop();
 
-        visit(*cond.getRHS());
-        auto new_rhs = curr_val;
+        auto new_rhs = remapCond(cond.getRHS());
 
         pCondValue new_cond;
         if (cond.getCondType() == CONDTY::AND)
@@ -95,7 +98,7 @@ struct CloneVisitor : Visitor {
     }
 
     void visit(IFInst &if_inst) override {
-        auto new_cond = remapValue(if_inst.getCond());
+        auto new_cond = remapCond(if_inst.getCond());
 
         IList new_body, new_else;
         // Body
@@ -124,8 +127,9 @@ struct CloneVisitor : Visitor {
             visit(*inst);
         ilist_stack.pop();
 
-        auto new_cond = remapValue(curr_val);
+        auto new_cond = remapCond(while_inst.getCond());
 
+        break_continue_stack.push({});
         ilist_stack.push(&new_body);
         for (const auto &inst : while_inst.getBodyInsts())
             visit(*inst);
@@ -137,6 +141,14 @@ struct CloneVisitor : Visitor {
         if (new_cond->is<CONDValue>())
             new_while->setMemHolder(new_cond);
         curr_val = new_while;
+
+        for (const auto &cb : break_continue_stack.top()) {
+            if (auto break_inst = cb->as<BREAKInst>())
+                break_inst->setLoop(new_while);
+            else if (auto cont_inst = cb->as<CONTINUEInst>())
+                cont_inst->setLoop(new_while);
+        }
+        break_continue_stack.pop();
     }
 
     void visit(FORInst &for_inst) override {
@@ -149,12 +161,14 @@ struct CloneVisitor : Visitor {
         auto new_base = remapValue(for_inst.getBase());
         auto new_bound = remapValue(for_inst.getBound());
         auto new_step = remapValue(for_inst.getStep());
+        static size_t name_cnt = 0;
         auto iv_name = for_inst.getIndVar()->getName() + ".dup" + std::to_string(name_cnt++);
         auto new_iv = std::make_shared<IndVar>(iv_name, new_orig_mem, new_base, new_bound, new_step,
                                                for_inst.getIndVar()->getDepth());
 
         old2new_inst[for_inst.getIndVar()] = new_iv;
 
+        break_continue_stack.push({});
         IList new_body;
         ilist_stack.push(&new_body);
         for (const auto &inst : for_inst.getBodyInsts())
@@ -165,13 +179,21 @@ struct CloneVisitor : Visitor {
         if (!ilist_stack.empty())
             ilist_stack.top()->emplace_back(new_for);
         curr_val = new_for;
+
+        for (const auto &cb : break_continue_stack.top()) {
+            if (auto break_inst = cb->as<BREAKInst>())
+                break_inst->setLoop(new_for);
+            else if (auto cont_inst = cb->as<CONTINUEInst>())
+                cont_inst->setLoop(new_for);
+        }
+        break_continue_stack.pop();
     }
 
     void visit(Value &value) override {
-        if (value.is<Instruction>())
-            visit(value.as_ref<Instruction>());
-        else if (value.is<CONDValue>())
+        if (value.is<CONDValue>())
             visit(value.as_ref<CONDValue>());
+        else if (value.is<Instruction>())
+            visit(value.as_ref<Instruction>());
         else
             curr_val = value.as<Value>();
     }
@@ -190,6 +212,14 @@ struct CloneVisitor : Visitor {
             return it->second;
         }
         return val;
+    }
+
+    pVal remapCond(const pVal &val) {
+        if (auto cond = val->as<CONDValue>()) {
+            visit(*cond);
+            return curr_val;
+        }
+        return remapValue(val);
     }
 };
 } // namespace SIR

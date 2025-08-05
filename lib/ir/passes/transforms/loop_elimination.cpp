@@ -203,7 +203,8 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
     // Fold LCSSA Phi for SCEV Expansion
     for (const auto &bb : function) {
         loop_elim_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
-        scev.forgetAll();
+        if (loop_elim_inst_modified)
+            scev.forgetAll();
     }
 
     // Since we might delete loops, make a temporary object.

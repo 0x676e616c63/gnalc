@@ -194,8 +194,11 @@ int main(int argc, char **argv) {
         OPT_ARG("--interchange", "--no-interchange", loop_interchange)
         OPT_ARG("--unswitch", "--no-unswitch", loop_unswitch)
         OPT_ARG("--fuse", "--no-fuse", loop_fuse)
+        OPT_ARG("--affinelicm", "--no-affinelicm", affine_licm)
         // IR Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
+        // SIR Module Transforms
+        OPT_ARG("--relayout", "--no-relayout", relayout)
 #undef OPT_ARG
         // Debug options:
         else if (arg == "-fuzz") fuzz_testing = true;
@@ -262,6 +265,9 @@ int main(int argc, char **argv) {
         else if (arg == "-fno-machineLICM") {
             bkd_opt_info.machineLICM = false;
         }
+        else if (arg == "-fno-codeLayout") {
+            bkd_opt_info.codeLayout = false;
+        }
         else if (arg.substr(0, 9) == "-loadEli=") {
             bkd_opt_info.redundantLoadEli_weight = std::stoull(arg.substr(9));
         }
@@ -306,6 +312,7 @@ Optimizations Flags:
   --interchange        - Loop interchange
   --unswitch           - Loop unswitch
   --fuse               - Loop fusion
+  --affinelicm         - Affine loop invariant code motion
   --mem2reg            - Promote memory to register
   --sccp               - Sparse conditional constant propagation
   --dce                - Dead code elimination
@@ -336,12 +343,14 @@ Optimizations Flags:
   --codesink           - Code Sink
   --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables
+  --relayout           - Data space layout optimization
 
 Backend options:
   -fno-PreRaCFGsimp     - Disable PreRa CFG simplification
   -fno-redundantLoadEli - Disable redundant load elimination
   -fno-PostRaScheduling - Disable PostRa Scheduling
   -fno-machineLICM      - Disable machine LICM
+  -fno-codeLayout        - Disable code layout optimization
 
 Debug options:
   -with-runtime              - Emit gnalc runtime when emitting LLVM IR

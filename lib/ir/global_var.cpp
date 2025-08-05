@@ -90,12 +90,16 @@ GlobalVariable::GlobalVariable(STOCLASS _sc, pType _ty, std::string _name, GVIni
 STOCLASS GlobalVariable::getStorageClass() const { return storage_class; }
 
 const pType &GlobalVariable::getVarType() const { return vtype; }
+void GlobalVariable::setVarType(const pType &ty) { vtype = ty; }
 
 bool GlobalVariable::isArray() const { return vtype->getTrait() == IRCTYPE::ARRAY; }
 
 const std::vector<GVIniter> &GVIniter::getInnerIniter() const { return inner_initer; }
 
 const GVIniter &GlobalVariable::getIniter() const { return initer; }
+void GlobalVariable::setIniter(GVIniter _initer) {
+    initer = std::move(_initer);
+}
 
 int GlobalVariable::getAlign() const { return align; }
 void GlobalVariable::setAlign(int a) { align = a; }

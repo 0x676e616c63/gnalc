@@ -163,7 +163,6 @@ public:
 
     NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
-    size_t getInstCount() const { return body_insts.size() + else_insts.size() + getCondInstCount(getCond()); }
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor) override;
     void accept(SIR::ContextVisitor &visitor) override;
@@ -207,8 +206,6 @@ public:
     NestedInstIterator nested_insts_end() override { return NestedInstIterator(); }
     NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
-    size_t getInstCount() const { return body_insts.size() + getCondInstCount(getCond()); }
-
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor) override;
     void accept(SIR::ContextVisitor &visitor) override;
@@ -222,6 +219,10 @@ public:
     void accept(IRVisitor &visitor) override;
     pVal getLoop() const { return loop.lock(); }
     void setLoop(const pVal &loop_) { loop = loop_; }
+private:
+    pVal cloneImpl() const override {
+        return std::make_shared<BREAKInst>();
+    }
 };
 
 class CONTINUEInst : public HELPERInst {
@@ -232,6 +233,10 @@ public:
     void accept(IRVisitor &visitor) override;
     pVal getLoop() const { return loop.lock(); }
     void setLoop(const pVal &loop_) { loop = loop_; }
+private:
+    pVal cloneImpl() const override {
+        return std::make_shared<CONTINUEInst>();
+    }
 };
 
 class IndVar : public Instruction {
@@ -292,14 +297,12 @@ public:
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
     std::list<pInst> &getBodyInsts() { return body_insts; }
 
-    LInstIter body_begin() { return LInstIter(body_insts.begin()); }
-    LInstIter body_end() { return LInstIter(body_insts.end()); }
+    LInstIter body_begin() { return body_insts.begin(); }
+    LInstIter body_end() { return body_insts.end(); }
 
     NestedInstIterator nested_insts_begin() override { return NestedInstIterator(as<HELPERInst>()); }
     NestedInstIterator nested_insts_end() override { return NestedInstIterator(); }
     NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
-
-    size_t getInstCount() const { return body_insts.size(); }
 
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor) override;

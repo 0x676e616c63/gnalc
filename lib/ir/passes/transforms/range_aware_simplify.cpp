@@ -9,6 +9,7 @@
 #include "ir/irbuilder.hpp"
 #include "ir/match.hpp"
 #include "ir/passes/analysis/range_analysis.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
 #include "mir/tools.hpp"
 
 #include <vector>
@@ -36,7 +37,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
         // x / 2^n = x >> n, where x >= 0
         pVal x;
         if (int divisor; match(inst, M::Div(M::Bind(x), M::PowerOfTwo(M::Bind(divisor))))) {
-            if (ranges.knownNonNegative(x)) {
+            if (ranges.knownNonNegative(x, inst->getParent())) {
                 IRBuilder builder("%rng", inst->getParent(), inst->iter());
                 auto n = function.getInteger(ctz_wrapper(divisor), inst->getType());
                 auto ashr = builder.makeAShr(x, n);

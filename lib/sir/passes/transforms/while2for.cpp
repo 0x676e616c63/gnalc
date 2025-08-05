@@ -28,14 +28,15 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &val) {
     if (auto ld = val->as<LOADInst>())
         ptr = ld->getPtr();
 
+    // For pointers, see if they are invariant first.
     if (ptr->getType()->is<PtrType>()) {
         if (isMemoryInvariantTo(ptr.get(), &wh))
             return {UpdateType::Invariant, val, nullptr};
+        // fall through to affine cases
     }
-    else if (isLoopInvariant(ptr.get(), &wh))
-        return {UpdateType::Invariant, val, nullptr};
+    // For scalars, they must not be in loop, which is always invariant.
     else
-        return {UpdateType::Unknown, nullptr, nullptr};
+        return {UpdateType::Invariant, val, nullptr};
 
     // Find the base
     auto base_it = std::next(IListRFind(ilist, wh.as<WHILEInst>()));
@@ -71,25 +72,28 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &val) {
     }
 
     // Find the iv update in the loop
-    pStore store;
+    pStore iv_update;
     std::set<pInst> iv_loads;
     std::vector<pInst> nested_insts{wh.nested_insts_begin(), wh.nested_insts_end()};
     for (auto it = nested_insts.rbegin(); it != nested_insts.rend(); ++it) {
         auto inst = *it;
         if (match(inst, M::Store(M::Val(), M::Is(ptr)))) {
-            if (!store)
-                store = inst->as<STOREInst>();
+            if (!iv_update)
+                iv_update = inst->as<STOREInst>();
             else {
-                if (!isTriviallyIdentical(inst->as<STOREInst>()->getValue(), store->getValue())) {
+                if (!isTriviallyIdentical(inst->as<STOREInst>()->getValue(), iv_update->getValue())) {
                     Logger::logDebug("[While2For]: Skip non-consistent iv update.");
                     return {UpdateType::Unknown, nullptr, nullptr};
                 }
                 update_insts.emplace(inst);
             }
-        } else if (match(inst, M::Load(M::Is(ptr))))
+        } else if (match(inst, M::Load(M::Is(ptr)))) {
+            // Use after iv update
+            if (!iv_update)
+                return {UpdateType::Unknown, nullptr, nullptr};
             iv_loads.emplace(inst);
-        else if (auto cont = inst->as<CONTINUEInst>()) {
-            if (store == nullptr)
+        } else if (auto cont = inst->as<CONTINUEInst>()) {
+            if (iv_update == nullptr)
                 continue;
 
             if (cont->getLoop().get() == &wh) {
@@ -102,7 +106,7 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &val) {
                 }
 
                 auto str = (*std::next(it))->as<STOREInst>();
-                if (!str || str->getPtr() != ptr || !isTriviallyIdentical(str->getValue(), store->getValue())) {
+                if (!str || str->getPtr() != ptr || !isTriviallyIdentical(str->getValue(), iv_update->getValue())) {
                     Logger::logDebug("[While2For]: Skip non-consistent iv update. (cont)");
                     return {UpdateType::Unknown, nullptr, nullptr};
                 }
@@ -110,20 +114,15 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &val) {
         }
     }
 
-    if (!store)
+    if (!iv_update)
         return {UpdateType::Invariant, base, nullptr};
 
     // IV update store
-    update_insts.emplace(store);
+    update_insts.emplace(iv_update);
 
-    if (!match(wh.getBodyInsts().back(), M::Store(M::Val(), M::Is(ptr)))) {
-        Logger::logDebug("[While2For]: Skip non-iv-updates-last loop.(not store)");
-        return {UpdateType::Unknown, nullptr, nullptr};
-    }
-
-    if (pVal step; match(store->getValue(), M::Add(M::Load(M::Is(ptr)), M::Bind(step))) ||
-                   match(store->getValue(), M::Add(M::Bind(step), M::Load(M::Is(ptr))))) {
-        auto add = store->getValue()->as<BinaryInst>();
+    if (pVal step; match(iv_update->getValue(), M::Add(M::Load(M::Is(ptr)), M::Bind(step)),
+                         M::Add(M::Bind(step), M::Load(M::Is(ptr))))) {
+        auto add = iv_update->getValue()->as<BinaryInst>();
         auto ld = add->getLHS();
         if (!ld->is<LOADInst>())
             ld = add->getRHS();
@@ -172,11 +171,13 @@ std::optional<ForInfo> transformWhile(IList &ilist, WHILEInst &wh, LinearFunctio
                                    l_evo.step, l_evo.iv_loads, l_evo.update_insts};
             }
 
-            Logger::logDebug("[While2For]: Skipped non-comparable condition.");
+            Logger::logDebug("[While2For]: Skipped non-comparable condition (ICMPOP::", Util::getEnumName(cond), ")");
             return std::nullopt;
         }
 
-        Logger::logDebug("[While2For]: Skipped non-comparable operands.");
+        Logger::logDebug("[While2For]: Skipped non-comparable operands. {lhs: '", lhs->getName(), "' (",
+                         Util::getEnumName(l_evo.type), "), rhs: '", rhs->getName(), "' (",
+                         Util::getEnumName(r_evo.type), ")}");
         return std::nullopt;
     }
     Logger::logDebug("[While2For]: Skipped non-icmp condition.");
@@ -209,7 +210,7 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &lfam) {
     for (auto &[ilist, iter, while_inst, depth] : replace_map) {
         if (auto for_info_opt = transformWhile(*ilist, *while_inst, function)) {
             auto info = *for_info_opt;
-            auto iv = std::make_shared<IndVar>(info.indvar_mem->getName() + ".ind." + std::to_string(name_cnt++),
+            auto iv = std::make_shared<IndVar>(info.indvar_mem->getName() + ".iv." + std::to_string(name_cnt++),
                                                info.indvar_mem, info.base, info.bound, info.step, depth);
             auto for_inst = std::make_shared<FORInst>(iv, while_inst->getBodyInsts());
             Err::gassert(while_inst->getCondInsts().back()->is<ICMPInst>());

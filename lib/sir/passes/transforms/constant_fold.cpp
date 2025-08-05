@@ -6,8 +6,11 @@
 #include "ir/passes/helpers/constant_fold.hpp"
 
 #include "ir/instructions/compare.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
 #include "sir/visitor.hpp"
+
+#include <optional>
+#include <vector>
+#include <utility>
 
 namespace SIR {
 struct RangeFoldVisitor : ContextVisitor {
@@ -15,61 +18,69 @@ struct RangeFoldVisitor : ContextVisitor {
 
     void visit(Context ctx, FORInst &for_inst) override {
         auto iv = for_inst.getIndVar();
-        if (!iv->isConstantDomain()) {
-            ContextVisitor::visit(ctx, for_inst);
-            return;
+
+        constexpr int int_min = std::numeric_limits<int>::min();
+        constexpr int int_max = std::numeric_limits<int>::max();
+
+        int base = int_min;
+        int bound = int_max;
+
+        if (auto base_ir_val = iv->getBase()->as<ConstantInt>())
+            base = base_ir_val->getVal();
+        if (auto bound_ir_val = iv->getBound()->as<ConstantInt>())
+            bound = bound_ir_val->getVal();
+
+        if (base != int_min || bound != int_max) {
+            for (const auto &user : iv->inst_users()) {
+                auto icmp = user->as<ICMPInst>();
+                if (!icmp)
+                    continue;
+
+                auto lhs = icmp->getLHS();
+                auto rhs = icmp->getRHS();
+                auto cond = icmp->getCond();
+                if (rhs == iv)
+                    cond = reverseCond(cond);
+                if (rhs->getVTrait() != ValueTrait::CONSTANT_LITERAL)
+                    continue;
+                auto rhs_ci = rhs->as<ConstantInt>()->getVal();
+
+                auto icmp_res = [&]() -> std::optional<bool> {
+                    switch (icmp->getCond()) {
+                    case ICMPOP::eq:
+                        if (rhs_ci < base || rhs_ci >= bound)
+                            return false;
+                        break;
+                    case ICMPOP::ne:
+                        if (rhs_ci < base && rhs_ci >= bound)
+                            return true;
+                        break;
+                    case ICMPOP::slt:
+                        if (rhs_ci >= bound)
+                            return true;
+                        break;
+                    case ICMPOP::sle:
+                        if (rhs_ci >= bound + 1)
+                            return true;
+                        break;
+                    case ICMPOP::sgt:
+                        if (rhs_ci < base)
+                            return true;
+                        break;
+                    case ICMPOP::sge:
+                        if (rhs_ci <= base)
+                            return true;
+                        break;
+                    default:
+                        Err::unreachable();
+                    }
+                    return std::nullopt;
+                }();
+                if (icmp_res)
+                    candidates.emplace_back(icmp, *icmp_res);
+            }
         }
 
-        int base = iv->getBase()->as<ConstantInt>()->getVal();
-        int bound = iv->getBound()->as<ConstantInt>()->getVal();
-        for (const auto &user : iv->inst_users()) {
-            auto icmp = user->as<ICMPInst>();
-            if (!icmp)
-                continue;
-
-            auto lhs = icmp->getLHS();
-            auto rhs = icmp->getRHS();
-            auto cond = icmp->getCond();
-            if (rhs == iv)
-                cond = reverseCond(cond);
-            if (rhs->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                continue;
-            auto rhs_ci = rhs->as<ConstantInt>()->getVal();
-
-            auto icmp_res = [&]() -> std::optional<bool> {
-                switch (icmp->getCond()) {
-                case ICMPOP::eq:
-                    if (rhs_ci < base || rhs_ci >= bound)
-                        return false;
-                    break;
-                case ICMPOP::ne:
-                    if (rhs_ci < base && rhs_ci >= bound)
-                        return true;
-                    break;
-                case ICMPOP::slt:
-                    if (rhs_ci >= bound)
-                        return true;
-                    break;
-                case ICMPOP::sle:
-                    if (rhs_ci >= bound + 1)
-                        return true;
-                    break;
-                case ICMPOP::sgt:
-                    if (rhs_ci < base)
-                        return true;
-                    break;
-                case ICMPOP::sge:
-                    if (rhs_ci <= base)
-                        return true;
-                    break;
-                default:
-                    Err::unreachable();
-                }
-                return std::nullopt;
-            }();
-            if (icmp_res)
-                candidates.emplace_back(icmp, *icmp_res);
-        }
         ContextVisitor::visit(ctx, for_inst);
     }
 };

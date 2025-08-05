@@ -18,6 +18,7 @@ struct OptInfo {
     bool CFGsimplifyAfterRa;
     bool PostRaScheduling;
     bool machineLICM;
+    bool codeLayout;
 
     size_t redundantLoadEli_weight = 60;
     unsigned registeralloc_dmp_times = 0;

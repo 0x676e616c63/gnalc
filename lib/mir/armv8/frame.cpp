@@ -16,18 +16,18 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
     auto callee = callinst->getFunc();
 
     using Attr = IR::FuncAttr;
-    if (callee->hasFnAttr(Attr::isMemsetIntrinsic)) {
+    if (callee->getIntrinsicID() == IR::IntrinsicID::Memset) {
         handleMemset(callinst, ctx);
         return;
-    } else if (callee->hasFnAttr(Attr::isMemcpyIntrinsic)) {
+    }
+
+    if (callee->getIntrinsicID() == IR::IntrinsicID::Memcpy) {
         handleMemcpy(callinst, ctx);
         return;
-    } else if (callee->hasFnAttr(Attr::isSIMDIntrinsic)) {
-        Err::todo("handleCallEntry: simd todo");
     }
 
     ///@brief callee->hasFnAttr(Attr::NotBuiltin)
-    auto mcallee = callee->hasFnAttr(Attr::isSylib) || callee->hasFnAttr(Attr::ParallelEntry)
+    auto mcallee = callee->hasFnAttr(Attr::Sylib | Attr::Runtime)
                        ? handleLib(callinst, ctx)
                        : ctx.mapGlobal(callee->getName());
 

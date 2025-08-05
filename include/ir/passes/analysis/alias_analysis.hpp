@@ -77,6 +77,12 @@ pVal getMemLocation(const pVal &i);
 
 Value* getPtrBase(Value* ptr);
 pVal getPtrBase(const pVal& ptr);
+
+// Quick analysis to see if two pointers are disjoint or consecutive.
+// Usually they come from loop unroll, handling them specially can speed up the analysis.
+// It's much faster than computing two AccessSet.
+bool isTriviallyDisjointPtr(Value *ptr1, Value *ptr2);
+bool isTriviallyConsecutivePtr(Value *ptr1, Value *ptr2);
 } // namespace IR
 
 #endif

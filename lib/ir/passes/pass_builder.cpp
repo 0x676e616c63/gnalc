@@ -226,7 +226,10 @@ auto make_loop(const PMOptions &options) {
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
-    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass())
+    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass(LoopUnrollPass::PO_Peel))
+    FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
+    FUNCTION_TRANSFORM(adce, CFGSimplifyPass(), ADCEPass())
+    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass(LoopUnrollPass::PO_Unroll))
     return fpm;
 }
 
@@ -363,6 +366,10 @@ FPM PassBuilder::buildFunctionPipeline(const PMOptions &options) {
 
 MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
     MPM mpm;
+    // Shake off SIR inlined functions
+    if (options.tree_shaking)
+        mpm.addPass(TreeShakingPass());
+
     mpm.addPass(makeModulePass(buildFunctionPipeline(options)));
     if (options.tree_shaking)
         mpm.addPass(TreeShakingPass());
@@ -373,7 +380,6 @@ MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // For SIR pass debug
     FPM fpm;
-    // fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
     fpm.addPass(NameNormalizePass());

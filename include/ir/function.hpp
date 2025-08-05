@@ -27,38 +27,49 @@ enum class FuncAttr {
     NotBuiltin = 1 << 0,
 
     // Main function
-    isProgramEntry = 1 << 1,
+    ProgramEntry = 1 << 1,
 
     // Typically this is a main function
     ExecuteExactlyOnce = 1 << 2,
 
     // Sylib
-    isSylib = 1 << 3,
+    Sylib = 1 << 3,
 
     // Width
     PromoteFromChar = 1 << 4,
     TruncateToChar = 1 << 5,
 
     // Intrinsic
-    isIntrinsic = 1 << 6,
-    isMemsetIntrinsic = 1 << 7,
-    isMemcpyIntrinsic = 1 << 8,
-    isSIMDIntrinsic = 1 << 9,
-    isAtomicAddI32 = 1 << 17,
-    isAtomicAddF32 = 1 << 18,
-
-    isLoweredIntrinsic = 1 << 10,
+    Intrinsic = 1 << 6,
+    LoweredIntrinsic = 1 << 7,
 
     // Only Builtin Functions
     // For user-defined functions, use AliasAnalysis instead.
-    builtinMemReadOnly = 1 << 11,
-    builtinMemWriteOnly = 1 << 12,
-    builtinMemReadWrite = 1 << 13,
+    builtinMemReadOnly = 1 << 8,
+    builtinMemWriteOnly = 1 << 9,
+    builtinMemReadWrite = 1 << 10,
+    builtinMemNoReadWrite = 1 << 11,
+    builtinPure = 1 << 12,
 
     // Loop Parallel
-    isRuntime = 1 << 14,
-    ParallelEntry = 1 << 15,
-    ParallelBody = 1 << 16,
+    Runtime = 1 << 13,
+    ParallelBody = 1 << 14,
+};
+
+enum class IntrinsicID {
+    None,
+    // Array init
+    Memset,
+    Memcpy,
+    // Parallel
+    ParallelForEntry,
+    AtomicAdd,
+    AtomicMul,
+    AtomicAnd,
+    AtomicOr,
+    AtomicXor,
+    AtomicFAdd,
+    AtomicFMul,
 };
 
 GNALC_ENUM_OPERATOR(FuncAttr)
@@ -67,14 +78,17 @@ using FuncAttrs = Attr::BitFlagsAttr<FuncAttr>;
 class FunctionDecl : public Value {
 private:
     Module *parent{};
+    IntrinsicID intrinsic_id{IntrinsicID::None};
 
 public:
-    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, FuncAttr attrs);
+    FunctionDecl(std::string name_, std::vector<pType> params,
+        pType ret_type, bool is_va_arg_, FuncAttr attrs, IntrinsicID id = IntrinsicID::None);
 
     void accept(IRVisitor &visitor) override;
 
     bool isSylib() const;
     bool isIntrinsic() const;
+    IntrinsicID getIntrinsicID() const;
 
     bool hasFnAttr(FuncAttr attr) const;
     void addFnAttr(FuncAttr attr);

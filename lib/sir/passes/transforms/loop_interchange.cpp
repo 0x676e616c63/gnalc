@@ -6,7 +6,7 @@
 #include "config/config.hpp"
 #include "ir/block_utils.hpp"
 #include "sir/base.hpp"
-#include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "sir/visitor.hpp"
 
 namespace SIR {
@@ -50,7 +50,7 @@ bool isArrayAccessOkToInterchange(const ArrayAccess &arr1, const ArrayAccess &ar
 }
 
 // Checks if two loops are safe to interchange
-bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FORInst *inner_for) {
+bool isSafeAndProfitableToInterchange(AffineAAResult *affine_aa, FORInst *outer_for, FORInst *inner_for) {
     auto outer_iv = outer_for->getIndVar();
     auto inner_iv = inner_for->getIndVar();
 
@@ -65,17 +65,17 @@ bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FO
     }
 
     // Scalar dependent loops can't be interchanged
-    if (!laa_res->isScalarIndependent(outer_for, inner_for))
+    if (!affine_aa->isScalarIndependent(outer_for, inner_for))
         return false;
 
-    const auto &rw = laa_res->queryInstRW(outer_for);
+    const auto &rw = affine_aa->queryInstRW(outer_for);
     if (!rw)
         return false;
 
     int cost = 0;
     // Now check memory dependencies
     for (const auto &s1 : rw->write) {
-        const auto &a1 = laa_res->queryPointer(s1);
+        const auto &a1 = affine_aa->queryPointer(s1);
         if (!a1)
             return false;
         if (!a1->isArray())
@@ -84,7 +84,7 @@ bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FO
         cost += getInterchangeCost(a1->array(), outer_iv.get(), inner_iv.get());
 
         for (const auto &s2 : rw->read) {
-            const auto &a2 = laa_res->queryPointer(s2);
+            const auto &a2 = affine_aa->queryPointer(s2);
             if (!a2)
                 return false;
             if (!a2->isArray())
@@ -97,7 +97,7 @@ bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FO
         }
 
         for (const auto &s3 : rw->write) {
-            const auto &a3 = laa_res->queryPointer(s3);
+            const auto &a3 = affine_aa->queryPointer(s3);
             if (!a3)
                 return false;
             if (!a3->isArray())
@@ -118,13 +118,13 @@ struct InterchangeVisitor : ContextVisitor {
     using ICCandidates = std::vector<std::pair<FORInst *, FORInst *>>;
 
     ICCandidates *candidates;
-    LAAResult *laa_res;
+    AffineAAResult *affine_aa;
 
     void visit(Context ctx, FORInst &for_inst) override {
         // Only interchange perfectly nested loops
         if (for_inst.getBodyInsts().size() == 1) {
             if (auto inner_for = for_inst.getBodyInsts().back()->as_raw<FORInst>()) {
-                if (isSafeAndProfitableToInterchange(laa_res, &for_inst, inner_for)) {
+                if (isSafeAndProfitableToInterchange(affine_aa, &for_inst, inner_for)) {
                     candidates->emplace_back(&for_inst, inner_for);
                     // If we've interchanged these loops, return to avoid visiting the inner for.
                     return;
@@ -136,13 +136,13 @@ struct InterchangeVisitor : ContextVisitor {
         ContextVisitor::visit(ctx, for_inst);
     }
 
-    InterchangeVisitor(LAAResult *laa_res_, ICCandidates *candidates_) : laa_res(laa_res_), candidates(candidates_) {}
+    InterchangeVisitor(AffineAAResult *affine_aa_, ICCandidates *candidates_) : affine_aa(affine_aa_), candidates(candidates_) {}
 };
 
 PM::PreservedAnalyses LoopInterchangePass::run(LinearFunction &function, LFAM &lfam) {
-    auto &laa_res = lfam.getResult<LAliasAnalysis>(function);
+    auto &affine_aa = lfam.getResult<AffineAliasAnalysis>(function);
     InterchangeVisitor::ICCandidates candidates;
-    InterchangeVisitor visitor(&laa_res, &candidates);
+    InterchangeVisitor visitor(&affine_aa, &candidates);
     function.accept(visitor);
 
     if (candidates.empty())

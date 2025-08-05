@@ -215,6 +215,8 @@ REGISTER_GNALC_FIXED_EXCEPT_PASS(codesink)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(inline)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(internalize)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(lsr)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(affinelicm)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(relayout)
 
 void register_gnalc_fixed_no_inline_lsr() {
     auto entry = gnalc_register_helper("--no-inline --no-lsr");
@@ -309,6 +311,16 @@ void register_gnalc_no_mloadeli() {
     BenchmarkRegistry::register_benchmark("gnalc_fixed_no_mloadeli", entry);
 }
 
+void register_gnalc_no_codelayout() {
+    auto entry = gnalc_register_helper("-O1 -fno-codeLayout");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_codelayout", entry);
+}
+
+void register_gnalc2_no_mloadeli() {
+    auto entry = gnalc2_register_helper("-O1 -fno-redundantLoadEli");
+    BenchmarkRegistry::register_benchmark("gnalc2_fixed_no_mloadeli", entry);
+}
+
 void Test::register_all_benchmarks() {
     register_example_0();
     register_example_1();
@@ -321,10 +333,6 @@ void Test::register_all_benchmarks() {
     register_gnalc_mem2reg();
     register_gnalc_std();
     register_gnalc_fixed();
-    register_gnalc2_loadEli_w0();
-    register_gnalc2_loadEli_w1();
-    register_gnalc2_loadEli_w2();
-    register_gnalc2_loadEli_w3();
 
     register_gnalc_fixed_no_memo();
     register_gnalc_fixed_no_parallel();
@@ -337,6 +345,8 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_inline();
     register_gnalc_fixed_no_loopunroll();
     register_gnalc_fixed_no_codesink();
+    register_gnalc_fixed_no_affinelicm();
+    register_gnalc_fixed_no_relayout();
 
     register_gnalc_sir_debug();
     register_gnalc_debug();
@@ -346,11 +356,18 @@ void Test::register_all_benchmarks() {
     register_gnalc_fuzz100();
     register_gnalc_no_mlicm();
     register_gnalc_no_mloadeli();
+    register_gnalc_no_codelayout();
     register_gnalc_fixed_no_internalize();
     register_gnalc_fixed_no_lsr();
     register_gnalc_fixed_no_inline_lsr();
 
+    register_gnalc2_loadEli_w0();
+    register_gnalc2_loadEli_w1();
+    register_gnalc2_loadEli_w2();
+    register_gnalc2_loadEli_w3();
+
     register_gnalc2_fixed();
     register_gnalc2_fixed_no_vectorizer();
     register_gnalc2_fixed_no_loopunroll();
+    register_gnalc2_no_mloadeli();
 }
