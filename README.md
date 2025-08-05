@@ -20,16 +20,21 @@ graph LR
 ```
 
 ## AST
+
 我们的 AST 节点分为三种：
 
-- 编译子单元及其辅助节点：`CompUnit`, `VarDef`, `DeclStmt`, `InitVal`, `ArraySubscript`, `FuncDef`, `FuncFParam`. 除 `DeclStmt` 外均继承自 `ASTNode`.
+- 编译子单元及其辅助节点：`CompUnit`, `VarDef`, `DeclStmt`, `InitVal`, `ArraySubscript`, `FuncDef`, `FuncFParam`. 除
+  `DeclStmt` 外均继承自 `ASTNode`.
 
-- 表达式节点：`Exp`, `DeclRef`, `ArrayExp`, `CallExp`, `FuncRParam`, `BinaryOp`, `UnaryOp`, `ParenExp`, `IntLiteral`, `FloatLiteral`. 除 `FuncRParam` 外均继承自 `Exp`.
+- 表达式节点：`Exp`, `DeclRef`, `ArrayExp`, `CallExp`, `FuncRParam`, `BinaryOp`, `UnaryOp`, `ParenExp`, `IntLiteral`,
+  `FloatLiteral`. 除 `FuncRParam` 外均继承自 `Exp`.
 
 - 语句节点: `CompStmt`, `IfStmt`, `WhileStmt`, `NullStmt`, `BreakStmt`, `ContinueStmt`, `ReturnStmt`. 均继承自 `Stmt`.
 
 ## SIR Generation
-基于 Visitor 模式，对 AST 进行遍历，生成 SIR。 SIR 没有基本块，If-else/While/For 均由相关辅助指令（`IFInst`/`WhileInst`/...）实现。
+
+基于 Visitor 模式，对 AST 进行遍历，生成 SIR。 SIR 没有基本块，If-else/While/For 均由相关辅助指令（`IFInst`/`WhileInst`
+/...）实现。
 
 ## Pass Manager
 
@@ -89,18 +94,28 @@ mem2reg）。
 
 ### Structure
 
+SIR 中由于存在嵌套的 If-else/While/For，导致普通的遍历通常不能很好的操作 SIR。因此 SIR 上大多数 pass 是借助 Visitor
+模式实现的。  
+目前 SIR 上有两类 Visitor：
+
+- 普通的 `Visitor`：仅遍历，不携带额外信息，通常和直接遍历 `nested_insts()` 效果一样
+- 带有上下文的 `ContextVisitor`：携带额外的上下文信息，如上一层指令的指针，遍历中指令的迭代器，遍历深度等
+
 ### Analysis Passes
 
 #### Instruction Dominance Analysis
+
 判断指令的支配关系。  
 这个 Analysis 先将 SIR 划分为 PseudoCFG，后在 PseudoBasicBlock 上进行通用的支配分析。
 目前该 analysis 主要被 Early Mem2Reg 使用。
 
 #### Affine Alias Analysis
+
 关于 Affine For 的 Alias Analysis。   
 我们将 Memory Access 分为 Scalar Access 和 Array Access。下面着重解释 Array Access，以下是相关数据结构的简化版。
 
 首先是 `AffineExpr`, 表示一个关于归纳变量的仿射表达式。
+
 ```c++
 struct AffineExpr {
     std::map<IndVar *, int> coeffs;
@@ -110,6 +125,7 @@ struct AffineExpr {
 ```
 
 于是我们可以定义出 `AffineExpr` 中，各 `IndVar` 的迭代范围 `IterRange`。
+
 ```c++
 struct IterRange {
     AffineExpr base;
@@ -119,6 +135,7 @@ struct IterRange {
 ```
 
 最后便可得到 `ArrayAccess`，
+
 ```c++
 struct ArrayAccess {
     Value *base;
@@ -128,6 +145,7 @@ struct ArrayAccess {
 ```
 
 Array Access 由 base, indices, domain 三个部分组成：
+
 - base: 数组的基地址，只能为 `ALLOCAInst`、`GlobalVaraiable` 或 `FormalParam`
 - indices: 索引表达式，每个元素为 `AffineExpr`，表示该索引的表达式。
 - domain: indices 中，各 `AffineExpr` 内归纳变量的范围。
@@ -135,6 +153,7 @@ Array Access 由 base, indices, domain 三个部分组成：
 ### Transform Passes
 
 #### Early Promote Memory to Register
+
 SIR 上的 mem2reg。
 
 #### While to For
@@ -142,12 +161,15 @@ SIR 上的 mem2reg。
 尝试将 while 循环转换为 affine for 循环，便于后续优化。
 
 #### Early Dead Code Elimination (EarlyDCE)
+
 SIR 上的死代码消除，`early` 指相对于 IR 上的 DCE 和 ADCE.
 
 #### Constant Fold
+
 常量折叠。
 
 #### Early Function Inline
+
 SIR 的函数内联。
 
 #### Loop Unswitch
@@ -163,9 +185,11 @@ SIR 的函数内联。
 尝试将交换嵌套的循环。
 
 #### Affine Loop Invariant Code Motion (AffineLICM)
+
 尝试将 Affine For 内的代码移动到循环外。
 
 参考资料:
+
 - [MLIR Affine Loop Invariant Code Motion](https://github.com/llvm/llvm-project/blob/main/mlir/lib/Dialect/Affine/Transforms/AffineLoopInvariantCodeMotion.cpp)
 
 #### ...
@@ -189,16 +213,19 @@ IR 是 SIR 的后继，我们使用了与 [LLVM IR](https://llvm.org/docs/LangRe
 ### Analysis Passes
 
 #### Dominance Analysis
+
 支配关系分析，使用 Semi-NCA 算法
 
 参考资料：
+
 - [再谈Dominator Tree的计算](https://blog.csdn.net/dashuniuniu/article/details/103462147)
 - [llvm浅谈5 domtree](https://zhuanlan.zhihu.com/p/586372481)
 - [编译器中的图论算法](https://zhuanlan.zhihu.com/p/365912693)
 - [OI Wiki - 支配树](https://oi-wiki.org/graph/dominator-tree/)
 
 #### Liveness Analysis
-活跃区间分析。 
+
+活跃区间分析。
 
 #### Loop Analysis
 
@@ -231,6 +258,7 @@ IR 是 SIR 的后继，我们使用了与 [LLVM IR](https://llvm.org/docs/LangRe
 当整个支配树遍历完成之后，就找到了控制流中的所有循环，后续再填充基本块与循环间的映射信息即可。
 
 参考资料：
+
 - [LLVM Loop Terminology (and Canonical Forms)](https://llvm.org/docs/LoopTerminology.html)
 - 深入理解 LLVM：代码生成 第 5 章 循环基本知识
 
@@ -406,11 +434,12 @@ if (a > 10) {
 ### Transform Passes
 
 #### Promote Memory to Register (mem2reg)
+
 将内存访问 (`alloca`, `load`, `store`) 等提升至寄存器，此后的 IR 除数组外大部分情况下无指针类型，便于后续优化。
 
 #### Dead Code Elimination (DCE)
 
-简单的死代码消除，递归地删除 use count 为 0 的指令。  
+简单的死代码消除，递归地删除 use count 为 0 的指令。
 
 #### Aggressive Dead Code Elimination (ADCE)
 
@@ -661,29 +690,36 @@ y = tmp + 3
 
 #### Loop Simplify
 
-循环简化。  
+循环简化。
 
 简化后的循环符合 Loop Simplify Form，即：
+
 - 唯一的 PreHeader
 - 唯一的 Back Edge（唯一 Latch）
 - Dedicated Exits （所有的 Exit Block 都被 Header 支配）
 
 参考资料：
+
 - [LLVM Loop Terminology (and Canonical Forms)](https://llvm.org/docs/LoopTerminology.html)
 
 #### Loop-Closed SSA Construction (LCSSA)
 
 循环闭包 SSA 构造。
 
-LCSSA 后所有的循环符合 LCSSA Form，即循环内定义的值只在循环内被使用。 这是通过将循环外的 use 都替换为 Exit Block 内的 LCSSA Phi 实现的。
+LCSSA 后所有的循环符合 LCSSA Form，即循环内定义的值只在循环内被使用。 这是通过将循环外的 use 都替换为 Exit Block 内的
+LCSSA Phi 实现的。
 LCSSA Phi 是一种只有一个项的完全冗余的 Phi 节点，将循环外所有的 use 替换为 LCSSA Phi 即可构造出 LCSSA Form.
+
 ```llvm
 exit_block:
 %x.lcssa = phi [%x, %bb]
 ```
-这里需要注意的是，[phi 的 incoming value 的 use 是看作在相对应的前驱内](https://llvm.org/docs/LangRef.html#phi-instruction)的，因此 LCSSA Phi 的 use 还是在循环内。
+
+这里需要注意的是，[phi 的 incoming value 的 use 是看作在相对应的前驱内](https://llvm.org/docs/LangRef.html#phi-instruction)
+的，因此 LCSSA Phi 的 use 还是在循环内。
 
 参考资料：
+
 - [LLVM Loop Terminology (and Canonical Forms)](https://llvm.org/docs/LoopTerminology.html)
 - [LLVM Language Reference Manual](https://llvm.org/docs/LangRef.html#phi-instruction)
 
@@ -691,7 +727,9 @@ exit_block:
 
 循环旋转
 
-普通的 while/for 循环 lower 之后的一般为 Header 退出循环。经过 Rotate 之后，变为 Latch 退出循环。这样可以简化 CFG，并利于 LICM 进行。例如：
+普通的 while/for 循环 lower 之后的一般为 Header 退出循环。经过 Rotate 之后，变为 Latch 退出循环。这样可以简化 CFG，并利于
+LICM 进行。例如：
+
 ```mermaid
 graph LR
     PreHeader --> Header
@@ -712,26 +750,28 @@ graph LR
     Header --> Body
     Header --> Exit
 ```
+
 注意到第二个图中，原来的 Body 变为了 Header，原来的 Header 变为了 Latch。   
 如果只有一个 Latch，那么 Latch 还可以与原来的 Header 合并。如果循环会执行至少一次，PreHeader 到 Body 的边也可消除。    
 此外，Rotate 会先复制 Header 中的指令到 PreHeader，而且 Rotate 对 CFG 也有一定要求，因此并不是所有循环都可以被 Rotate。
 
 参考资料：
-- [LLVM Loop Terminology (and Canonical Forms)](https://llvm.org/docs/LoopTerminology.html)
 
+- [LLVM Loop Terminology (and Canonical Forms)](https://llvm.org/docs/LoopTerminology.html)
 
 #### Loop Strength Reduce
 
-强度削弱  
+强度削弱
 
 基于 SCEV 将循环内的乘法/含有乘法的 `getelementptr` 转换为加法/不含乘法的 `getelementptr`。  
 这是通过在 Header 里面插入 Phi，把乘法改为归纳变量的加法实现的。
 
 #### Useless Loop Elimination (LoopElimination)
 
-无用循环消除  
+无用循环消除
 
-对于无副作用的循环，尝试通过 SCEV 计算出循环退出后各个变量的值，并替换掉循环外对他们的 use，从而使整个循环可以被消除。此外它还把 SCEV 可以推断出只执行一次的循环的回边打破。
+对于无副作用的循环，尝试通过 SCEV 计算出循环退出后各个变量的值，并替换掉循环外对他们的 use，从而使整个循环可以被消除。此外它还把
+SCEV 可以推断出只执行一次的循环的回边打破。
 
 #### Loop Invariant Code Motion (LICM)
 
@@ -766,12 +806,14 @@ LICM 进行的代码移动分为 hoist 和 sink
 #### Loop Unroll
 
 循环展开，包含：
+
 - Fully Unroll
 - Partially Unroll
 - Runtime Unroll
 - Peeling
 
 参考资料：
+
 - [Deep diving into LLVM loop unroll](https://yashwantsingh.in/posts/loop-unroll/)
 
 #### SLP Vectorizer
@@ -781,6 +823,7 @@ LICM 进行的代码移动分为 hoist 和 sink
 我们使用 Bottom Up SLP，从基本块内的 `store` 寻找向量化机会，配合循环展开效果更好。
 
 参考资料：
+
 - [Exploiting Superword Level Parallelism with Multimedia Instruction Sets](https://groups.csail.mit.edu/cag/slp/SLP-PLDI-2000.pdf)
 - [Loop-Aware SLP in GCC - Proceedings of the GCC Developers’ Summit](http://gcc.gnu.org/wiki/HomePage?action=AttachFile&do=get&target=GCC2007-Proceedings.pdf)
 - [VeGen: a vectorizer generator for SIMD and beyond](https://dl.acm.org/doi/10.1145/3445814.3446692)
@@ -818,7 +861,7 @@ LICM 进行的代码移动分为 hoist 和 sink
 #### Verify
 
 简单的正确性检查，能查出编写 pass 初期相当一部分 bug。   
-命令行传入 `--verify` 可在每个 `pass` 后自动开启。 
+命令行传入 `--verify` 可在每个 `pass` 后自动开启。
 
 #### Print Function/Module
 
@@ -831,82 +874,107 @@ LICM 进行的代码移动分为 hoist 和 sink
 ### Intro
 
 MIR 是针对目标机器架构特定的中间表示，抽象程度更低，不符合 SSA 形式。
-本 MIR 在经过最终的CodeGen之后可以分别转化为Riscv64或者AArch64的符合GNU汇编器标准的汇编指令
+本 MIR 在经过最终的 CodeGen 之后可以分别转化为 RISCV64 或者 AArch64 的符合 GNU 汇编器标准的汇编指令。
 
-ps: legacy_MIR 是比赛章程正式发布前的MIR，用于生成ArmV7指令集下的汇编指令，效果上仅保证基本的正确性 
+PS: LegacyMIR 是比赛章程正式发布前的 MIR，用于生成 ARMv7 指令集下的汇编指令，效果上仅保证基本的正确性.
 
 ### Structure
-- `MIRModule`：代表一整个编译单元，Function和全局变量的集合，
+
+- `MIRModule`：代表一整个编译单元，Function 和全局变量的集合，
 - `MIRFunction`：用于存放函数体，持有基本块，存放栈空间信息
 - `MIRBlk`：
-  - 持有该基本块中所有的指令
-  - 维护其前驱和后继的基本块
-  - FlattenCFG中将与其直接邻近的基本块
-  - 块中使用了文字池的基本块，将在块的末尾插入文字池，以此尝试减少data cache miss
+    - 持有该基本块中所有的指令
+    - 维护其前驱和后继的基本块
+    - FlattenCFG 中将与其直接邻近的基本块
+    - 块中使用了文字池的基本块，将在块的末尾插入文字池，以此尝试减少 Data Cache Miss
 - `MIRInst`：
-  - `mOpcode`用于标记该Inst具体执行什么操作，为了兼容不同的指令集，mOpcode是一个variant
-  - `mOperands`存放操作数列表，每种指令对于操作数列表的使用（存放多少以及存放在哪里）都有规定，不过没有设置对此的专门地检查
-  - 对于该Inst具体操作的位宽，通过`mOperands`推断得到，不过这种方法实际上缺乏可拓展性，并非最佳实践
+    - `mOpcode` 用于标记该 Inst 具体执行什么操作，为了兼容不同的指令集，mOpcode 是一个 variant
+    - `mOperands` 存放操作数列表，每种指令对于操作数列表的使用（存放多少以及存放在哪里）都有规定，不过没有设置对此的专门地检查
+    - 对于该 Inst 具体操作的位宽，通过 `mOperands` 推断得到，不过这种方法实际上缺乏可拓展性，并非最佳实践
 - `MIROperand`：内容比较丰富的一个结构
-  - `mOperand`：用于标识该操作数的类型，variant从前到后依次表示寄存器（虚拟的或者ISA寄存器）、重定向地址（一般就是汇编中的标签）、u32或者f32立即数（都用unsigned存储）、u64立即数（一般是记忆化会使用）、分支概率（not impl yet）、以及最后的文字池数据
-  - `mType`：该Operand的类型，用于上面提到的推断 
+    - `mOperand`：用于标识该操作数的类型，variant 从前到后依次表示寄存器（虚拟的或者ISA寄存器）、重定向地址（一般就是汇编中的标签）、u32
+      或者 f32 立即数（都用 unsigned 存储）、u64 立即数、分支概率、以及最后的文字池数据
+    - `mType`：该Operand的类型，用于上面提到的推断
 - `CodeGenContext`：存放架构相关的信息，如寄存器使用，调用规约等
-  - `nextId`: 给虚拟寄存器命名，方便调试
-  - `referCnt`: 引用计数，可以比较方面的消除死代码，不过在寄存器分配后删除冗余Copy指令后就不能再用了
+    - `nextId`: 给虚拟寄存器命名，方便调试
+    - `referCnt`: 引用计数，可以比较方面的消除死代码，不过在寄存器分配后删除冗余 Copy 指令后就不能再用了
 
 ### Analysis Passes
+
 MIR 上的分析Pass主要有
-- `branch_freq_analysis`: 分析基本块之间的跳转频率
-- `domtree_analysis`：分析基本块之间的支配关系
-- `liveananlysis`：分析变量的活跃信息，包括基本块的livein，liveout，单个变量的liveinterval length等
-- `loop_analysis`：通过基本块的前驱后继关系，寻找loop，算法和IR上的分析一致
+
+- Branch Frequency Analysis: 分析基本块之间的跳转频率
+- Dominance Analysis：分析基本块之间的支配关系
+- LiveAnalysis：分析变量的活跃信息，包括基本块的 livein，liveout，单个变量的 liveinterval length 等
+- LoopAnalysis：通过基本块的前驱后继关系，寻找 loop，算法和 IR 上的分析一致
 
 ### Transform Passes
-首先需要通过Lowering才能从IR模式转到MIR模式，此时的MIR都是GenericMIR
-这个过程进行Phi函数消除，Phi函数消除使用简单的拓扑排序和插入拷贝完成
+
+首先需要通过 Lowering 才能从 IR 转到 MIR，此时的 MIR 都是 GenericMIR
+这个过程进行 Phi 节点消除，Phi 节点消除使用简单的拓扑排序和插入拷贝完成。
 
 MIR 形式上进行等效转换的Pass如下
 
 #### FusedAddress
-中端 IR 形式上，通常使用gep指令获取数据地址，这种方式通常无法充分利用指令集提供的寻址模式
-该pass将识别指针的运算指令，并尝试将其中的加法指令替换为LDR/STR中的基址或者变址寻址
+
+中端 IR 形式上，通常使用 `getelementptr` 指令获取数据地址，这种方式通常无法充分利用指令集提供的寻址模式
+该 pass 将识别指针的运算指令，并尝试将其中的加法指令替换为 LDR/STR 中的基址或者变址寻址
+
 #### MachineConstantFold
-IR 形式上，为了获取一个多级数组中的某一个元素地址，需要使用多级的gep逐级添加偏移量，对于汇编指令而言，这些计算是不必要的，偏移可以一次计算完毕
+
+IR 形式上，为了获取一个多级数组中的某一个元素地址，需要使用多级的 gep 逐级添加偏移量，对于汇编指令而言，这些计算是不必要的，偏移可以一次计算完毕
+
 #### ISel
-- 指令选择，但主要是将GenericMIR处理成接近汇编指令形式，AArch64架构和Riscv64架构的某些特化指令将在这个过程插入，
+
+- 指令选择，但主要是将 GenericMIR 处理成接近汇编指令形式，AArch64 架构和 RISCV64 架构的某些特化指令将在这个过程插入，
+
 #### GenericPeephole
-- 窥孔优化的集合，在很多其他pass之后都可以使用，但其中有一些限制了使用时期，尤其是那些需要引用计数的窥孔
+
+- 窥孔优化的集合，在很多其他 pass 之后都可以使用，但其中有一些限制了使用时期，尤其是那些需要引用计数的窥孔
+
 #### CFGsimplifyBeforeRA
-- 删除死块（如果IR形式时没删）
-- 尝试合并bool的定义和使用，即从存储bool值到寄存器，修改到直接使用CPSR
+
+- 删除死块（如果 IR 形式时没删）
+- 尝试合并 bool 的定义和使用，即从存储 bool 值到寄存器，修改到直接使用 CPSR
+
 #### LoadEli
-由于汇编指令无法接受立即数作为操作数，在`ISel`阶段会使用显式的各种Load将立即数加载到对应寄存器中，由于`ISel`阶段一次仅处理一条指令，并不考虑其他指令，故Load实际上有可能是多余的，即已经被加载到某个虚拟寄存器中，可以考虑将Load替换为Copy
-- 扫描`MIRInst`，对于每个被显式加载的立即数，构建表项，记录所有出现Load的基本块，以及块内的Load指令
-- 对于记录的所有的基本块，计算出它们在支配树上的LCA基本块
-- 由于Copy会延长操作数的活跃区间，可能导致更多寄存器溢出，所以对每个基本块使用启发式算法，决定对于该块是进行全局替换（Copy LCA基本块中的虚拟寄存器），还是局部替换（Copy 基本块内的虚拟寄存器）
-- 判断完成之后，将Load替换为Copy
+
+由于汇编指令无法接受立即数作为操作数，在 `ISel` 阶段会使用显式的各种 Load 将立即数加载到对应寄存器中，由于 `ISel`
+阶段一次仅处理一条指令，并不考虑其他指令，故 Load 实际上有可能是多余的，即已经被加载到某个虚拟寄存器中，可以考虑将 Load 替换为
+Copy
+
+- 扫描 `MIRInst` ，对于每个被显式加载的立即数，构建表项，记录所有出现 Load 的基本块，以及块内的 Load 指令
+- 对于记录的所有的基本块，计算出它们在支配树上的 LCA 基本块
+- 由于 Copy 会延长操作数的活跃区间，可能导致更多寄存器溢出，所以对每个基本块使用启发式算法，决定对于该块是进行全局替换（Copy
+  LCA 基本块中的虚拟寄存器），还是局部替换（Copy 基本块内的虚拟寄存器）
+- 判断完成之后，将 Load 替换为 Copy
+
 #### MachineLICM
-由于`ISel`中可能在循环中插入其他指令，这些指令实际上极有可能是循环不变量，故可以将其外提
+
+由于 `ISel` 中可能在循环中插入其他指令，这些指令实际上极有可能是循环不变量，故可以将其外提
+
 #### RegisterAlloc
+
 采用图着色寄存器分配，原理参见[Iterated Register Coalescing](https://dl.acm.org/doi/pdf/10.1145/229542.229546)
+
 #### CodeLayout
-对整体的代码布局进行调整，期望减少Instruction cache miss
-由于测例一般进行了大量的函数内联，故`CodeLayOut`主要是对基本块布局进行调整，即基本块重排
+
+对整体的代码布局进行调整，期望减少 Instruction cache miss
+由于测例一般进行了大量的函数内联，故 `CodeLayOut` 主要是对基本块布局进行调整，即基本块重排
+
 #### CFGsimplifyAfterRA
-1. 在寄存器分配后，合并冗余的Copy之后，有一些块将成为只有无条件跳转的块，可以将该块在CFG中删去
-2. 对于某些基本块，其最后一条指令为无条件跳转，并且在FlattenCFG中其后紧邻的基本块即为跳转目标，可消除该无条件跳转，改为顺序执行
-3. 对于一些有条件跳转的基本块，可以通过反转条件和目的基本块，形成2中描述的场景
+
+1. 在寄存器分配后，合并冗余的 Copy 之后，有一些块将成为只有无条件跳转的块，可以将该块在 CFG 中删去
+2. 对于某些基本块，其最后一条指令为无条件跳转，并且在 FlattenCFG 中其后紧邻的基本块即为跳转目标，可消除该无条件跳转，改为顺序执行
+3. 对于一些有条件跳转的基本块，可以通过反转条件和目的基本块，形成 2 中描述的场景
+
 #### PostRaScheduling
-进行基本块块内的指令调度和重排，目前只有AArch64后端有这个功能
+
+进行基本块块内的指令调度和重排，目前只有 AArch64 后端有这个功能
+
 - 对指令和寄存器进行依赖分析和拓扑排序
 - 模拟时钟周期，CPU运算部件以及寄存器的就绪情况
 - 模拟指令的发射和资源占用
-
-### Utility Passes
-
-## BrainFuck
-
-## IR Parser
 
 ## Test Suite
 
@@ -1039,7 +1107,8 @@ graph TD
 
 这是针对整个编译器的测试，具体而言，先在官方 runner 上编译链接所有测例，并将其推送到 artifacts 分支，然后触发 pi 上的测试流程，
 拉取 artifacts 分支，并运行测试，测试运行结果会保存在 test-results 分支中。
-pi 上的测试在 [ghaction.cpp](/test/ghaction.cpp) 中，初期为多线程测试，后期为了保证计时精度，改为单线程。原多线程版本在 [ghaction_multithread.cpp](/test/ghaction_multithread.cpp)。
+pi 上的测试在 [ghaction.cpp](/test/ghaction.cpp)
+中，初期为多线程测试，后期为了保证计时精度，改为单线程。原多线程版本在 [ghaction_multithread.cpp](/test/ghaction_multithread.cpp)。
 测试结果会自动保存在 test-results 分支中，并推送到 Gnalc Performance Dashboard。  
 此外，为避免仓库体积过于膨胀，artifacts 分支仅保留最近 10 次运行的结果。
 
@@ -1107,7 +1176,7 @@ Performance Dashboard 的数据来源于 Github Action 自动推送的测试结�
 - [Enna1's website](https://enna1.github.io/)
 - [Understanding LLVM Transformation Passes](https://understanding-llvm-transformation-passes.readthedocs.io/en/latest/)
 
-
 ## License
+
 This project is licensed under the MIT License.  
 See [LICENSE](LICENSE) for details.
