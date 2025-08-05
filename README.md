@@ -154,11 +154,12 @@ Array Access 由 base, indices, domain 三个部分组成：
 
 #### Early Promote Memory to Register
 
-SIR 上的 mem2reg。
+SIR 上的 mem2reg。由于 SIR 无 Phi 节点，这里的 mem2reg 应用范围较窄，只能将与循环无关的一部分内存提升为寄存器。
 
 #### While to For
 
-尝试将 while 循环转换为 affine for 循环，便于后续优化。
+尝试将 While 循环转换为 Affine For 循环，此时归纳变量变为 `IndVar`，它与 Phi 节点类似，在 lower 到 IR 时直接替换为 Header
+里面的 Phi，所以也可看作在循环内做了局部的 mem2reg。
 
 #### Early Dead Code Elimination (EarlyDCE)
 
@@ -182,17 +183,24 @@ SIR 的函数内联。
 
 #### Loop Interchange
 
-尝试将交换嵌套的循环。
+尝试将交换嵌套的循环以优化访问的局部性。
 
 #### Affine Loop Invariant Code Motion (AffineLICM)
 
-尝试将 Affine For 内的代码移动到循环外。
+基于 AffineAliasAnalysis，尝试将 Affine For 内的代码移动到循环外。
 
 参考资料:
 
 - [MLIR Affine Loop Invariant Code Motion](https://github.com/llvm/llvm-project/blob/main/mlir/lib/Dialect/Affine/Transforms/AffineLoopInvariantCodeMotion.cpp)
 
-#### ...
+#### Reshape Fold
+
+基于 AffineAliasAnalysis，将 Affine For 内数组的 reshape （复制，转置等等）传播到使用点，消除不必要中间数组复制。
+
+#### Relayout
+
+对于访问模式局部性差的循环，如果 LoopInterchange 不能优化访问模式，则 Relayout 尝试将数组转置，改变数据的排布，从而提升访问的局部性。这个
+pass 同样基于 AffineAliasAnalysis。
 
 ### Utility Passes
 
@@ -841,7 +849,52 @@ LICM 进行的代码移动分为 hoist 和 sink
 - 将尾递归转换为循环，从而减少函数调用开销和栈空间使用。
 - 对于非递归的尾调用，仅设置标记而不改变结构。
 
-#### ...
+#### Memoization
+
+将纯递归函数记忆化
+
+参考资料
+
+- [Clava - C/C++/CUDA/OpenCL source-to-source compiler](https://github.com/specs-feup/clava)
+- [A framework for automatic and parameterizable memoization](https://www.sciencedirect.com/science/article/pii/S2352711018301559)
+- [A methodology and framework for software memoization of functions.](https://doi.org/10.1145/3457388.3458668)
+
+#### Code Sink
+
+在不改变语义的情况下，将每条指令尽可能 sink 到最早的 User。
+
+#### Code Generation Prepare (CodeGenPrepare)
+
+为后续 lower 至 MIR 做准备。目前主要是破除关键边。
+
+#### Flatten `getelementptr` to Arithmetics (GepFlatten)
+
+将 `getelementptr` 转为 `ptrtoint` + `mul/add` + `inttoptr` + `zext`
+
+#### Internalize
+
+全局变量尽量转为局部变量
+
+#### Globalize
+
+将大的局部变量转为全局变量
+
+#### Lower Intrinsics
+
+SIR Gen 时，数组局部变量可能会使用 `memset` 进行数组初始化。Internalize 将全局数组转为局部数组时，可能使用 `memcpy`。
+而有些平台不支持这些 Intrinsic，此时这个 pass 就地实现一个函数来代替。
+
+#### Name Normalize
+
+修复指令的命名以符合 LLVM IR 格式。
+
+#### Tree Shaking
+
+删除无用的全局变量和函数。
+
+#### Unify Exits
+
+将退出块统一为一个块。
 
 ### Utility Passes
 
