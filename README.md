@@ -831,12 +831,76 @@ LICM 进行的代码移动分为 hoist 和 sink
 ### Intro
 
 MIR 是针对目标机器架构特定的中间表示，抽象程度更低，不符合 SSA 形式。
+本 MIR 在经过最终的CodeGen之后可以分别转化为Riscv64或者AArch64的符合GNU汇编器标准的汇编指令
+
+ps: legacy_MIR 是比赛章程正式发布前的MIR，用于生成ArmV7指令集下的汇编指令，效果上仅保证基本的正确性 
 
 ### Structure
+- `MIRModule`：代表一整个编译单元，Function和全局变量的集合，
+- `MIRFunction`：用于存放函数体，持有基本块，存放栈空间信息
+- `MIRBlk`：
+  - 持有该基本块中所有的指令
+  - 维护其前驱和后继的基本块
+  - FlattenCFG中将与其直接邻近的基本块
+  - 块中使用了文字池的基本块，将在块的末尾插入文字池，以此尝试减少data cache miss
+- `MIRInst`：
+  - `mOpcode`用于标记该Inst具体执行什么操作，为了兼容不同的指令集，mOpcode是一个variant
+  - `mOperands`存放操作数列表，每种指令对于操作数列表的使用（存放多少以及存放在哪里）都有规定，不过没有设置对此的专门地检查
+  - 对于该Inst具体操作的位宽，通过`mOperands`推断得到，不过这种方法实际上缺乏可拓展性，并非最佳实践
+- `MIROperand`：内容比较丰富的一个结构
+  - `mOperand`：用于标识该操作数的类型，variant从前到后依次表示寄存器（虚拟的或者ISA寄存器）、重定向地址（一般就是汇编中的标签）、u32或者f32立即数（都用unsigned存储）、u64立即数（一般是记忆化会使用）、分支概率（not impl yet）、以及最后的文字池数据
+  - `mType`：该Operand的类型，用于上面提到的推断 
+- `CodeGenContext`：存放架构相关的信息，如寄存器使用，调用规约等
+  - `nextId`: 给虚拟寄存器命名，方便调试
+  - `referCnt`: 引用计数，可以比较方面的消除死代码，不过在寄存器分配后删除冗余Copy指令后就不能再用了
 
 ### Analysis Passes
+MIR 上的分析Pass主要有
+- `branch_freq_analysis`: 分析基本块之间的跳转频率
+- `domtree_analysis`：分析基本块之间的支配关系
+- `liveananlysis`：分析变量的活跃信息，包括基本块的livein，liveout，单个变量的liveinterval length等
+- `loop_analysis`：通过基本块的前驱后继关系，寻找loop，算法和IR上的分析一致
 
 ### Transform Passes
+首先需要通过Lowering才能从IR模式转到MIR模式，此时的MIR都是GenericMIR
+这个过程进行Phi函数消除，Phi函数消除使用简单的拓扑排序和插入拷贝完成
+
+MIR 形式上进行等效转换的Pass如下
+
+#### FusedAddress
+中端 IR 形式上，通常使用gep指令获取数据地址，这种方式通常无法充分利用指令集提供的寻址模式
+该pass将识别指针的运算指令，并尝试将其中的加法指令替换为LDR/STR中的基址或者变址寻址
+#### MachineConstantFold
+IR 形式上，为了获取一个多级数组中的某一个元素地址，需要使用多级的gep逐级添加偏移量，对于汇编指令而言，这些计算是不必要的，偏移可以一次计算完毕
+#### ISel
+- 指令选择，但主要是将GenericMIR处理成接近汇编指令形式，AArch64架构和Riscv64架构的某些特化指令将在这个过程插入，
+#### GenericPeephole
+- 窥孔优化的集合，在很多其他pass之后都可以使用，但其中有一些限制了使用时期，尤其是那些需要引用计数的窥孔
+#### CFGsimplifyBeforeRA
+- 删除死块（如果IR形式时没删）
+- 尝试合并bool的定义和使用，即从存储bool值到寄存器，修改到直接使用CPSR
+#### LoadEli
+由于汇编指令无法接受立即数作为操作数，在`ISel`阶段会使用显式的各种Load将立即数加载到对应寄存器中，由于`ISel`阶段一次仅处理一条指令，并不考虑其他指令，故Load实际上有可能是多余的，即已经被加载到某个虚拟寄存器中，可以考虑将Load替换为Copy
+- 扫描`MIRInst`，对于每个被显式加载的立即数，构建表项，记录所有出现Load的基本块，以及块内的Load指令
+- 对于记录的所有的基本块，计算出它们在支配树上的LCA基本块
+- 由于Copy会延长操作数的活跃区间，可能导致更多寄存器溢出，所以对每个基本块使用启发式算法，决定对于该块是进行全局替换（Copy LCA基本块中的虚拟寄存器），还是局部替换（Copy 基本块内的虚拟寄存器）
+- 判断完成之后，将Load替换为Copy
+#### MachineLICM
+由于`ISel`中可能在循环中插入其他指令，这些指令实际上极有可能是循环不变量，故可以将其外提
+#### RegisterAlloc
+采用图着色寄存器分配，原理参见[Iterated Register Coalescing](https://dl.acm.org/doi/pdf/10.1145/229542.229546)
+#### CodeLayout
+对整体的代码布局进行调整，期望减少Instruction cache miss
+由于测例一般进行了大量的函数内联，故`CodeLayOut`主要是对基本块布局进行调整，即基本块重排
+#### CFGsimplifyAfterRA
+1. 在寄存器分配后，合并冗余的Copy之后，有一些块将成为只有无条件跳转的块，可以将该块在CFG中删去
+2. 对于某些基本块，其最后一条指令为无条件跳转，并且在FlattenCFG中其后紧邻的基本块即为跳转目标，可消除该无条件跳转，改为顺序执行
+3. 对于一些有条件跳转的基本块，可以通过反转条件和目的基本块，形成2中描述的场景
+#### PostRaScheduling
+进行基本块块内的指令调度和重排，目前只有AArch64后端有这个功能
+- 对指令和寄存器进行依赖分析和拓扑排序
+- 模拟时钟周期，CPU运算部件以及寄存器的就绪情况
+- 模拟指令的发射和资源占用
 
 ### Utility Passes
 
