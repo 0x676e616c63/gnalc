@@ -43,7 +43,6 @@
 // Reference:
 //   - "Partial Control-Flow Linearization"
 //       https://compilers.cs.uni-saarland.de/papers/moll_parlin_pldi18.pdf
-//   (TODO, we have not implemented it currently, but it is quite amazing)
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_IF_CONVERSION_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_IF_CONVERSION_HPP

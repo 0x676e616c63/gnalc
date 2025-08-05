@@ -1,4 +1,4 @@
-# Gnalc - Yet another SysY compiler
+# Gnalc - 0x676e616c63
 
 [![Base](https://github.com/Althra/gnalc/actions/workflows/base.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/base.yml)
 [![FixedPoint](https://github.com/Althra/gnalc/actions/workflows/fixedpoint.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/fixedpoint.yml)
@@ -106,6 +106,7 @@ struct AffineExpr {
     std::map<IndVar *, int> coeffs;
     int constant;
     Value* invariant = nullptr;
+}    
 ```
 
 于是我们可以定义出 `AffineExpr` 中，各 `IndVar` 的迭代范围 `IterRange`。
@@ -123,6 +124,7 @@ struct ArrayAccess {
     Value *base;
     std::vector<AffineExpr> indices;
     std::map<IndVar*, IterRange> domain;
+}
 ```
 
 Array Access 由 base, indices, domain 三个部分组成：
@@ -681,6 +683,10 @@ exit_block:
 
 #### Loop Strength Reduce
 
+强度削弱  
+
+基于 SCEV 将循环内的乘法/含有乘法的 `getelementptr` 转换为加法/不含乘法的 `getelementptr`。
+
 #### Useless Loop Elimination
 
 #### Loop Invariant Code Motion
@@ -713,25 +719,29 @@ LICM 进行的代码移动分为 hoist 和 sink
 
 3. 将指令克隆到支配的退出块
 
-#### Induction Variable Simplify
-
-Yet to be implemented.
-
 #### Loop Unroll
+
+循环展开，包含：
+- Fully Unroll
+- Partially Unroll
+- Runtime Unroll
+- Peeling
 
 - [Deep diving into LLVM loop unroll](https://yashwantsingh.in/posts/loop-unroll/)
 
-#### Loop Parallel
-
-Yet to be implemented.
-
 #### Vectorizer
+
+自动向量化
+
+我们使用 Bottom Up SLP，从基本块内的 `store` 寻找向量化机会，配合循环展开效果更好。
 
 - [Exploiting Superword Level Parallelism with Multimedia Instruction Sets](https://groups.csail.mit.edu/cag/slp/SLP-PLDI-2000.pdf)
 - [Loop-Aware SLP in GCC - Proceedings of the GCC Developers’ Summit](http://gcc.gnu.org/wiki/HomePage?action=AttachFile&do=get&target=GCC2007-Proceedings.pdf)
 - [VeGen: a vectorizer generator for SIMD and beyond](https://dl.acm.org/doi/10.1145/3445814.3446692)
 
-#### Memoization
+#### Loop Parallel
+
+循环并行
 
 #### Function Inline
 
@@ -746,35 +756,38 @@ Yet to be implemented.
 - 将尾递归转换为循环，从而减少函数调用开销和栈空间使用。
 - 对于非递归的尾调用，仅设置标记而不改变结构。
 
-#### Unify Exits
-
-#### Tree Shaking
-
-#### CodeGen Preparation
-
-#### Name Normalization
-
-重命名所有的指令和基本块以符合 LLVM 的命名规则，仅在调试 IR 时使用。
+#### ...
 
 ### Utility Passes
 
-#### Analysis Storer
+#### Print CFG as "dot" (DotCFG)
 
-#### Print CFG as "dot"
+将 CFG 转为 dot，效果与 `opt -disable-output --passes=dot-cfg` 类似
 
-#### Print CFG as "png"
+#### Print CFG as "png" (PngCFG)
+
+将 CFG 先转为 dot，再转为 png。
 
 #### Run Test
 
+运行给的测试用例并验证的 pass，便于插入到 pipeline 中验证 Transform 正确性。
+命令行传入 `--test-out xxx`/`--test-in xxx` 可在每个 pass 后自动开启。
+
 #### Verify
+
+简单的正确性检查，能检查编写 pass 初期相当一部分 bug。 命令行传入 `--verify` 可在每个 `pass` 后自动开启。 
 
 #### Print Function/Module
 
-#### Print Loop/DbgMsg/SCEV/Range/LoopAA
+以 LLVM IR 格式打印 Function/Module 到指定流
+
+#### ...
 
 ## MIR
 
 ### Intro
+
+MIR 是针对目标机器架构特定的中间表示，抽象程度更低，不符合 SSA 形式。
 
 ### Structure
 
@@ -954,7 +967,14 @@ graph TD
     class M main
 ```
 
-## Name
+## Gnalc Performance Dashboard
+
+Performance Dashboard 的数据来源于 Github Action 自动推送的测试结果，或手动上传的比赛数据。
+
+![最新性能概览](/docs/images/dashboard0.png)
+![趋势分析](/docs/images/dashboard1.png)
+![Commit 对比](/docs/images/dashboard2.png)
+![测例历史性能](/docs/images/dashboard3.png)
 
 ## Books and Blogs
 
