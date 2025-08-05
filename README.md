@@ -2,7 +2,7 @@
 
 [![Base](https://github.com/Althra/gnalc/actions/workflows/base.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/base.yml)
 [![FixedPoint](https://github.com/Althra/gnalc/actions/workflows/fixedpoint.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/fixedpoint.yml)
-[![Fuzz](https://github.com/Althra/gnalc/actions/workflows/fuzz.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/fuzz.yml)
+[![Pipeline Fuzz](https://github.com/Althra/gnalc/actions/workflows/fuzz.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/fuzz.yml)
 [![Backend Test](https://github.com/Althra/gnalc/actions/workflows/backend-test.yml/badge.svg)](https://github.com/Althra/gnalc/actions/workflows/backend-test.yml)
 
 ## Architecture
@@ -93,12 +93,12 @@ mem2reg）。
 
 #### Instruction Dominance Analysis
 判断指令的支配关系。  
-这个 Analysis 现将 SIR 划分为 PseudoCFG，后在 PseudoBasicBlock 上进行通用的支配分析。
+这个 Analysis 先将 SIR 划分为 PseudoCFG，后在 PseudoBasicBlock 上进行通用的支配分析。
 目前该 analysis 主要被 Early Mem2Reg 使用。
 
 #### Affine Alias Analysis
 关于 Affine For 的 Alias Analysis。   
-我们将 Memory Access 分为 Scalar Access 和 Array Access。下面着重解释 Array Access。
+我们将 Memory Access 分为 Scalar Access 和 Array Access。下面着重解释 Array Access，以下是相关数据结构的简化版。
 
 首先是 `AffineExpr`, 表示一个关于归纳变量的仿射表达式。
 ```c++
@@ -106,7 +106,7 @@ struct AffineExpr {
     std::map<IndVar *, int> coeffs;
     int constant;
     Value* invariant = nullptr;
-}    
+}
 ```
 
 于是我们可以定义出 `AffineExpr` 中，各 `IndVar` 的迭代范围 `IterRange`。
@@ -154,6 +154,14 @@ SIR 的函数内联。
 
 尝试将循环条件分支移出循环。
 
+#### Loop Fusion
+
+尝试将两个循环融合为一个循环。
+
+#### Loop Interchange
+
+尝试将交换嵌套的循环。
+
 #### Affine Loop Invariant Code Motion (AffineLICM)
 尝试将 Affine For 内的代码移动到循环外。
 
@@ -175,6 +183,8 @@ SIR 的函数内联。
 IR 是 SIR 的后继，我们使用了与 [LLVM IR](https://llvm.org/docs/LangRef.html) 兼容的 IR, 以便使用 LLVM 的工具链进行调试。
 
 ### Structure
+
+我们的 IR 是 LLVM IR 的子集，相关指令在 [这里](docs/irinst.md)。
 
 ### Analysis Passes
 
@@ -347,7 +357,7 @@ use-def 而无法删除循环。
 它基于 AMM (Access-based Memory Modeling)，提供比 Basic Alias Analysis 粒度更细的结果。
 
 在我们的实现中，它利用 SCEV 提供的归纳变量信息准确的分析循环内指针的变化规律，同时也可以得到指针是否相邻的信息。  
-目前主要在向量化时使用。
+目前主要在向量化和循环并行使用。
 
 参考资料：
 
@@ -681,15 +691,49 @@ exit_block:
 
 循环旋转
 
+普通的 while/for 循环 lower 之后的一般为 Header 退出循环。经过 Rotate 之后，变为 Latch 退出循环。这样可以简化 CFG，并利于 LICM 进行。例如：
+```mermaid
+graph LR
+    PreHeader --> Header
+    Header --> Body
+    Body --> Latch
+    Latch --> Header
+    Header --> Exit
+```
+
+经过 Rotate 之后变为：
+
+```mermaid
+graph LR
+    PreHeader+Header --> Body
+    PreHeader+Header --> Exit
+    Body --> Latch
+    Latch --> Header
+    Header --> Body
+    Header --> Exit
+```
+注意到第二个图中，原来的 Body 变为了 Header，原来的 Header 变为了 Latch。   
+如果只有一个 Latch，那么 Latch 还可以与原来的 Header 合并。如果循环会执行至少一次，PreHeader 到 Body 的边也可消除。    
+此外，Rotate 会先复制 Header 中的指令到 PreHeader，而且 Rotate 对 CFG 也有一定要求，因此并不是所有循环都可以被 Rotate。
+
+参考资料：
+- [LLVM Loop Terminology (and Canonical Forms)](https://llvm.org/docs/LoopTerminology.html)
+
+
 #### Loop Strength Reduce
 
 强度削弱  
 
-基于 SCEV 将循环内的乘法/含有乘法的 `getelementptr` 转换为加法/不含乘法的 `getelementptr`。
+基于 SCEV 将循环内的乘法/含有乘法的 `getelementptr` 转换为加法/不含乘法的 `getelementptr`。  
+这是通过在 Header 里面插入 Phi，把乘法改为归纳变量的加法实现的。
 
-#### Useless Loop Elimination
+#### Useless Loop Elimination (LoopElimination)
 
-#### Loop Invariant Code Motion
+无用循环消除  
+
+对于无副作用的循环，尝试通过 SCEV 计算出循环退出后各个变量的值，并替换掉循环外对他们的 use，从而使整个循环可以被消除。此外它还把 SCEV 可以推断出只执行一次的循环的回边打破。
+
+#### Loop Invariant Code Motion (LICM)
 
 将每次循环迭代时计算结果都相同的表达式移到循环外。减少重复计算，提高程序性能。  
 在移动指令时，需考虑循环中的 use-def 关系与 control flow equivalence。  
@@ -727,14 +771,16 @@ LICM 进行的代码移动分为 hoist 和 sink
 - Runtime Unroll
 - Peeling
 
+参考资料：
 - [Deep diving into LLVM loop unroll](https://yashwantsingh.in/posts/loop-unroll/)
 
-#### Vectorizer
+#### SLP Vectorizer
 
 自动向量化
 
 我们使用 Bottom Up SLP，从基本块内的 `store` 寻找向量化机会，配合循环展开效果更好。
 
+参考资料：
 - [Exploiting Superword Level Parallelism with Multimedia Instruction Sets](https://groups.csail.mit.edu/cag/slp/SLP-PLDI-2000.pdf)
 - [Loop-Aware SLP in GCC - Proceedings of the GCC Developers’ Summit](http://gcc.gnu.org/wiki/HomePage?action=AttachFile&do=get&target=GCC2007-Proceedings.pdf)
 - [VeGen: a vectorizer generator for SIMD and beyond](https://dl.acm.org/doi/10.1145/3445814.3446692)
@@ -746,10 +792,6 @@ LICM 进行的代码移动分为 hoist 和 sink
 #### Function Inline
 
 函数内联
-
-#### Internalize
-
-全局变量转局部变量
 
 #### Tail Recursion Elimination
 
@@ -770,12 +812,13 @@ LICM 进行的代码移动分为 hoist 和 sink
 
 #### Run Test
 
-运行给的测试用例并验证的 pass，便于插入到 pipeline 中验证 Transform 正确性。
-命令行传入 `--test-out xxx`/`--test-in xxx` 可在每个 pass 后自动开启。
+运行给的测试用例并验证的 pass，便于插入到 pipeline 中验证 Transform 正确性。  
+命令行传入 `--test-out xxx`/`--test-in xxx` 可在每个 pass 后自动开启。其中 `--test-in` 为可选的。
 
 #### Verify
 
-简单的正确性检查，能检查编写 pass 初期相当一部分 bug。 命令行传入 `--verify` 可在每个 `pass` 后自动开启。 
+简单的正确性检查，能查出编写 pass 初期相当一部分 bug。   
+命令行传入 `--verify` 可在每个 `pass` 后自动开启。 
 
 #### Print Function/Module
 
@@ -801,29 +844,29 @@ MIR 是针对目标机器架构特定的中间表示，抽象程度更低，不�
 
 ## IR Parser
 
-## Runtime Library
+## Test Suite
 
-## Driver
+![workflow](/docs/images/workflow.svg)
 
-## Scripts
+以下内容的配置方法在 [这里](/docs/testsuite.md)。
 
-## Gnalc Test
+### Gnalc Test
 
 gnalc test 可对一组 SysY 测试文件进行自动化编译／运行验证
 
-### IR 验证
+#### IR 验证
 
 生成 LLVM IR（.ll），链接标准库后用 lli 或本机执行，侧重前端正确性。
 
-### 汇编验证
+#### 汇编验证
 
 生成目标架构汇编（.s），再用交叉编译器和 QEMU（或真机）执行，检验后端生成的汇编。
 
-### 差分测试
+#### 差分测试
 
 启用 `--diff` 时，先用 Clang 编译同一测试，获取参考输出，再与 gnalc 输出逐字符比对，定位语义偏差。
 
-### 命令行参数
+#### 命令行参数
 
 - `--run [前缀]`、`--skip [前缀]`：选取要跑或要跳过的测试用例。
 
@@ -837,7 +880,7 @@ gnalc test 可对一组 SysY 测试文件进行自动化编译／运行验证
 
 - ...
 
-### 运行流程
+#### 运行流程
 
 测例运行时，大概有以下步骤：
 
@@ -851,7 +894,7 @@ gnalc test 可对一组 SysY 测试文件进行自动化编译／运行验证
 - 默认运行一次，可选多次运行取平均时间
 - 若指定 --diff，则用 Clang 生成参考 .bc，并对比执行结果。
 
-## Gnalc Benchmark
+### Gnalc Benchmark
 
 - 在两种编译模式（Mode1 vs Mode2）下，对同一测试集进行多次执行（默认 3 次）
 - 对比正确性与执行时间
@@ -906,14 +949,14 @@ void register_clang_o3() {
 }
 ```
 
-## GitHub Action
+### GitHub Action
 
-我们的 GitHub Action 分为两类测试：
+我们的 GitHub Action 上的测试分为两类：
 
 - 针对 IR Pipeline 的测试，在 GitHub 官方 x86 runner 上使用 LLVM 工具链测试
 - 针对整个编译器的测试，测例的编译、链接过程在官方 x86 runner 上进行，具体测试在自托管 aarch64 树莓派上进行
 
-### IR Testing
+#### IR Testing
 
 仅测试 IR Pipeline，其中
 
@@ -928,10 +971,12 @@ graph TD
     Z[fuzz.yml] --> AA[Pipeline Fuzzing]
 ```
 
-### Testing with backend
+#### Testing with backend
 
 这是针对整个编译器的测试，具体而言，先在官方 runner 上编译链接所有测例，并将其推送到 artifacts 分支，然后触发 pi 上的测试流程，
 拉取 artifacts 分支，并运行测试，测试运行结果会保存在 test-results 分支中。
+pi 上的测试在 [ghaction.cpp](/test/ghaction.cpp) 中，初期为多线程测试，后期为了保证计时精度，改为单线程。原多线程版本在 [ghaction_multithread.cpp](/test/ghaction_multithread.cpp)。
+测试结果会自动保存在 test-results 分支中，并推送到 Gnalc Performance Dashboard。  
 此外，为避免仓库体积过于膨胀，artifacts 分支仅保留最近 10 次运行的结果。
 
 ```mermaid
@@ -939,6 +984,7 @@ graph TD
     Start[Gnalc Test] --> A
     A[backend-test.yml] -->|x86 runner| B(compile)
     A -->|self - hosted aarch64 runner| C(evaluate)
+    A --> V(publish)
     B -->|调用| D[compile-artifacts.yml]
     D --> E[检查 artifacts 分支]
     E -->|提交过多| F[重置分支]
@@ -957,17 +1003,22 @@ graph TD
     R --> S[运行测试]
     S --> T[生成测试报告]
     T --> U[更新 test-result 分支]
+    V --> W[解析 test-result]
+    W --> X[推送到 gh-pages 分支]
     classDef main fill: #e6f7ff, stroke: #1890ff
     classDef compile fill: #f6ffed, stroke: #52c41a
     classDef eval fill: #fff7e6, stroke: #fa8c16
+    classDef publish fill: #f6ffed, stroke: #52c41a
     class Start main
     class B compile
     class C eval
+    class V publish
     class U main
+    class X main
     class M main
 ```
 
-## Gnalc Performance Dashboard
+### Gnalc Performance Dashboard
 
 Performance Dashboard 的数据来源于 Github Action 自动推送的测试结果，或手动上传的比赛数据。
 
