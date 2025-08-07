@@ -1124,7 +1124,8 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
     case OP::FSUB:
     case OP::MUL:
     case OP::FMUL:
-    case OP::DIV:
+    case OP::SDIV:
+    case OP::UDIV:
     case OP::FDIV:
     case OP::SREM:
     case OP::UREM:
@@ -1350,7 +1351,8 @@ int VectorizerPass::getBaseCost(const Tree &tree) {
     case OP::FSUB:
     case OP::MUL:
     case OP::FMUL:
-    case OP::DIV:
+    case OP::SDIV:
+    case OP::UDIV:
     case OP::FDIV:
     case OP::SREM:
     case OP::UREM:
@@ -1754,7 +1756,8 @@ pVal VectorizerPass::vectorizeTree(Tree *tree) {
     case OP::FSUB:
     case OP::MUL:
     case OP::FMUL:
-    case OP::DIV:
+    case OP::SDIV:
+    case OP::UDIV:
     case OP::FDIV:
     case OP::SREM:
     case OP::UREM:

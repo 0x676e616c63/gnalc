@@ -201,7 +201,8 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
     case OP::MUL:
     case OP::FMUL:
         return ExprOp::Mul;
-    case OP::DIV:
+    case OP::SDIV:
+    case OP::UDIV:
     case OP::FDIV:
         return ExprOp::Div;
     case OP::UREM:

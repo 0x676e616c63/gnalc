@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "ir/passes/analysis/scev.hpp"
+#include "ir/block_utils.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/match.hpp"
-#include "ir/block_utils.hpp"
+#include "mir/tools.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -26,6 +27,8 @@ std::ostream &operator<<(std::ostream &os, const SCEVExpr &expr) {
             op = "*";
         else if (expr.getOp() == Op::Div)
             op = "/";
+        else if (expr.getOp() == Op::Pow)
+            op = "^";
         else
             Err::unreachable();
         os << "( " << *expr.getLHS() << " " << op << " " << *expr.getRHS() << " )";
@@ -41,6 +44,10 @@ std::ostream &operator<<(std::ostream &os, const TREC &trec) {
         os << *trec.getExpr();
     else if (trec.isAddRec())
         os << "{ " << *trec.getBase() << ", +, " << *trec.getStep() << " }_" << trec.getLoop()->getHeader()->getName();
+    else if (trec.isMulRec())
+        os << "{ " << *trec.getBase() << ", *, " << *trec.getStep() << " }_" << trec.getLoop()->getHeader()->getName();
+    else if (trec.isDivRec())
+        os << "{ " << *trec.getBase() << ", /, " << *trec.getStep() << " }_" << trec.getLoop()->getHeader()->getName();
     else if (trec.isPeeled())
         os << "( " << *trec.getFirst() << ", " << *trec.getRest() << " )_" << trec.getLoop()->getHeader()->getName();
     else if (trec.isUntracked())
@@ -58,12 +65,12 @@ SCEVExpr *TREC::getExpr() const {
 }
 
 TREC *TREC::getBase() const {
-    Err::gassert(isAddRec());
-    return std::get<AddRec>(value).base;
+    Err::gassert(isRec());
+    return std::get<Rec>(value).base;
 }
 TREC *TREC::getStep() const {
-    Err::gassert(isAddRec());
-    return std::get<AddRec>(value).step;
+    Err::gassert(isRec());
+    return std::get<Rec>(value).step;
 }
 
 SCEVExpr *TREC::getFirst() const {
@@ -76,14 +83,17 @@ TREC *TREC::getRest() const {
 }
 
 const Loop *TREC::getLoop() const {
-    Err::gassert(isAddRec() || isPeeled());
-    if (isAddRec())
-        return std::get<AddRec>(value).loop;
+    Err::gassert(isRec() || isPeeled());
+    if (isRec())
+        return std::get<Rec>(value).loop;
     return std::get<Peeled>(value).loop;
 }
 
 bool TREC::isExpr() const { return type == TRECType::Expr; }
 bool TREC::isAddRec() const { return type == TRECType::AddRec; }
+bool TREC::isMulRec() const { return type == TRECType::MulRec; }
+bool TREC::isDivRec() const { return type == TRECType::DivRec; }
+bool TREC::isRec() const { return isAddRec() || isMulRec() || isDivRec(); }
 bool TREC::isPeeled() const { return type == TRECType::Peeled; }
 bool TREC::isUntracked() const { return type == TRECType::Untracked; }
 bool TREC::isUndef() const { return type == TRECType::Undefined; }
@@ -198,7 +208,19 @@ pVal SCEVHandle::expandSCEVExprImpl(SCEVExpr *expr, const pBlock &block, BasicBl
             ir_op = OP::MUL;
             break;
         case SCEVExpr::Binary::Op::Div:
-            ir_op = OP::DIV;
+            ir_op = OP::SDIV;
+            break;
+        case SCEVExpr::Binary::Op::Pow: {
+            auto lhs_ci = lhs->as<ConstantInt>();
+            if (!lhs_ci || !Util::isPowerOfTwo(lhs_ci->getVal()))
+                return nullptr;
+            lhs = block->getParent()->getConst(1);
+            auto exp = block->getParent()->getConst(ctz_wrapper(lhs_ci->getVal()));
+            auto mul = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), OP::MUL, rhs, exp);
+            block->addInst(insert_before, mul);
+            rhs = mul;
+            ir_op = OP::SHL;
+        }
             break;
         default:
             Err::unreachable();
@@ -281,6 +303,13 @@ std::optional<size_t> SCEVHandle::estimateExpansionCostImpl(SCEVExpr *expr, cons
         return 0;
     }
     if (expr->isBinary()) {
+        if (expr->getOp() == SCEVExpr::Binary::Op::Pow) {
+            // if (!expr->getLHS()->isIRValue())
+            // return std::nullopt;
+            // auto ci = expr->getLHS()->getIRValue()->as<ConstantInt>();
+            // if (!ci || !Util::isPowerOfTwo(ci->getVal()))
+            return std::nullopt;
+        }
         auto lhs = estimateExpansionCostImpl(expr->getLHS(), block, visited);
         if (!lhs)
             return std::nullopt;
@@ -328,8 +357,20 @@ pVal SCEVHandle::expandSCEVExprUncheckedImpl(SCEVExpr *expr, const pBlock &block
             ir_op = OP::MUL;
             break;
         case SCEVExpr::Binary::Op::Div:
-            ir_op = OP::DIV;
+            ir_op = OP::SDIV;
             break;
+        case SCEVExpr::Binary::Op::Pow: {
+            // auto lhs_ci = lhs->as<ConstantInt>();
+            // if (!lhs_ci || !Util::isPowerOfTwo(lhs_ci->getVal()))
+            //     return nullptr;
+            // lhs = block->getParent()->getConst(1);
+            // auto exp = block->getParent()->getConst(ctz_wrapper(lhs_ci->getVal()));
+            // auto mul = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), OP::MUL, rhs, exp);
+            // block->addInst(insert_before, mul);
+            // rhs = mul;
+            // ir_op = OP::SHL;
+            return nullptr;
+        }
         default:
             Err::unreachable();
         }
@@ -513,6 +554,8 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         res = getTRECSub(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
     else if (match(val, M::Mul(M::Bind(x), M::Bind(y))))
         res = getTRECMul(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
+    else if (match(val, M::SDiv(M::Bind(x), M::Bind(y))))
+        res = getTRECDiv(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
     else if (auto phi = val->as_raw<PHIInst>()) {
         auto phi_bb = phi->getParent();
         // Else If n matches "v = loop-phi(a, b)" Then
@@ -522,16 +565,19 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
             Err::gassert(val_loop == loop);
             auto [invariant, variant] = *analyzeHeaderPhi(val_loop, phi);
 
-            auto [exist, update] = buildUpdateExpr(phi, variant, val_loop);
+            auto [exist, update, type] = buildUpdateExpr(phi, variant, val_loop);
             if (!exist)
                 res = getPeeledTREC(loop, getSCEVExpr(invariant), getIRValTREC(variant));
-            else if (update->isUntracked())
+            else if (update->isUntracked() || update->isUndef())
                 res = getTRECUntracked();
-            else if (update->isUndef()) {
-                Err::unreachable();
-                res = getTRECUntracked();
-            } else
+            else if (type == UpdateExprType::Add || type == UpdateExprType::LoopPhi)
                 res = getAddRecTREC(loop, getIRValTREC(invariant), update);
+            else if (type == UpdateExprType::Mul)
+                res = getMulRecTREC(loop, getIRValTREC(invariant), update);
+            else if (type == UpdateExprType::Div)
+                res = getDivRecTREC(loop, getIRValTREC(invariant), update);
+            else
+                res = getTRECUntracked();
         }
         // Else If n matches "v = condition-phi(a, b)" Then
         else if (val_loop->getHeader() != phi_bb) {
@@ -575,40 +621,102 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
 // Input: h the halting loop-phi, n the definition of an SSA name
 // Output: (exist, update), exist is true if h has been reached,
 // update is the reconstructed expression for the overall effect in the loop of h
-std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop) {
+std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop) {
     // If (n is h) Then
     if (loop_phi == val)
-        return {true, getIRValTREC(function->getConst(0).get())};
+        return {true, getIRValTREC(function->getConst(0).get()), UpdateExprType::LoopPhi};
     // Else If n is a statement in an outer loop Then
     if (loop_phi_loop->isTriviallyInvariant(val))
-        return {false, getTRECUndef()};
+        return {false, getTRECUndef(), UpdateExprType::Expr};
+
+    // Currently we don't support arbitrary nested recurrences, so check if they are consistent.
+    auto isConsistent_2 = [](UpdateExprType ty1, UpdateExprType ty2) {
+        switch (ty1) {
+            case UpdateExprType::Expr:
+            case UpdateExprType::LoopPhi:
+                return ty2 != UpdateExprType::Unknown;
+            case UpdateExprType::Add:
+                return ty2 == UpdateExprType::Add || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
+            case UpdateExprType::Mul:
+                return ty2 == UpdateExprType::Mul || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
+            case UpdateExprType::Div:
+                return ty2 == UpdateExprType::Div || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
+            case UpdateExprType::Unknown:
+                return false;
+        }
+        return false;
+    };
+
+    auto isConsistent_3 = [&isConsistent_2](UpdateExprType ty1, UpdateExprType ty2, UpdateExprType ty3) {
+        return isConsistent_2(ty1, ty2) && isConsistent_2(ty1, ty3);
+    };
+
     pVal x, y;
     // Else If n matches "v = a + b" Then
     if (match(val, M::Add(M::Bind(x), M::Bind(y)))) {
-        auto [exist_x, update_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
-        auto [exist_y, update_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
-        if (exist_x && exist_y)
-            return {false, getTRECUndef()};
+        auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+        auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+        if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Add, type_x, type_y))
+            return {false, getTRECUndef(), UpdateExprType::Unknown};
+
+        if (type_x == UpdateExprType::LoopPhi)
+            update_x = getExprTREC(getSCEVExpr(0));
+        if (type_y == UpdateExprType::LoopPhi)
+            update_y = getExprTREC(getSCEVExpr(0));
+
         if (exist_x)
-            return {true, getTRECAdd(update_x, getIRValTREC(y.get()))};
+            return {true, getTRECAdd(update_x, getIRValTREC(y.get())), UpdateExprType::Add};
         if (exist_y)
-            return {true, getTRECAdd(update_y, getIRValTREC(x.get()))};
-        return {false, getTRECUndef()};
+            return {true, getTRECAdd(update_y, getIRValTREC(x.get())), UpdateExprType::Add};
+        return {false, getTRECUndef(), UpdateExprType::Unknown};
     }
     if (match(val, M::Sub(M::Bind(x), M::Bind(y)))) {
-        auto [exist_x, update_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
-        auto [exist_y, update_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
-        if (exist_x && exist_y)
-            return {false, getTRECUndef()};
+        auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+        auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+        if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Add, type_x, type_y))
+            return {false, getTRECUndef(), UpdateExprType::Unknown};
+
+        if (type_x == UpdateExprType::LoopPhi)
+            update_x = getExprTREC(getSCEVExpr(0));
+        if (type_y == UpdateExprType::LoopPhi)
+            update_y = getExprTREC(getSCEVExpr(0));
+
         if (exist_x) {
             auto neg = getSCEVExprNeg(getSCEVExpr(y.get()));
-            return {true, getTRECAdd(update_x, getExprTREC(neg))};
+            return {true, getTRECAdd(update_x, getExprTREC(neg)), UpdateExprType::Add};
         }
         if (exist_y) {
             auto neg = getTRECNeg(update_y);
-            return {true, getTRECAdd(neg, getIRValTREC(x.get()))};
+            return {true, getTRECAdd(neg, getIRValTREC(x.get())), UpdateExprType::Add};
         }
-        return {false, getTRECUndef()};
+        return {false, getTRECUndef(), UpdateExprType::Unknown};
+    }
+
+    if (match(val, M::Mul(M::Bind(x), M::Bind(y)))) {
+        auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+        auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+        if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Mul, type_x, type_y))
+            return {false, getTRECUndef(), UpdateExprType::Unknown};
+
+        if (type_x == UpdateExprType::LoopPhi)
+            update_x = getExprTREC(getSCEVExpr(1));
+        if (type_y == UpdateExprType::LoopPhi)
+            update_y = getExprTREC(getSCEVExpr(1));
+
+        if (exist_x)
+            return {true, getTRECMul(update_x, getIRValTREC(y.get())), UpdateExprType::Mul};
+        if (exist_y)
+            return {true, getTRECMul(update_y, getIRValTREC(x.get())), UpdateExprType::Mul};
+        return {false, getTRECUndef(), UpdateExprType::Unknown};
+    }
+    if (match(val, M::SDiv(M::Bind(x), M::Bind(y)))) {
+        auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+        auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+        if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Div, type_x, type_y))
+            return {false, getTRECUndef(), UpdateExprType::Unknown};
+        if (exist_x && type_x == UpdateExprType::LoopPhi)
+            return {true, getIRValTREC(y.get()), UpdateExprType::Div};
+        return {false, getTRECUndef(), UpdateExprType::Unknown};
     }
 
     if (auto val_phi = val->as_raw<PHIInst>()) {
@@ -622,45 +730,59 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
             auto [val_phi_invariant, val_phi_variant] = *analyzeHeaderPhi(val_phi_loop, val_phi);
 
             if (loop_phi_loop->isTriviallyInvariant(val_phi_invariant))
-                return {false, getTRECUndef()};
+                return {false, getTRECUndef(), UpdateExprType::Unknown};
 
             auto s = apply(analyzeEvolution(val_phi_loop, val), getTripCount(val_phi_loop));
             if (!s)
-                return {false, getTRECUndef()};
+                return {false, getTRECUndef(), UpdateExprType::Unknown};
             if (s->isBinary() && s->getLHS()->isIRValue() && s->getLHS()->getRawIRValue() == val_phi_variant) {
-                auto [exist, update] = buildUpdateExpr(loop_phi, val_phi_invariant, loop_phi_loop);
+                auto [exist, update, type] = buildUpdateExpr(loop_phi, val_phi_invariant, loop_phi_loop);
                 if (exist) {
                     if (s->getOp() == SCEVExpr::Binary::Op::Add)
-                        return {true, getTRECAdd(update, getExprTREC(s->getRHS()))};
+                        return {true, getTRECAdd(update, getExprTREC(s->getRHS())), UpdateExprType::Add};
                     if (s->getOp() == SCEVExpr::Binary::Op::Sub)
-                        return {true, getTRECAdd(update, getExprTREC(getSCEVExprNeg(s->getRHS())))};
+                        return {true, getTRECAdd(update, getExprTREC(getSCEVExprNeg(s->getRHS()))), UpdateExprType::Add};
+                    if (s->getOp() == SCEVExpr::Binary::Op::Mul)
+                        return {true, getTRECMul(update, getExprTREC(s->getRHS())), UpdateExprType::Mul};
+                    if (s->getOp() == SCEVExpr::Binary::Op::Div)
+                        return {true, getTRECDiv(update, getExprTREC(getSCEVExprDiv(getSCEVExpr(1), s->getRHS()))), UpdateExprType::Mul};
+                    return {true, getTRECUntracked(), UpdateExprType::Unknown};
                 }
             }
-            return {false, getTRECUndef()};
+            return {false, getTRECUndef(), UpdateExprType::Unknown};
         }
 
         // Else If n matches "v = condition-phi(a, b)" Then
+        UpdateExprType common_type = UpdateExprType::Unknown;
+        bool first = true;
         for (const auto &[v, b] : val_phi->incomings()) {
-            auto [exist, update] = buildUpdateExpr(loop_phi, v.get(), loop_phi_loop);
+            auto [exist, update, type] = buildUpdateExpr(loop_phi, v.get(), loop_phi_loop);
+
+            if (first) {
+                common_type = type;
+                first = false;
+            } else if (!isConsistent_2(common_type, type))
+                return {false, getTRECUndef(), UpdateExprType::Unknown};
+
             if (exist)
-                return {true, getTRECUntracked()};
+                return {true, getTRECUntracked(), UpdateExprType::Unknown};
         }
 
-        return {false, getTRECUndef()};
+        return {false, getTRECUndef(), UpdateExprType::Unknown};
     }
 
     if (auto select = val->as_raw<SELECTInst>()) {
-        auto [t_exist, t_update] = buildUpdateExpr(loop_phi, select->getTrueVal().get(), loop_phi_loop);
+        auto [t_exist, t_update, t_type] = buildUpdateExpr(loop_phi, select->getTrueVal().get(), loop_phi_loop);
         if (t_exist)
-            return {true, getTRECUntracked()};
-        auto [f_exist, f_update] = buildUpdateExpr(loop_phi, select->getFalseVal().get(), loop_phi_loop);
-        if (f_exist)
-            return {true, getTRECUntracked()};
+            return {true, getTRECUntracked(), UpdateExprType::Unknown};
+        auto [f_exist, f_update, f_type] = buildUpdateExpr(loop_phi, select->getFalseVal().get(), loop_phi_loop);
+        if (f_exist || !isConsistent_2(t_type, f_type))
+            return {true, getTRECUntracked(), UpdateExprType::Unknown};
 
-        return {false, getTRECUndef()};
+        return {false, getTRECUndef(), UpdateExprType::Unknown};
     }
 
-    return {false, getTRECUndef()};
+    return {false, getTRECUndef(), UpdateExprType::Unknown};
 }
 
 // Input: trec a symbolic TREC, l the instantiation loop
@@ -703,8 +825,10 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
                     case SCEVExpr::Binary::Op::Mul:
                         return getTRECMul(lhs, rhs);
                     case SCEVExpr::Binary::Op::Div:
+                        return getTRECDiv(lhs, rhs);
+                    case SCEVExpr::Binary::Op::Pow:
                         return getTRECUntracked();
-                default:
+                    default:
                         Err::unreachable();
                 }
                 return getTRECUntracked();
@@ -715,10 +839,10 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
         return analyzeExprEvo(trec->getExpr());
     }
 
-    if (trec->isAddRec()) {
+    if (trec->isRec()) {
         auto i1 = instantiateEvolutionImpl(trec->getBase(), loop, instantiated);
         auto i2 = instantiateEvolutionImpl(trec->getStep(), loop, instantiated);
-        return getAddRecTREC(trec->getLoop(), i1, i2);
+        return getRecTREC(trec->getType(), trec->getLoop(), i1, i2);
     }
 
     if (trec->isPeeled()) {
@@ -737,12 +861,9 @@ SCEVExpr* SCEVHandle::swapOperands(SCEVExpr *x) {
     switch (x->getOp()) {
         case SCEVExpr::Binary::Op::Add:
             return getSCEVExprAdd(x->getRHS(), x->getLHS());
-        case SCEVExpr::Binary::Op::Sub:
-            return getSCEVExprSub(x->getRHS(), x->getLHS());
         case SCEVExpr::Binary::Op::Mul:
             return getSCEVExprMul(x->getRHS(), x->getLHS());
-        case SCEVExpr::Binary::Op::Div:
-            return getSCEVExprDiv(x->getRHS(), x->getLHS());
+        default: Err::unreachable("Swap what?");
     }
     Err::unreachable();
     return nullptr;
@@ -880,7 +1001,7 @@ TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
     if (trec->isExpr())
         return getExprTREC(foldSCEVExpr(trec->getExpr()));
 
-    if (!trec->isAddRec() && !trec->isPeeled())
+    if (!trec->isRec() && !trec->isPeeled())
         return getTRECUntracked();
 
     trec = foldTREC(trec);
@@ -967,6 +1088,17 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
         if (trip_cnt_val == 0)
             return trec->getFirst();
         return apply(trec->getRest(), getSCEVExpr(trip_cnt_val - 1));
+    }
+
+    if (trec->isMulRec() || trec->isDivRec()) {
+        auto base = trec->getBase();
+        auto step = trec->getStep();
+        if (!base->isExpr() || !step->isExpr())
+            return nullptr;
+        auto rhs = getSCEVExprPow(step->getExpr(), trip_cnt);
+        if (trec->isMulRec())
+            return getSCEVExprMul(base->getExpr(), rhs);
+        return getSCEVExprDiv(base->getExpr(), rhs);
     }
 
     if (!trec->isAddRec())
@@ -1216,12 +1348,24 @@ TREC *SCEVHandle::getExprTREC(SCEVExpr *expr) {
 
 TREC *SCEVHandle::getIRValTREC(Value *x) { return getExprTREC(getSCEVExpr(x)); }
 
-TREC *SCEVHandle::getAddRecTREC(const Loop *loop, TREC *base, TREC *step) {
+TREC *SCEVHandle::getRecTREC(TRECType type, const Loop *loop, TREC *base, TREC *step) {
     Err::gassert(!base->isUndef() && !step->isUndef());
     if (base->isUntracked() || step->isUntracked())
         return getTRECUntracked();
-    auto trec = std::make_shared<TREC>(TREC::AddRec{base, step, loop});
+    auto trec = std::make_shared<TREC>(TREC::Rec{base, step, loop}, type);
     return getPoolTREC(trec);
+}
+
+TREC *SCEVHandle::getAddRecTREC(const Loop *loop, TREC *base, TREC *step) {
+    return getRecTREC(TRECType::AddRec, loop, base, step);
+}
+
+TREC *SCEVHandle::getMulRecTREC(const Loop *loop, TREC *base, TREC *step) {
+    return getRecTREC(TRECType::MulRec, loop, base, step);
+}
+
+TREC *SCEVHandle::getDivRecTREC(const Loop *loop, TREC *base, TREC *step) {
+    return getRecTREC(TRECType::DivRec, loop, base, step);
 }
 
 TREC *SCEVHandle::getPeeledTREC(const Loop *loop, SCEVExpr *first, TREC *rest) {
@@ -1323,6 +1467,19 @@ TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
                                getTRECMul(x->getStep(), y->getStep()));
     return getAddRecTREC(x->getLoop(), new_base, new_step);
 }
+TREC *SCEVHandle::getTRECDiv(TREC *x, TREC *y) {
+    Err::gassert(!x->isUndef() && !y->isUndef());
+    if (x->isUntracked() || y->isUntracked())
+        return getTRECUntracked();
+    if (x->isExpr() && y->isExpr())
+        return getPoolTREC(std::make_shared<TREC>(getSCEVExprDiv(x->getExpr(), y->getExpr())));
+    if (x->isAddRec() && y->isExpr())
+        return getAddRecTREC(x->getLoop(), getTRECDiv(x->getBase(), y), getTRECDiv(x->getStep(), y));
+    if (x->isPeeled() && y->isExpr())
+        return getPeeledTREC(x->getLoop(), getSCEVExprDiv(x->getFirst(), y->getExpr()), getTRECDiv(x->getRest(), y));
+
+    return getTRECUntracked();
+}
 TREC *SCEVHandle::getTRECNeg(TREC *x) { return getTRECSub(getExprTREC(getSCEVExpr(0)), x); }
 
 // Note that this function is called in a post order depth-first order. Thus, we don't
@@ -1349,8 +1506,8 @@ TREC* SCEVHandle::foldTREC(TREC *trec) {
     if (trec->isExpr())
         return getExprTREC(foldSCEVExpr(trec->getExpr()));
 
-    if (trec->isAddRec())
-        return getAddRecTREC(trec->getLoop(), foldTREC(trec->getBase()), foldTREC(trec->getStep()));
+    if (trec->isRec())
+        return getRecTREC(trec->getType(), trec->getLoop(), foldTREC(trec->getBase()), foldTREC(trec->getStep()));
 
     if (trec->isPeeled()) {
         auto first = foldSCEVExpr(trec->getFirst());
@@ -1432,6 +1589,22 @@ SCEVExpr *SCEVHandle::getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y) {
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Div, x, y));
 }
+
+SCEVExpr *SCEVHandle::getSCEVExprPow(SCEVExpr *x, SCEVExpr *y) {
+    if (x->isIRValue() && match(x->getRawIRValue(), M::Is(0)))
+        return getSCEVExpr(1);
+    if (y->isIRValue() && match(y->getRawIRValue(), M::Is(1)))
+        return x;
+    if (x->isIRValue() && y->isIRValue()) {
+        int a, b;
+        if (match(x->getRawIRValue(), M::Bind(a)) &&
+            match(y->getRawIRValue(), M::Bind(b)))
+            return getSCEVExpr(std::pow(a, b));
+    }
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Pow, x, y));
+}
+
+
 SCEVExpr *SCEVHandle::getSCEVExprNeg(SCEVExpr *x) {
     if (int a; x->isIRValue() && match(x->getRawIRValue(), M::Bind(a)))
         return getSCEVExpr(-a);

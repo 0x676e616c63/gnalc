@@ -785,7 +785,7 @@ void IRGenerator::visit(BinaryOp &node) {
             MAKE_OP(BiOp::ADD, IR::OP::ADD, IR::OP::FADD, +)
             MAKE_OP(BiOp::SUB, IR::OP::SUB, IR::OP::FSUB, -)
             MAKE_OP(BiOp::MUL, IR::OP::MUL, IR::OP::FMUL, *)
-            MAKE_OP(BiOp::DIV, IR::OP::DIV, IR::OP::FDIV, /)
+            MAKE_OP(BiOp::DIV, IR::OP::SDIV, IR::OP::FDIV, /)
 
         case BiOp::MOD:
             Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32);

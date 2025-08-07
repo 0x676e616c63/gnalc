@@ -133,7 +133,8 @@ public:
                 else if (lhs.isConstant() && rhs.isConstant())
                     changes[inst].setCProxy(lhs.cproxy() * rhs.cproxy());
                 break;
-            case OP::DIV:
+            case OP::SDIV:
+            case OP::UDIV:
             case OP::FDIV:
                 if (rhs.isZero()) {
                     Logger::logWarning("Zero divisor detected.");

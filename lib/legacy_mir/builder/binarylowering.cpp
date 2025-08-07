@@ -170,7 +170,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     // =================
     // 转化为 sdiv / mov + sdiv
     // =================
-    else if (op == IR::OP::DIV) {
+    else if (op == IR::OP::SDIV) {
         if (rconst && lconst) {
             int constVal = lconst->getVal() / rconst->getVal();
 

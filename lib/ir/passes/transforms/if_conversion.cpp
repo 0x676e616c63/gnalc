@@ -20,7 +20,8 @@ bool isSafeAndProfitableToConvert(const pBlock &bb) {
         if (inst->is<STOREInst, LOADInst, CALLInst>())
             return false;
 
-        if (inst->getOpcode() == OP::DIV || inst->getOpcode() == OP::SREM || inst->getOpcode() == OP::FDIV ||
+        if (inst->getOpcode() == OP::SDIV || inst->getOpcode() == OP::UDIV
+            || inst->getOpcode() == OP::SREM || inst->getOpcode() == OP::FDIV ||
             inst->getOpcode() == OP::FREM)
             return false;
     }

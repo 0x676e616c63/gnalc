@@ -382,7 +382,19 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass());
+    fpm.addPass(BreakCriticalEdgesPass());
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(ADCEPass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(RangeAwareSimplifyPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LoopEliminationPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(PrintRangePass(std::cerr));
+    fpm.addPass(NameNormalizePass(true));
     return fpm;
     // // Parallel
     // FPM fpm;

@@ -92,7 +92,7 @@ public:
         int cost = is_fp ? 2 : 1;
 
         // sdiv -> add + cmp + select + ashr
-        if (op == OP::DIV && rhs.kind == OperandKind::UniformConstant && rhs.prop == OperandProp::PowerOfTwo) {
+        if (op == OP::SDIV && rhs.kind == OperandKind::UniformConstant && rhs.prop == OperandProp::PowerOfTwo) {
             cost += getBinaryCost(OP::ADD, ty, OperandTrait::none(), OperandTrait::none());
             cost += getBinaryCost(OP::SUB, ty, OperandTrait::none(), OperandTrait::none());
             cost += getSelectCost(ty);
@@ -134,7 +134,8 @@ public:
     }
     bool canVectorize(OP op) const override {
         switch (op) {
-        case OP::DIV:
+        case OP::SDIV:
+        case OP::UDIV:
         case OP::LSHR:
         case OP::ASHR:
         case OP::SREM:

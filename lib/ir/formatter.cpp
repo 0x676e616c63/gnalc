@@ -41,8 +41,10 @@ std::string IRFormatter::formatOp(OP op) {
         return "mul";
     case OP::FMUL:
         return "fmul";
-    case OP::DIV:
+    case OP::SDIV:
         return "sdiv";
+    case OP::UDIV:
+        return "udiv";
     case OP::FDIV:
         return "fdiv";
     case OP::SREM:
@@ -270,7 +272,7 @@ std::string IRFormatter::formatInst(Instruction &inst) {
     case OP::FSUB:
     case OP::MUL:
     case OP::FMUL:
-    case OP::DIV:
+    case OP::SDIV:
     case OP::FDIV:
     case OP::SREM:
     case OP::UREM:

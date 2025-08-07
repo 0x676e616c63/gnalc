@@ -32,7 +32,7 @@ class SCEVExpr {
 
 public:
     struct Binary {
-        enum class Op { Add, Sub, Mul, Div };
+        enum class Op { Add, Sub, Mul, Div, Pow };
         Op op;
         SCEVExpr *lhs;
         SCEVExpr *rhs;
@@ -62,19 +62,19 @@ public:
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
 };
-enum class TRECType { AddRec, Peeled, Expr, Undefined, Untracked };
+enum class TRECType { AddRec, MulRec, DivRec, Peeled, Expr, Undefined, Untracked };
 // Tree of Recurrences
 // Note that we do not support Periodic Evolution.
 class TREC {
     friend std::ostream &operator<<(std::ostream &os, const TREC &expr);
 
 public:
-    struct AddRec {
+    struct Rec {
         TREC *base;
         TREC *step;
         const Loop *loop;
 
-        bool operator==(const AddRec &other) const {
+        bool operator==(const Rec &other) const {
             return base == other.base && step == other.step && loop == other.loop;
         }
     };
@@ -91,23 +91,27 @@ public:
 
 private:
     TRECType type;
-    std::variant<std::monostate, SCEVExpr *, AddRec, Peeled> value;
+    std::variant<std::monostate, SCEVExpr *, Rec, Peeled> value;
 
 public:
     explicit TREC(TRECType type_) : type(type_) { Err::gassert(type != TRECType::Expr); }
     explicit TREC(SCEVExpr *scev_expr) : value(scev_expr), type(TRECType::Expr) {}
 
-    explicit TREC(AddRec rec) : value(rec), type(TRECType::AddRec) {}
+    explicit TREC(Rec rec, TRECType ty) : value(rec), type(ty) {
+        Err::gassert(ty == TRECType::AddRec || ty == TRECType::MulRec || ty == TRECType::DivRec);
+    }
     explicit TREC(Peeled rec) : value(rec), type(TRECType::Peeled) {}
 
     static TREC undef() { return TREC(TRECType::Undefined); }
     static TREC untracked() { return TREC(TRECType::Untracked); }
     static TREC expr(SCEVExpr *i) { return TREC(i); }
 
+    // TODO: Refactor interface
+
     // For expr
     SCEVExpr *getExpr() const;
 
-    // For AddRec
+    // For Rec
     TREC *getBase() const;
     TREC *getStep() const;
 
@@ -115,14 +119,19 @@ public:
     SCEVExpr *getFirst() const;
     TREC *getRest() const;
 
-    // For AddRec and PeeledTREC
+    // For Rec and PeeledTREC
     const Loop *getLoop() const;
 
     bool isExpr() const;
     bool isAddRec() const;
+    bool isMulRec() const;
+    bool isDivRec() const;
+    bool isRec() const;
     bool isPeeled() const;
     bool isUntracked() const;
     bool isUndef() const;
+
+    TRECType getType() const { return type; }
 
     bool operator==(const TREC &other) const { return type == other.type && value == other.value; }
 
@@ -193,11 +202,15 @@ public:
     TREC *getExprTREC(SCEVExpr *expr);
     // Convenient wrapper for getSCEVExprTREC(getSCEVExpr(x))
     TREC *getIRValTREC(Value *x);
+    TREC *getRecTREC(TRECType type, const Loop *loop, TREC *base, TREC *step);
     TREC *getAddRecTREC(const Loop *loop, TREC *base, TREC *step);
+    TREC *getMulRecTREC(const Loop *loop, TREC *base, TREC *step);
+    TREC *getDivRecTREC(const Loop *loop, TREC *base, TREC *step);
     TREC *getPeeledTREC(const Loop *loop, SCEVExpr *first, TREC *rest);
     TREC *getTRECAdd(TREC *x, TREC *y);
     TREC *getTRECSub(TREC *x, TREC *y);
     TREC *getTRECMul(TREC *x, TREC *y);
+    TREC *getTRECDiv(TREC *x, TREC *y);
     TREC *getTRECNeg(TREC *x);
     [[nodiscard]] TREC *unifyPeeledTREC(TREC *peeled);
     [[nodiscard]] TREC* foldTREC(TREC *trec);
@@ -206,6 +219,7 @@ public:
     SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprPow(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
     SCEVExpr *getSCEVExpr(int x);
     SCEVExpr *getSCEVExpr(Value *x);
@@ -233,7 +247,10 @@ private:
     // Input: h the halting loop-phi, n the definition of an SSA name
     // Output: (exist, update), exist is true if h has been reached,
     //         update is the reconstructed expression for the overall effect in the loop of h
-    std::pair<bool, TREC *> buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop);
+    enum class UpdateExprType {
+        LoopPhi, Expr, Add, Mul, Div, Unknown
+    };
+    std::tuple<bool, TREC *, UpdateExprType> buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop);
 
     SCEVExpr* computeSymbolicBinomialCoefficient(SCEVExpr* n, int p);
     SCEVExpr *apply(TREC *trec, SCEVExpr *trip_cnt);

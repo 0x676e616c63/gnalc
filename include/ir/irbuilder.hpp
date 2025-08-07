@@ -48,7 +48,8 @@ public:
     pBinary makeAdd(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeSub(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeMul(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
-    pBinary makeDiv(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
+    pBinary makeSDiv(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
+    pBinary makeUDiv(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeURem(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeSRem(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeAnd(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;

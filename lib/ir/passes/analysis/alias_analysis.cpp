@@ -207,7 +207,8 @@ bool hasSideEffect(FAM &fam, Instruction *inst) {
         case OP::FSUB:
         case OP::MUL:
         case OP::FMUL:
-        case OP::DIV:
+        case OP::SDIV:
+        case OP::UDIV:
         case OP::FDIV:
         case OP::SREM:
         case OP::UREM:

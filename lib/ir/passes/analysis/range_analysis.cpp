@@ -53,6 +53,34 @@ FRng RangeResult::getFloatRange(Value *val, BasicBlock *bb) const {
 }
 FRng RangeResult::getFloatRange(const pVal &val, const pBlock &bb) const { return getFloatRange(val.get(), bb.get()); }
 
+IRng RangeResult::getIntRange(Value *val, ICtxRng::Edge edge) const {
+    if (auto ci32 = val->as<ConstantInt>())
+        return IRng(ci32->getVal());
+    if (auto ci1 = val->as<ConstantI1>())
+        return IRng(ci1->getVal());
+    if (auto ci8 = val->as<ConstantI8>())
+        return IRng(ci8->getVal());
+    auto it = int_range_map.find(val);
+    if (it == int_range_map.end())
+        return IRng();
+    return it->second.getEdge(edge);
+}
+IRng RangeResult::getIntRange(const pVal &val, ICtxRng::Edge edge) const {
+    return getIntRange(val.get(), edge);
+}
+FRng RangeResult::getFloatRange(Value *val, FCtxRng::Edge edge) const {
+    if (auto ci32 = val->as<ConstantFloat>())
+        return FRng(ci32->getVal());
+
+    auto it = float_range_map.find(val);
+    if (it == float_range_map.end())
+        return FRng();
+    return it->second.getEdge(edge);
+}
+FRng RangeResult::getFloatRange(const pVal &val, FCtxRng::Edge edge) const {
+    return getFloatRange(val.get(), edge);
+}
+
 bool RangeResult::knownNonNegative(Value *val, BasicBlock *bb) const {
     if (auto ci32 = val->as<ConstantInt>())
         return ci32->getVal() >= 0;
@@ -79,6 +107,34 @@ bool RangeResult::knownNonNegative(const pVal &val, const pBlock &bb) const {
     return knownNonNegative(val.get(), bb.get());
 }
 
+bool RangeResult::knownNonNegative(Value *val, BasicBlockEdge edge) const {
+    if (auto ci32 = val->as<ConstantInt>())
+        return ci32->getVal() >= 0;
+    if (auto ci8 = val->as<ConstantI8>())
+        return ci8->getVal() >= 0;
+    if (auto ci1 = val->as<ConstantI1>())
+        return true;
+    if (auto cf32 = val->as<ConstantFloat>())
+        return cf32->getVal() >= 0.0f;
+
+    if (val->getType()->isInteger()) {
+        auto rng = getIntRange(val, edge);
+        if (rng.min != IRng::MIN && rng.min >= 0)
+            return true;
+    }
+    if (val->getType()->isFloatingPoint()) {
+        auto rng = getFloatRange(val, edge);
+        if (rng.min != FRng::MIN && rng.min >= 0.0f)
+            return true;
+    }
+    return false;
+}
+
+
+bool RangeResult::knownNonNegative(const pVal &val, BasicBlockEdge edge) const {
+    return knownNonNegative(val.get(), edge);
+}
+
 bool RangeResult::update(Value *val, const IRng &range) { return int_range_map[val].updateGlobal(range); }
 bool RangeResult::update(Value *val, const IRng &range, BasicBlock *bb) {
     if (auto inst = val->as_raw<Instruction>()) {
@@ -97,6 +153,13 @@ bool RangeResult::update(Value *val, const FRng &range, BasicBlock *bb) {
         }
     }
     return float_range_map[val].updateContextual(range, bb);
+}
+
+bool RangeResult::update(Value *val, const IRng &range, ICtxRng::Edge edge) {
+    return int_range_map[val].updateEdge(range, edge);
+}
+bool RangeResult::update(Value *val, const FRng &range, FCtxRng::Edge edge) {
+    return float_range_map[val].updateEdge(range, edge);
 }
 
 bool RangeResult::merge(Value *val, const IRng &range) { return int_range_map[val].mergeGlobal(range); }
@@ -151,9 +214,10 @@ std::tuple<unsigned, unsigned, unsigned> countOperSign(RangeResult &res, PHIInst
     unsigned known_negative = 0;
     unsigned zero = 0;
     unsigned known_positive = 0;
+    auto phi_bb = phi->getParent().get();
     if (phi->getType()->isInteger()) {
         for (const auto &[val, bb] : phi->incomings()) {
-            auto rng = res.getIntRange(val, bb);
+            auto rng = res.getIntRange(val, BasicBlockEdge{bb.get(), phi_bb });
             if (rng.min > 0)
                 known_positive++;
             if (rng.max < 0)
@@ -163,7 +227,7 @@ std::tuple<unsigned, unsigned, unsigned> countOperSign(RangeResult &res, PHIInst
         }
     } else if (phi->getType()->isFloatingPoint()) {
         for (const auto &[val, bb] : phi->incomings()) {
-            auto rng = res.getFloatRange(val, bb);
+            auto rng = res.getFloatRange(val, BasicBlockEdge{bb.get(), phi_bb});
             if (rng.min > 0.0f)
                 known_positive++;
             if (rng.max < 0.0f)
@@ -183,16 +247,15 @@ enum class PhiOperSign {
     Unknown
 };
 PhiOperSign analyzePhiOperSign(RangeResult &res, PHIInst *phi, Value *oper, BasicBlock *oper_bb = nullptr) {
+    BasicBlockEdge edge = {oper_bb, phi->getParent().get() };
     if (phi->getType()->isInteger()) {
-        auto rng = res.getIntRange(oper, oper_bb);
+        auto rng = res.getIntRange(oper, edge);
         if (rng.min >= 0 || rng.max <= 0)
             return PhiOperSign::Determined;
     } else if (phi->getType()->isFloatingPoint()) {
-        for (const auto &[val, bb] : phi->incomings()) {
-            auto rng = res.getFloatRange(val, bb);
-            if (rng.min >= 0.0f || rng.max <= 0.0f)
-                return PhiOperSign::Determined;
-        }
+        auto rng = res.getFloatRange(oper, edge);
+        if (rng.min >= 0.0f || rng.max <= 0.0f)
+            return PhiOperSign::Determined;
     }
 
     auto binary = oper->as<BinaryInst>();
@@ -208,8 +271,8 @@ PhiOperSign analyzePhiOperSign(RangeResult &res, PHIInst *phi, Value *oper, Basi
     auto opcode = binary->getOpcode();
     auto non_phi_oper = lhs == phi ? rhs : lhs;
 
-    if (res.knownNonNegative(non_phi_oper, oper_bb)) {
-        if (opcode == OP::MUL || opcode == OP::DIV || opcode == OP::FMUL || opcode == OP::FDIV)
+    if (res.knownNonNegative(non_phi_oper, edge)) {
+        if (opcode == OP::MUL || opcode == OP::SDIV || opcode == OP::UDIV || opcode == OP::FMUL || opcode == OP::FDIV)
             return PhiOperSign::Same;
 
         if (opcode == OP::ADD || opcode == OP::FADD)
@@ -316,7 +379,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                     updateInt(binary, lrng - rrng);
                 else if (binary->getOpcode() == OP::MUL)
                     updateInt(binary, lrng * rrng);
-                else if (binary->getOpcode() == OP::DIV)
+                else if (binary->getOpcode() == OP::SDIV || binary->getOpcode() == OP::UDIV)
                     updateInt(binary, lrng / rrng);
                 else if (binary->getOpcode() == OP::SREM)
                     updateInt(binary, lrng % rrng);
@@ -509,6 +572,18 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         return modified;
     };
 
+    auto updateEdgeInt = [&](Value *v, const ICtxRng::Edge &edge, const IRng &rng) {
+        if (!v->is<Instruction, FormalParam>())
+            return false;
+        return res.update(v, rng, edge);
+    };
+
+    auto updateEdgeFloat = [&](Value *v, const FCtxRng::Edge &edge, const FRng &rng) {
+        if (!v->is<Instruction, FormalParam>())
+            return false;
+        return res.update(v, rng, edge);
+    };
+
     auto &scev = fam->getResult<SCEVAnalysis>(*func);
     while (!worklist.empty()) {
         auto pair = worklist.front();
@@ -621,7 +696,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     updateContextualInt(binary, bb, lrng - rrng);
                 else if (binary->getOpcode() == OP::MUL)
                     updateContextualInt(binary, bb, lrng * rrng);
-                else if (binary->getOpcode() == OP::DIV)
+                else if (binary->getOpcode() == OP::SDIV || binary->getOpcode() == OP::UDIV)
                     updateContextualInt(binary, bb, lrng / rrng);
                 else if (binary->getOpcode() == OP::SREM)
                     updateContextualInt(binary, bb, lrng % rrng);
@@ -736,6 +811,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             auto rhs = icmp->getRHS().get();
             auto lrng = res.getIntRange(lhs, bb);
             auto rrng = res.getIntRange(rhs, bb);
+            auto icmp_bb = icmp->getParent().get();
 
             for (auto inst_user : icmp->inst_users()) {
                 if (auto user_br = inst_user->as_raw<BRInst>()) {
@@ -746,10 +822,12 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     bool falsebb_can_set = falsebb->getNumPreds() == 1;
 
                     auto tryUpdateTrue = [&](Value *val, const IRng &rng) {
+                        updateEdgeInt(val, BasicBlockEdge{icmp_bb, truebb}, rng);
                         if (truebb_can_set)
                             updateContextualInt(val, truebb, rng);
                     };
                     auto tryUpdateFalse = [&](Value *val, const IRng &rng) {
+                        updateEdgeInt(val, BasicBlockEdge{icmp_bb, falsebb}, rng);
                         if (falsebb_can_set)
                             updateContextualInt(val, falsebb, rng);
                     };
@@ -825,6 +903,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             auto rhs = fcmp->getRHS().get();
             auto lrng = res.getFloatRange(lhs, bb);
             auto rrng = res.getFloatRange(rhs, bb);
+            auto fcmp_bb = fcmp->getParent().get();
 
             for (auto inst_user : fcmp->inst_users()) {
                 if (auto user_br = inst_user->as_raw<BRInst>()) {
@@ -834,10 +913,12 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     bool falsebb_can_set = falsebb->getNumPreds() == 1;
 
                     auto tryUpdateTrue = [&](Value *val, const FRng &rng) {
+                        updateEdgeFloat(val, {fcmp_bb, truebb}, rng);
                         if (truebb_can_set)
                             updateContextualFloat(val, truebb, rng);
                     };
                     auto tryUpdateFalse = [&](Value *val, const FRng &rng) {
+                        updateEdgeFloat(val, {fcmp_bb, falsebb}, rng);
                         if (falsebb_can_set)
                             updateContextualFloat(val, falsebb, rng);
                     };
@@ -851,60 +932,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                         tryUpdateFalse(lhs, rrng);
                         tryUpdateFalse(rhs, lrng);
                         break;
-                    case FCMPOP::olt:
-                        // lhs < rhs
-                        if (rrng.max != FRng::MAX)
-                            tryUpdateTrue(lhs, FRng(FRng::MIN, rrng.max - 0.01));
-                        if (lrng.min != FRng::MIN)
-                            tryUpdateTrue(rhs, FRng(lrng.min + 0.01, FRng::MAX));
-
-                        // lhs >= rhs
-                        if (rrng.min != FRng::MIN)
-                            tryUpdateFalse(lhs, FRng(rrng.min, FRng::MAX));
-                        if (lrng.max != FRng::MAX)
-                            tryUpdateFalse(rhs, FRng(FRng::MIN, lrng.max));
-                        break;
-                    case FCMPOP::ole:
-                        // lhs <= rhs
-                        if (rrng.max != FRng::MAX)
-                            tryUpdateTrue(lhs, FRng(FRng::MIN, rrng.max));
-                        if (lrng.min != FRng::MIN)
-                            tryUpdateTrue(rhs, FRng(lrng.min, FRng::MAX));
-
-                        // lhs > rhs
-                        if (rrng.min != FRng::MIN)
-                            tryUpdateFalse(lhs, FRng(rrng.min + 0.01, FRng::MAX));
-                        if (lrng.max != FRng::MAX)
-                            tryUpdateFalse(rhs, FRng(FRng::MIN, lrng.max - 0.01));
-                        break;
-                    case FCMPOP::ogt:
-                        // lhs > rhs
-                        if (rrng.min != FRng::MIN)
-                            tryUpdateTrue(lhs, FRng(rrng.min + 0.01, FRng::MAX));
-                        if (lrng.max != FRng::MAX)
-                            tryUpdateTrue(rhs, FRng(FRng::MIN, lrng.max - 0.01));
-
-                        // lhs <= rhs
-                        if (rrng.max != FRng::MAX)
-                            tryUpdateFalse(lhs, FRng(FRng::MIN, rrng.max));
-                        if (lrng.min != FRng::MIN)
-                            tryUpdateFalse(rhs, FRng(lrng.min, FRng::MAX));
-                        break;
-                    case FCMPOP::oge:
-                        // lhs >= rhs
-                        if (rrng.min != FRng::MIN)
-                            tryUpdateTrue(lhs, FRng(rrng.min, FRng::MAX));
-                        if (lrng.max != FRng::MAX)
-                            tryUpdateTrue(rhs, FRng(FRng::MIN, lrng.max));
-
-                        // lhs < rhs
-                        if (rrng.max != FRng::MAX)
-                            tryUpdateFalse(lhs, FRng(FRng::MIN, rrng.max - 0.01));
-                        if (lrng.min != FRng::MIN)
-                            tryUpdateFalse(rhs, FRng(lrng.min + 0.01, FRng::MAX));
-                        break;
-                    default:
-                        Err::unreachable();
+                    default: break;
                     }
                 }
             }

@@ -63,7 +63,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             REPLACE(M::Sub(M::Bind(x), M::IsIntegerVal(0)), x)
 
             // x / 1 = x
-            REPLACE(M::Div(M::Bind(x), M::IsIntegerVal(1)), x)
+            REPLACE(M::SDiv(M::Bind(x), M::IsIntegerVal(1)), x)
 
             // x * 1 = x
             REPLACE(M::Mul(M::Bind(x), M::IsIntegerVal(1)), x)
@@ -90,7 +90,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             REPLACE(M::Mul(M::IsIntegerVal(0), M::Val()), i32_zero)
 
             // 0 / x = 0
-            REPLACE(M::Div(M::IsIntegerVal(0), M::Val()), i32_zero)
+            REPLACE(M::SDiv(M::IsIntegerVal(0), M::Val()), i32_zero)
 
             // 0 % x = 0
             REPLACE(M::Rem(M::IsIntegerVal(0), M::Val()), i32_zero)
@@ -99,7 +99,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             REPLACE(M::Rem(M::Val(), M::IsIntegerVal(1)), i32_zero)
 
             // x / x = 1
-            REPLACE(M::Div(M::Bind(x), M::Is(x)), i32_one)
+            REPLACE(M::SDiv(M::Bind(x), M::Is(x)), i32_one)
 
             // x / x = 1.0f
             REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)
@@ -348,19 +348,19 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // float: -x * -y -> x * y
         //        -x / -y -> x / y
         REWRITE_BEG(M::Mul(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
-                    M::Div(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
+                    M::SDiv(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
                     M::Fmul(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))),
                     M::Fdiv(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))))
         auto binary = builder.makeBinary(inst->getOpcode(), x, y);
         REWRITE_END(binary)
 
         // x / (x * y) -> 1 / y
-        REWRITE_BEG(M::Div(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
-        auto div = builder.makeDiv(i32_one, y);
+        REWRITE_BEG(M::SDiv(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
+        auto div = builder.makeSDiv(i32_one, y);
         REWRITE_END(div)
 
         // ((x * c2) + c1) / c2 -> x + c1 / c2
-        REWRITE_BEG(M::Div(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
+        REWRITE_BEG(M::SDiv(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
         auto add = builder.makeAdd(x, function.getConst(c1 / c2));
         REWRITE_END(add)
 

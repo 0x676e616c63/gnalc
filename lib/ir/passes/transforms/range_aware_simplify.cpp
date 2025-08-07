@@ -29,19 +29,19 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
     std::vector<pInst> candidate;
     for (const auto &bb : function) {
         for (const auto &inst : *bb) {
-            if (inst->getOpcode() == OP::DIV || inst->getOpcode() == OP::SREM || inst->getOpcode() == OP::UREM)
+            if (inst->getOpcode() == OP::SDIV || inst->getOpcode() == OP::UDIV || inst->getOpcode() == OP::SREM || inst->getOpcode() == OP::UREM)
                 candidate.emplace_back(inst);
         }
     }
     for (auto &inst : candidate) {
         // x / 2^n = x >> n, where x >= 0
         pVal x;
-        if (int divisor; match(inst, M::Div(M::Bind(x), M::PowerOfTwo(M::Bind(divisor))))) {
-            if (ranges.knownNonNegative(x, inst->getParent())) {
+        if (int divisor; match(inst, M::SDiv(M::Bind(x), M::PowerOfTwo(M::Bind(divisor))))) {
+            if (inst->getOpcode() == OP::UDIV || ranges.knownNonNegative(x, inst->getParent())) {
                 IRBuilder builder("%rng", inst->getParent(), inst->iter());
                 auto n = function.getInteger(ctz_wrapper(divisor), inst->getType());
-                auto ashr = builder.makeAShr(x, n);
-                inst->replaceSelf(ashr);
+                auto shr = builder.makeLShr(x, n);
+                inst->replaceSelf(shr);
                 rng_inst_modified = true;
                 Logger::logDebug("[RngSimplify]: Rewrite x / 2^n.");
             }
