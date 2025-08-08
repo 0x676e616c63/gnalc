@@ -31,6 +31,9 @@ constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 constexpr auto MEMSET_INTRINSIC_NAME = "@llvm.memset.p0i8.i32";
 // Intrinsic for global variable internalization
 constexpr auto MEMCPY_INTRINSIC_NAME = "@llvm.memcpy.p0.p0.i32";
+// Intrinsic for SCEV Expansion
+constexpr auto SCEV_INT_POW_INTRINSIC_NAME = "@gnalc.ipow";
+
 
 // Memoization
 constexpr auto MEMOIZATION_LUT_SIZE = 65536;

@@ -70,6 +70,8 @@ enum class IntrinsicID {
     AtomicXor,
     AtomicFAdd,
     AtomicFMul,
+    // SCEV
+    IntPow,
 };
 
 GNALC_ENUM_OPERATOR(FuncAttr)

@@ -19,6 +19,12 @@
 #include <vector>
 
 namespace IR {
+bool mul_will_overflow(int a, int b) {
+    long long res = static_cast<long long>(a) * static_cast<long long>(b);
+    return res < std::numeric_limits<int>::min()
+        || res > std::numeric_limits<int>::max();
+}
+
 PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     bool instsimplify_inst_modified = false;
     this->fam = &fam;

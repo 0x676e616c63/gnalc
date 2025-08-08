@@ -40,10 +40,11 @@ bool reduceMultiply(SCEVHandle &scev, LoopInfo &loop_info) {
                         }
                         auto evo = scev.getSCEVAtBlock(curr.get(), bb);
                         if (evo && evo->isAddRec()) {
-                            auto cost = scev.estimateExpansionCost(evo);
+                            SCEVSynthesizer synthesizer(&scev, &bb->getParent()->getConstantPool());
+                            auto cost = synthesizer.estimateCost(evo);
                             if (!cost || *cost > Config::IR::LSR_MULTIPLY_EXPANSION_THRESHOLD)
                                 continue;
-                            if (auto phi = scev.expandAddRec(evo)) {
+                            if (auto phi = synthesizer.synthesizeRec(evo)) {
                                 auto use_list = curr->getUseList();
                                 curr->replaceSelf(phi);
                                 Logger::logDebug("[LSR]: expanded AddRec for '", curr->getName(), "'.");

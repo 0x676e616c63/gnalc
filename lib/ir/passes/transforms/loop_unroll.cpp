@@ -420,12 +420,13 @@ void LoopUnrollPass::unroll_analyze(const pLoop &loop, UnrollOption &option, Fun
             pBlock epilog = std::make_shared<BasicBlock>("rtunroll.epilog." + std::to_string(unroll_name_idx));
 
             // prolog
-            auto trip_countV = SCEVH.expandSCEVExprUnchecked(trip_countE, prolog, prolog->end());
+            SCEVSynthesizer synthesizer(prolog, prolog->end(), &SCEVH, &FC.getConstantPool());
+            synthesizer.disableCheck();
+            auto trip_countV = synthesizer.synthesizeExpr(trip_countE);
             auto remainderV = std::make_shared<BinaryInst>("rtunroll.remainder." + std::to_string(unroll_name_idx), OP::SREM, trip_countV, unroll_factorV);
             prolog->addInst(remainderV);
-            if (stepV == nullptr) {
-                stepV = SCEVH.expandSCEVExprUnchecked(stepE, prolog, prolog->end());
-            }
+            if (stepV == nullptr)
+                stepV = synthesizer.synthesizeExpr(stepE);
             auto stepMremV = std::make_shared<BinaryInst>("rtunroll.stepMrem." + std::to_string(unroll_name_idx), OP::MUL, stepV, remainderV);
             prolog->addInst(stepMremV);
             // new_boundary = raw_boundary - step * remainder

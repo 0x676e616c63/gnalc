@@ -5,6 +5,7 @@
 #include "ir/block_utils.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/match.hpp"
+#include "ir/passes/transforms/loop_unroll.hpp"
 #include "mir/tools.hpp"
 
 #include <algorithm>
@@ -115,8 +116,7 @@ std::optional<std::tuple<int, int>> TREC::getConstantAffineAddRec() const {
         auto base = base_expr->getRawIRValue();
         auto step = step_expr->getRawIRValue();
         if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL && step->getVTrait() == ValueTrait::CONSTANT_LITERAL)
-            return std::make_tuple(base->as_raw<ConstantInt>()->getVal(),
-                                   step->as_raw<ConstantInt>()->getVal());
+            return std::make_tuple(base->as_raw<ConstantInt>()->getVal(), step->as_raw<ConstantInt>()->getVal());
     }
     return std::nullopt;
 }
@@ -143,307 +143,12 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     scoped_evolution[loop][val] = res;
     return res;
 }
-TREC *SCEVHandle::getSCEVAtScope(const pVal& val, const pLoop &loop) {
-    return getSCEVAtScope(val.get(), loop.get());
-}
+TREC *SCEVHandle::getSCEVAtScope(const pVal &val, const pLoop &loop) { return getSCEVAtScope(val.get(), loop.get()); }
 SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const pLoop &loop, RangeResult *ranges) {
     return getBackEdgeTakenCount(loop.get(), ranges);
 }
 
-SCEVExpr *SCEVHandle::getTripCount(const pLoop &loop, RangeResult *ranges) {
-    return getTripCount(loop.get(), ranges);
-}
-
-pVal SCEVHandle::expandSCEVExpr(SCEVExpr *expr, const pBlock &block, BasicBlock::iterator insert_before) const {
-    std::map<SCEVExpr *, pVal> inserted;
-    auto ret = expandSCEVExprImpl(expr, block, insert_before, inserted);
-    if (ret == nullptr) {
-        for (const auto &[k, v] : inserted) {
-            auto inst = v->as<Instruction>();
-            block->delFirstOfInst(inst);
-        }
-    }
-    return ret;
-}
-
-pVal SCEVHandle::expandSCEVExpr(SCEVExpr *expr, const pBlock &block) const {
-    return expandSCEVExpr(expr, block, block->getTerminator()->iter());
-}
-
-pVal SCEVHandle::expandSCEVExprImpl(SCEVExpr *expr, const pBlock &block, BasicBlock::iterator insert_before,
-                                    std::map<SCEVExpr *, pVal> &inserted) const {
-    static size_t name_cnt = 0;
-
-    // We only reuse IR Value that is inserted by expandSCEVExprImpl, they are always safe to
-    // reuse at this point. Redundancy will be eliminated by GVN-PRE later.
-    // Besides, reusing IR Value in loops can leave a no side effect Loop can not be eliminated.
-    auto it = inserted.find(expr);
-    if (it != inserted.end())
-        return it->second;
-
-    if (expr->isIRValue()) {
-        auto ir_val = expr->getIRValue();
-        if (auto inst = ir_val->as<Instruction>()) {
-            if (!domtree->ADomB(inst->getParent(), block))
-                return nullptr;
-        }
-        return ir_val;
-    }
-    if (expr->isBinary()) {
-        auto lhs = expandSCEVExprImpl(expr->getLHS(), block, insert_before, inserted);
-        if (!lhs)
-            return nullptr;
-        auto rhs = expandSCEVExprImpl(expr->getRHS(), block, insert_before, inserted);
-        if (!rhs)
-            return nullptr;
-        OP ir_op = OP::ADD;
-        switch (expr->getOp()) {
-        case SCEVExpr::Binary::Op::Add:
-            ir_op = OP::ADD;
-            break;
-        case SCEVExpr::Binary::Op::Sub:
-            ir_op = OP::SUB;
-            break;
-        case SCEVExpr::Binary::Op::Mul:
-            ir_op = OP::MUL;
-            break;
-        case SCEVExpr::Binary::Op::Div:
-            ir_op = OP::SDIV;
-            break;
-        case SCEVExpr::Binary::Op::Pow: {
-            auto lhs_ci = lhs->as<ConstantInt>();
-            if (!lhs_ci || !Util::isPowerOfTwo(lhs_ci->getVal()))
-                return nullptr;
-            lhs = block->getParent()->getConst(1);
-            auto exp = block->getParent()->getConst(ctz_wrapper(lhs_ci->getVal()));
-            auto mul = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), OP::MUL, rhs, exp);
-            block->addInst(insert_before, mul);
-            rhs = mul;
-            ir_op = OP::SHL;
-        }
-            break;
-        default:
-            Err::unreachable();
-        }
-        auto inst = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), ir_op, lhs, rhs);
-        inserted[expr] = inst;
-        block->addInst(insert_before, inst);
-        return inst;
-    }
-    Err::unreachable();
-    return nullptr;
-}
-
-pPhi SCEVHandle::expandAddRec(TREC *addrec) {
-    static size_t name_cnt = 0;
-    auto loop = addrec->getLoop();
-
-    if (!loop->getRawPreHeader() || !loop->getRawLatch())
-        return nullptr;
-
-    if (!addrec->isAddRec())
-        return nullptr;
-
-    // Only handle single exit
-    if (loop->getExitBlocks().size() != 1)
-        return nullptr;
-
-    auto preheader = loop->getPreHeader();
-    auto header = loop->getHeader();
-    auto latch = loop->getLatch();
-    auto base = addrec->getBase();
-    auto step = addrec->getStep();
-
-    if (!step->isExpr())
-        return nullptr;
-    auto step_expr = step->getExpr();
-
-    auto base_expr = eval(base, loop_info->getLoopFor(preheader).get());
-    if (!base_expr->isExpr())
-        return nullptr;
-    auto base_val = expandSCEVExpr(base_expr->getExpr(), preheader);
-    if (!base_val)
-        return nullptr;
-
-    auto step_val = expandSCEVExpr(step_expr, latch);
-    if (!step_val && base_val->is<Instruction>()) {
-        eliminateDeadInsts(base_val->as<Instruction>());
-        return nullptr;
-    }
-
-    auto indvar = std::make_shared<PHIInst>("%scev.p" + std::to_string(name_cnt++), base_val->getType());
-    auto update = std::make_shared<BinaryInst>("%scev.a" + std::to_string(name_cnt++), OP::ADD, indvar, step_val);
-
-    indvar->addPhiOper(base_val, preheader);
-    indvar->addPhiOper(update, latch);
-    header->addPhiInst(indvar);
-
-    latch->addInst(latch->getEndInsertPoint(), update);
-
-    return indvar;
-}
-
-std::optional<size_t> SCEVHandle::estimateExpansionCost(SCEVExpr *expr, const pBlock &block) const {
-    std::set<SCEVExpr *> visited;
-    return estimateExpansionCostImpl(expr, block, visited);
-}
-
-std::optional<size_t> SCEVHandle::estimateExpansionCostImpl(SCEVExpr *expr, const pBlock &block,
-                                                            std::set<SCEVExpr *> &visited) const {
-    auto it = visited.find(expr);
-    if (it != visited.end())
-        return 0;
-
-    if (expr->isIRValue()) {
-        auto ir_val = expr->getIRValue();
-        if (auto inst = ir_val->as<Instruction>()) {
-            if (!domtree->ADomB(inst->getParent(), block))
-                return std::nullopt;
-        }
-        return 0;
-    }
-    if (expr->isBinary()) {
-        if (expr->getOp() == SCEVExpr::Binary::Op::Pow) {
-            // if (!expr->getLHS()->isIRValue())
-            // return std::nullopt;
-            // auto ci = expr->getLHS()->getIRValue()->as<ConstantInt>();
-            // if (!ci || !Util::isPowerOfTwo(ci->getVal()))
-            return std::nullopt;
-        }
-        auto lhs = estimateExpansionCostImpl(expr->getLHS(), block, visited);
-        if (!lhs)
-            return std::nullopt;
-        auto rhs = estimateExpansionCostImpl(expr->getRHS(), block, visited);
-        if (!rhs)
-            return std::nullopt;
-        visited.emplace(expr);
-        return *lhs + *rhs + 1;
-    }
-    return std::nullopt;
-}
-
-
-pVal SCEVHandle::expandSCEVExprUnchecked(SCEVExpr *expr, const pBlock &block,
-                                         BasicBlock::iterator insert_before) const {
-    std::map<SCEVExpr *, pVal> inserted;
-    return expandSCEVExprUncheckedImpl(expr, block, insert_before, inserted);
-}
-
-pVal SCEVHandle::expandSCEVExprUncheckedImpl(SCEVExpr *expr, const pBlock &block, BasicBlock::iterator insert_before,
-                                             std::map<SCEVExpr *, pVal> &inserted) const {
-    static size_t name_cnt = 0;
-
-    // We only reuse IR Value that is inserted by expandSCEVExprUncheckedImpl, they are always safe to
-    // reuse at this point. Redundancy will be eliminated by GVN-PRE later.
-    // Besides, reusing IR Value in loops can leave a no side effect Loop can not be eliminated.
-    auto it = inserted.find(expr);
-    if (it != inserted.end())
-        return it->second;
-
-    if (expr->isIRValue())
-        return expr->getIRValue();
-    if (expr->isBinary()) {
-        auto lhs = expandSCEVExprUncheckedImpl(expr->getLHS(), block, insert_before, inserted);
-        auto rhs = expandSCEVExprUncheckedImpl(expr->getRHS(), block, insert_before, inserted);
-        OP ir_op = OP::ADD;
-        switch (expr->getOp()) {
-        case SCEVExpr::Binary::Op::Add:
-            ir_op = OP::ADD;
-            break;
-        case SCEVExpr::Binary::Op::Sub:
-            ir_op = OP::SUB;
-            break;
-        case SCEVExpr::Binary::Op::Mul:
-            ir_op = OP::MUL;
-            break;
-        case SCEVExpr::Binary::Op::Div:
-            ir_op = OP::SDIV;
-            break;
-        case SCEVExpr::Binary::Op::Pow: {
-            // auto lhs_ci = lhs->as<ConstantInt>();
-            // if (!lhs_ci || !Util::isPowerOfTwo(lhs_ci->getVal()))
-            //     return nullptr;
-            // lhs = block->getParent()->getConst(1);
-            // auto exp = block->getParent()->getConst(ctz_wrapper(lhs_ci->getVal()));
-            // auto mul = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), OP::MUL, rhs, exp);
-            // block->addInst(insert_before, mul);
-            // rhs = mul;
-            // ir_op = OP::SHL;
-            return nullptr;
-        }
-        default:
-            Err::unreachable();
-        }
-        auto inst = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), ir_op, lhs, rhs);
-        inserted[expr] = inst;
-        block->addInst(insert_before, inst);
-        return inst;
-    }
-    Err::unreachable();
-    return nullptr;
-}
-
-size_t SCEVHandle::estimateExpansionCostUnchecked(SCEVExpr *expr, const pBlock &block) const {
-    std::set<SCEVExpr *> visited;
-    return estimateExpansionCostUncheckedImpl(expr, block, visited);
-}
-
-size_t SCEVHandle::estimateExpansionCostUncheckedImpl(SCEVExpr *expr, const pBlock &block,
-                                                                     std::set<SCEVExpr *> &visited) const {
-    auto it = visited.find(expr);
-    if (it != visited.end())
-        return 0;
-
-    if (expr->isIRValue())
-        return 0;
-    if (expr->isBinary()) {
-        auto lhs = estimateExpansionCostUncheckedImpl(expr->getLHS(), block, visited);
-        auto rhs = estimateExpansionCostUncheckedImpl(expr->getRHS(), block, visited);
-        visited.emplace(expr);
-        return lhs + rhs + 1;
-    }
-
-    Err::unreachable();
-    return 0;
-}
-
-std::optional<size_t> SCEVHandle::estimateExpansionCost(TREC *addrec) {
-    auto loop = addrec->getLoop();
-
-    if (!loop->getRawPreHeader() || !loop->getRawLatch())
-        return std::nullopt;
-
-    if (!addrec->isAddRec())
-        return std::nullopt;
-
-    // Only handle single exit
-    if (loop->getExitBlocks().size() != 1)
-        return std::nullopt;
-
-    auto preheader = loop->getPreHeader();
-    auto header = loop->getHeader();
-    auto latch = loop->getLatch();
-    auto base = addrec->getBase();
-    auto step = addrec->getStep();
-
-    if (!step->isExpr())
-        return std::nullopt;
-    auto step_expr = step->getExpr();
-
-    auto base_expr = eval(base, loop_info->getLoopFor(preheader).get());
-    if (!base_expr->isExpr())
-        return std::nullopt;
-    auto base_val = estimateExpansionCost(base_expr->getExpr(), preheader);
-    if (!base_val)
-        return std::nullopt;
-
-    auto step_val = estimateExpansionCost(step_expr, latch);
-    if (!step_val)
-        return std::nullopt;
-
-    // Base + Step + Update + Phi
-    return *base_val + *step_val + 2;
-}
+SCEVExpr *SCEVHandle::getTripCount(const pLoop &loop, RangeResult *ranges) { return getTripCount(loop.get(), ranges); }
 
 void SCEVHandle::forgetAll() {
     evolution.clear();
@@ -465,8 +170,7 @@ TREC *SCEVHandle::getSCEVAtScopeImpl(Value *val, const Loop *loop) {
     }
 
     pVal x, y;
-    if (match(val, M::Add(M::Bind(x), M::Bind(y))) ||
-        match(val, M::Sub(M::Bind(x), M::Bind(y))) ||
+    if (match(val, M::Add(M::Bind(x), M::Bind(y))) || match(val, M::Sub(M::Bind(x), M::Bind(y))) ||
         match(val, M::Mul(M::Bind(x), M::Bind(y)))) {
         TREC *tx = nullptr, *ty = nullptr;
         if (auto inst_x = x->as<Instruction>()) {
@@ -593,8 +297,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
                     break;
                 }
             }
-        }
-        else
+        } else
             res = getTRECUntracked();
     } else if (auto select = val->as_raw<SELECTInst>()) {
         auto tevo = instantiateEvolution(analyzeEvolution(loop, select->getTrueVal().get()), val_loop);
@@ -621,7 +324,8 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
 // Input: h the halting loop-phi, n the definition of an SSA name
 // Output: (exist, update), exist is true if h has been reached,
 // update is the reconstructed expression for the overall effect in the loop of h
-std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop) {
+std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Value *val,
+                                                                                 const Loop *loop_phi_loop) {
     // If (n is h) Then
     if (loop_phi == val)
         return {true, getIRValTREC(function->getConst(0).get()), UpdateExprType::LoopPhi};
@@ -632,17 +336,17 @@ std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr
     // Currently we don't support arbitrary nested recurrences, so check if they are consistent.
     auto isConsistent_2 = [](UpdateExprType ty1, UpdateExprType ty2) {
         switch (ty1) {
-            case UpdateExprType::Expr:
-            case UpdateExprType::LoopPhi:
-                return ty2 != UpdateExprType::Unknown;
-            case UpdateExprType::Add:
-                return ty2 == UpdateExprType::Add || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
-            case UpdateExprType::Mul:
-                return ty2 == UpdateExprType::Mul || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
-            case UpdateExprType::Div:
-                return ty2 == UpdateExprType::Div || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
-            case UpdateExprType::Unknown:
-                return false;
+        case UpdateExprType::Expr:
+        case UpdateExprType::LoopPhi:
+            return ty2 != UpdateExprType::Unknown;
+        case UpdateExprType::Add:
+            return ty2 == UpdateExprType::Add || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
+        case UpdateExprType::Mul:
+            return ty2 == UpdateExprType::Mul || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
+        case UpdateExprType::Div:
+            return ty2 == UpdateExprType::Div || ty2 == UpdateExprType::Expr || ty2 == UpdateExprType::LoopPhi;
+        case UpdateExprType::Unknown:
+            return false;
         }
         return false;
     };
@@ -725,7 +429,7 @@ std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr
 
         // Else If n matches "v = loop-phi(a, b)" Then
         bool is_loop_phi = val_phi_loop && val_phi_loop->getHeader() == val_phi_bb &&
-            analyzeHeaderPhi(val_phi_loop, val_phi).has_value();
+                           analyzeHeaderPhi(val_phi_loop, val_phi).has_value();
         if (is_loop_phi) {
             auto [val_phi_invariant, val_phi_variant] = *analyzeHeaderPhi(val_phi_loop, val_phi);
 
@@ -741,11 +445,13 @@ std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr
                     if (s->getOp() == SCEVExpr::Binary::Op::Add)
                         return {true, getTRECAdd(update, getExprTREC(s->getRHS())), UpdateExprType::Add};
                     if (s->getOp() == SCEVExpr::Binary::Op::Sub)
-                        return {true, getTRECAdd(update, getExprTREC(getSCEVExprNeg(s->getRHS()))), UpdateExprType::Add};
+                        return {true, getTRECAdd(update, getExprTREC(getSCEVExprNeg(s->getRHS()))),
+                                UpdateExprType::Add};
                     if (s->getOp() == SCEVExpr::Binary::Op::Mul)
                         return {true, getTRECMul(update, getExprTREC(s->getRHS())), UpdateExprType::Mul};
                     if (s->getOp() == SCEVExpr::Binary::Op::Div)
-                        return {true, getTRECDiv(update, getExprTREC(getSCEVExprDiv(getSCEVExpr(1), s->getRHS()))), UpdateExprType::Mul};
+                        return {true, getTRECDiv(update, getExprTREC(getSCEVExprDiv(getSCEVExpr(1), s->getRHS()))),
+                                UpdateExprType::Mul};
                     return {true, getTRECUntracked(), UpdateExprType::Unknown};
                 }
             }
@@ -795,7 +501,8 @@ TREC *SCEVHandle::instantiateEvolution(TREC *trec, const Loop *loop) {
     return ret;
 }
 
-TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::vector<std::unordered_set<TREC *>> &instantiated) {
+TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop,
+                                           std::vector<std::unordered_set<TREC *>> &instantiated) {
     // If trec is a constant c Then
     if (trec->isExpr() && trec->getExpr()->isIRValue()) {
         auto inst = trec->getExpr()->getRawIRValue()->as_raw<Instruction>();
@@ -806,8 +513,7 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
     if (trec->isExpr()) {
         // Else If trec is a variable already instantiated Then
         // TODO: resolve mixers
-        if (std::any_of(instantiated.begin(), instantiated.end(),
-            [trec](const auto &set) { return set.count(trec); }))
+        if (std::any_of(instantiated.begin(), instantiated.end(), [trec](const auto &set) { return set.count(trec); }))
             return getTRECUntracked();
         instantiated.back().emplace(trec);
 
@@ -818,18 +524,18 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
                 auto lhs = analyzeExprEvo(expr->getLHS());
                 auto rhs = analyzeExprEvo(expr->getRHS());
                 switch (expr->getOp()) {
-                    case SCEVExpr::Binary::Op::Add:
-                        return getTRECAdd(lhs, rhs);
-                    case SCEVExpr::Binary::Op::Sub:
-                        return getTRECSub(lhs, rhs);
-                    case SCEVExpr::Binary::Op::Mul:
-                        return getTRECMul(lhs, rhs);
-                    case SCEVExpr::Binary::Op::Div:
-                        return getTRECDiv(lhs, rhs);
-                    case SCEVExpr::Binary::Op::Pow:
-                        return getTRECUntracked();
-                    default:
-                        Err::unreachable();
+                case SCEVExpr::Binary::Op::Add:
+                    return getTRECAdd(lhs, rhs);
+                case SCEVExpr::Binary::Op::Sub:
+                    return getTRECSub(lhs, rhs);
+                case SCEVExpr::Binary::Op::Mul:
+                    return getTRECMul(lhs, rhs);
+                case SCEVExpr::Binary::Op::Div:
+                    return getTRECDiv(lhs, rhs);
+                case SCEVExpr::Binary::Op::Pow:
+                    return getTRECUntracked();
+                default:
+                    Err::unreachable();
                 }
                 return getTRECUntracked();
             }
@@ -856,21 +562,21 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
     return getTRECUntracked();
 }
 
-SCEVExpr* SCEVHandle::swapOperands(SCEVExpr *x) {
+SCEVExpr *SCEVHandle::swapOperands(SCEVExpr *x) {
     Err::gassert(x->isBinary());
     switch (x->getOp()) {
-        case SCEVExpr::Binary::Op::Add:
-            return getSCEVExprAdd(x->getRHS(), x->getLHS());
-        case SCEVExpr::Binary::Op::Mul:
-            return getSCEVExprMul(x->getRHS(), x->getLHS());
-        default: Err::unreachable("Swap what?");
+    case SCEVExpr::Binary::Op::Add:
+        return getSCEVExprAdd(x->getRHS(), x->getLHS());
+    case SCEVExpr::Binary::Op::Mul:
+        return getSCEVExprMul(x->getRHS(), x->getLHS());
+    default:
+        Err::unreachable("Swap what?");
     }
     Err::unreachable();
     return nullptr;
 }
 
-
-SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
+SCEVExpr *SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
     using Op = SCEVExpr::Binary::Op;
     if (expr->isBinary()) {
         auto lhs = expr->getLHS();
@@ -925,8 +631,7 @@ SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
                 if (op == Op::Mul)
                     return foldSCEVExpr(rhs);
             }
-        }
-        else if (rhs_ci) {
+        } else if (rhs_ci) {
             if (rhs_ci->getVal() == 0) {
                 if (op == Op::Add || op == Op::Sub)
                     return foldSCEVExpr(lhs);
@@ -974,8 +679,7 @@ SCEVExpr* SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
                 if (lhs_lhs_ci && rhs_ci) {
                     auto x = lhs_lhs_ci->getVal();
                     auto y = rhs_ci->getVal();
-                    return getSCEVExprAdd(getSCEVExpr(x * y),
-                        getSCEVExprMul(getSCEVExpr(y),  lhs->getRHS()));
+                    return getSCEVExprAdd(getSCEVExpr(x * y), getSCEVExprMul(getSCEVExpr(y), lhs->getRHS()));
                 }
             }
         }
@@ -1138,8 +842,7 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
         // Note that we skipped flatten[0]
         for (size_t i = 1; i < flatten.size(); ++i) {
             int ci;
-            if (!flatten[i]->isIRValue() ||
-                !match(flatten[i]->getRawIRValue(), M::Bind(ci)))
+            if (!flatten[i]->isIRValue() || !match(flatten[i]->getRawIRValue(), M::Bind(ci)))
                 return nullptr;
             worklist.emplace_back(ci);
         }
@@ -1228,15 +931,13 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
 
             // Trivial cases
             if ((cmpop == ICMPOP::sgt && step <= 0 && base <= cond_val) ||
-                (cmpop == ICMPOP::slt && step >= 0 && base >= cond_val) ||
-                (cmpop == ICMPOP::ne && base == cond_val))
+                (cmpop == ICMPOP::slt && step >= 0 && base >= cond_val) || (cmpop == ICMPOP::ne && base == cond_val))
                 return getSCEVExpr(0);
 
             // Infinite
             if ((cmpop == ICMPOP::sgt && step >= 0 && base > cond_val) ||
                 (cmpop == ICMPOP::slt && step <= 0 && base < cond_val) ||
-                (cmpop == ICMPOP::ne && (step <= 0 && base < cond_val) ||
-                (step >= 0 && base > cond_val)))
+                (cmpop == ICMPOP::ne && (step <= 0 && base < cond_val) || (step >= 0 && base > cond_val)))
                 return nullptr;
 
             // {base, +, step} <=> cond_val
@@ -1273,8 +974,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
             } else if (cmpop == ICMPOP::sle) {
                 cmpop = ICMPOP::slt;
                 cond = getSCEVExprAdd(cond, getSCEVExpr(1));
-            }
-            else if (cmpop == ICMPOP::eq) {
+            } else if (cmpop == ICMPOP::eq) {
                 if (base == cond && !match(step_ir_val, M::Is(0)))
                     return getSCEVExpr(1);
                 // If base != cond, we are not sure whether base equals cond or not at runtime.
@@ -1395,7 +1095,7 @@ TREC *SCEVHandle::getTRECAdd(TREC *x, TREC *y) {
     if (x->isPeeled() && y->isExpr())
         return getPeeledTREC(x->getLoop(), getSCEVExprAdd(x->getFirst(), y->getExpr()), getTRECAdd(x->getRest(), y));
 
-    if(!x->isAddRec() || !y->isAddRec())
+    if (!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
 
     if (x->getLoop() != y->getLoop()) {
@@ -1422,7 +1122,7 @@ TREC *SCEVHandle::getTRECSub(TREC *x, TREC *y) {
     if (x->isPeeled() && y->isExpr())
         return getPeeledTREC(x->getLoop(), getSCEVExprSub(x->getFirst(), y->getExpr()), getTRECSub(x->getRest(), y));
 
-    if(!x->isAddRec() || !y->isAddRec())
+    if (!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
 
     if (x->getLoop() != y->getLoop()) {
@@ -1452,7 +1152,7 @@ TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
     if (x->isPeeled() && y->isExpr())
         return getPeeledTREC(x->getLoop(), getSCEVExprMul(x->getFirst(), y->getExpr()), getTRECMul(x->getRest(), y));
 
-    if(!x->isAddRec() || !y->isAddRec())
+    if (!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
 
     if (x->getLoop() != y->getLoop()) {
@@ -1502,7 +1202,7 @@ TREC *SCEVHandle::unifyPeeledTREC(TREC *peeled) {
     return peeled;
 }
 
-TREC* SCEVHandle::foldTREC(TREC *trec) {
+TREC *SCEVHandle::foldTREC(TREC *trec) {
     if (trec->isExpr())
         return getExprTREC(foldSCEVExpr(trec->getExpr()));
 
@@ -1536,8 +1236,7 @@ SCEVExpr *SCEVHandle::getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y) {
         return x;
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getRawIRValue(), M::Bind(a)) &&
-            match(y->getRawIRValue(), M::Bind(b)))
+        if (match(x->getRawIRValue(), M::Bind(a)) && match(y->getRawIRValue(), M::Bind(b)))
             return getSCEVExpr(a + b);
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Add, x, y));
@@ -1549,8 +1248,7 @@ SCEVExpr *SCEVHandle::getSCEVExprSub(SCEVExpr *x, SCEVExpr *y) {
         return x;
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getRawIRValue(), M::Bind(a)) &&
-            match(y->getRawIRValue(), M::Bind(b)))
+        if (match(x->getRawIRValue(), M::Bind(a)) && match(y->getRawIRValue(), M::Bind(b)))
             return getSCEVExpr(a - b);
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Sub, x, y));
@@ -1568,8 +1266,7 @@ SCEVExpr *SCEVHandle::getSCEVExprMul(SCEVExpr *x, SCEVExpr *y) {
 
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getRawIRValue(), M::Bind(a)) &&
-            match(y->getRawIRValue(), M::Bind(b)))
+        if (match(x->getRawIRValue(), M::Bind(a)) && match(y->getRawIRValue(), M::Bind(b)))
             return getSCEVExpr(a * b);
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Mul, x, y));
@@ -1583,11 +1280,24 @@ SCEVExpr *SCEVHandle::getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y) {
         return x;
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getRawIRValue(), M::Bind(a)) &&
-            match(y->getRawIRValue(), M::Bind(b)))
+        if (match(x->getRawIRValue(), M::Bind(a)) && match(y->getRawIRValue(), M::Bind(b)))
             return getSCEVExpr(a / b);
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Div, x, y));
+}
+
+// https://stackoverflow.com/questions/101439/the-most-efficient-way-to-implement-an-integer-based-power-function-powint-int
+int ipow(int base, int exp) {
+    int result = 1;
+    while (true) {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        if (!exp)
+            break;
+        base *= base;
+    }
+    return result;
 }
 
 SCEVExpr *SCEVHandle::getSCEVExprPow(SCEVExpr *x, SCEVExpr *y) {
@@ -1597,13 +1307,11 @@ SCEVExpr *SCEVHandle::getSCEVExprPow(SCEVExpr *x, SCEVExpr *y) {
         return x;
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getRawIRValue(), M::Bind(a)) &&
-            match(y->getRawIRValue(), M::Bind(b)))
-            return getSCEVExpr(std::pow(a, b));
+        if (match(x->getRawIRValue(), M::Bind(a)) && match(y->getRawIRValue(), M::Bind(b)))
+            return getSCEVExpr(ipow(a, b));
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Pow, x, y));
 }
-
 
 SCEVExpr *SCEVHandle::getSCEVExprNeg(SCEVExpr *x) {
     if (int a; x->isIRValue() && match(x->getRawIRValue(), M::Bind(a)))
@@ -1614,9 +1322,235 @@ SCEVExpr *SCEVHandle::getSCEVExprNeg(SCEVExpr *x) {
 SCEVExpr *SCEVHandle::getSCEVExpr(int x) { return getSCEVExpr(function->getConst(x).get()); }
 SCEVExpr *SCEVHandle::getSCEVExpr(Value *x) { return getPoolSCEV(std::make_shared<SCEVExpr>(x)); }
 
+void SCEVSynthesizer::setInsertPoint(const pBlock &block_, BasicBlock::iterator insert_before) {
+    block = block_;
+    insert_point = insert_before;
+    insert_point_valid = true;
+}
+
+void SCEVSynthesizer::disableCheck() { unchecked = true; }
+
+void SCEVSynthesizer::withRanges(RangeResult* ranges_) {
+    ranges = ranges_;
+}
+
+pVal SCEVSynthesizer::synthesizeExpr(SCEVExpr *expr) {
+    std::map<SCEVExpr *, pVal> inserted;
+    auto ret = synthesizeExprImpl(expr, inserted);
+    if (ret == nullptr) {
+        for (const auto &[k, v] : inserted) {
+            auto inst = v->as<Instruction>();
+            block->delFirstOfInst(inst);
+        }
+    }
+    return ret;
+}
+
+pVal SCEVSynthesizer::synthesizeExprImpl(SCEVExpr *expr, std::map<SCEVExpr *, pVal> &inserted) {
+    Err::gassert(insert_point_valid);
+    static size_t name_cnt = 0;
+
+    // We only reuse IR Value that is inserted by synthesizeExprImpl, they are always safe to
+    // reuse at this point. Redundancy will be eliminated by GVN-PRE later.
+    // Besides, reusing IR Value in loops can leave a no side effect Loop can not be eliminated.
+    auto it = inserted.find(expr);
+    if (it != inserted.end())
+        return it->second;
+
+    if (expr->isIRValue()) {
+        auto ir_val = expr->getIRValue();
+        if (!unchecked) {
+            if (auto inst = ir_val->as<Instruction>()) {
+                if (!scev->domtree->ADomB(inst->getParent(), block))
+                    return nullptr;
+            }
+        }
+        return ir_val;
+    }
+    if (expr->isBinary()) {
+        // Trivial cases
+        auto lhs = synthesizeExprImpl(expr->getLHS(), inserted);
+        if (!lhs)
+            return nullptr;
+        auto rhs = synthesizeExprImpl(expr->getRHS(), inserted);
+        if (!rhs)
+            return nullptr;
+
+        OP ir_op = OP::ADD;
+        switch (expr->getOp()) {
+        case SCEVExpr::Binary::Op::Add:
+            ir_op = OP::ADD;
+            break;
+        case SCEVExpr::Binary::Op::Sub:
+            ir_op = OP::SUB;
+            break;
+        case SCEVExpr::Binary::Op::Mul:
+            ir_op = OP::MUL;
+            break;
+        case SCEVExpr::Binary::Op::Div:
+            ir_op = OP::SDIV;
+            break;
+        // FIXME: Fix overflow
+        case SCEVExpr::Binary::Op::Pow:
+            return nullptr;
+        default:
+            Err::unreachable();
+        }
+        auto inst = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), ir_op, lhs, rhs);
+        inserted[expr] = inst;
+        block->addInst(insert_point, inst);
+        return inst;
+    }
+    Err::unreachable();
+    return nullptr;
+}
+
+pPhi SCEVSynthesizer::synthesizeRec(TREC *rec) {
+    static size_t name_cnt = 0;
+    auto loop = rec->getLoop();
+
+    if (!loop->getRawPreHeader() || !loop->getRawLatch())
+        return nullptr;
+
+    if (!rec->isRec())
+        return nullptr;
+
+    // Only handle single exit
+    if (loop->getExitBlocks().size() != 1)
+        return nullptr;
+
+    auto preheader = loop->getPreHeader();
+    auto header = loop->getHeader();
+    auto latch = loop->getLatch();
+    auto base = rec->getBase();
+    auto step = rec->getStep();
+
+    if (!step->isExpr())
+        return nullptr;
+    auto step_expr = step->getExpr();
+
+    auto base_expr = scev->eval(base, scev->loop_info->getLoopFor(preheader).get());
+    if (!base_expr->isExpr())
+        return nullptr;
+
+    setInsertPoint(preheader, preheader->getTerminator()->iter());
+    auto base_val = synthesizeExpr(base_expr->getExpr());
+    if (!base_val)
+        return nullptr;
+
+    setInsertPoint(latch, preheader->getTerminator()->iter());
+    auto step_val = synthesizeExpr(step_expr);
+    if (!step_val && base_val->is<Instruction>()) {
+        eliminateDeadInsts(base_val->as<Instruction>());
+        return nullptr;
+    }
+
+    auto indvar = std::make_shared<PHIInst>("%scev.p" + std::to_string(name_cnt++), base_val->getType());
+
+    OP ir_op = OP::ADD;
+    switch (rec->getType()) {
+    case TRECType::AddRec:
+        ir_op = OP::ADD;
+        break;
+    case TRECType::MulRec:
+        ir_op = OP::MUL;
+        break;
+    case TRECType::DivRec:
+        ir_op = OP::SDIV;
+        break;
+    default:
+        Err::unreachable("Recurrence of what?");
+    }
+
+    auto update = std::make_shared<BinaryInst>("%scev.a" + std::to_string(name_cnt++), ir_op, indvar, step_val);
+
+    indvar->addPhiOper(base_val, preheader);
+    indvar->addPhiOper(update, latch);
+    header->addPhiInst(indvar);
+
+    latch->addInst(latch->getEndInsertPoint(), update);
+
+    return indvar;
+}
+
+std::optional<size_t> SCEVSynthesizer::estimateCost(SCEVExpr *expr, const pBlock &block) {
+    std::set<SCEVExpr *> visited;
+    return estimateCostImpl(expr, block, visited);
+}
+
+std::optional<size_t> SCEVSynthesizer::estimateCostImpl(SCEVExpr *expr, const pBlock &block,
+                                                        std::set<SCEVExpr *> &visited) {
+    auto it = visited.find(expr);
+    if (it != visited.end())
+        return 0;
+
+    if (expr->isIRValue()) {
+        if (!unchecked) {
+            auto ir_val = expr->getIRValue();
+            if (auto inst = ir_val->as<Instruction>()) {
+                if (!scev->domtree->ADomB(inst->getParent(), block))
+                    return std::nullopt;
+            }
+        }
+        return 0;
+    }
+    if (expr->isBinary()) {
+        if (expr->getOp() == SCEVExpr::Binary::Op::Pow)
+            return std::nullopt;
+
+        auto lhs = estimateCostImpl(expr->getLHS(), block, visited);
+        if (!lhs)
+            return std::nullopt;
+        auto rhs = estimateCostImpl(expr->getRHS(), block, visited);
+        if (!rhs)
+            return std::nullopt;
+        visited.emplace(expr);
+        return *lhs + *rhs + 1;
+    }
+    return std::nullopt;
+}
+
+std::optional<size_t> SCEVSynthesizer::estimateCost(TREC *addrec) {
+    auto loop = addrec->getLoop();
+
+    if (!loop->getRawPreHeader() || !loop->getRawLatch())
+        return std::nullopt;
+
+    if (!addrec->isAddRec())
+        return std::nullopt;
+
+    // Only handle single exit
+    if (loop->getExitBlocks().size() != 1)
+        return std::nullopt;
+
+    auto preheader = loop->getPreHeader();
+    auto header = loop->getHeader();
+    auto latch = loop->getLatch();
+    auto base = addrec->getBase();
+    auto step = addrec->getStep();
+
+    if (!step->isExpr())
+        return std::nullopt;
+    auto step_expr = step->getExpr();
+
+    auto base_expr = scev->eval(base, scev->loop_info->getLoopFor(preheader).get());
+    if (!base_expr->isExpr())
+        return std::nullopt;
+    auto base_val = estimateCost(base_expr->getExpr(), preheader);
+    if (!base_val)
+        return std::nullopt;
+
+    auto step_val = estimateCost(step_expr, latch);
+    if (!step_val)
+        return std::nullopt;
+
+    // Base + Step + Update + Phi
+    return *base_val + *step_val + 2;
+}
+
 SCEVHandle SCEVAnalysis::run(Function &func, FAM &fam) {
-    auto& loop_info = fam.getResult<LoopAnalysis>(func);
-    auto& domtree = fam.getResult<DomTreeAnalysis>(func);
+    auto &loop_info = fam.getResult<LoopAnalysis>(func);
+    auto &domtree = fam.getResult<DomTreeAnalysis>(func);
     return SCEVHandle(&func, &loop_info, &domtree);
 }
 

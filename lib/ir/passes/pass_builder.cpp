@@ -496,6 +496,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
 MPM PassBuilder::buildModuleDebugPipeline() {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionDebugPipeline()));
+    mpm.addPass(LowerIntrinsicsPass());
     return mpm;
 }
 
