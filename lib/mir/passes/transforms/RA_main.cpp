@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/MIR.hpp"
+#include "mir/info.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/tools.hpp"
 #include "utils/logger.hpp"
@@ -240,6 +241,11 @@ void RegisterAllocImpl::MkWorkList() {
 
 void RegisterAllocImpl::Simplify() {
 
+    // auto it = std::find_if(simplifyWorkList.begin(), simplifyWorkList.end(),
+    //                        [&](const auto &mop) { return mop->getUseTrait() == MIROperand::usage::StoreConst; });
+
+    // it != simplifyWorkList.end() ? nop : void(it = simplifyWorkList.begin());
+
     auto it = simplifyWorkList.begin();
 
     auto n = *it;
@@ -327,7 +333,6 @@ void RegisterAllocImpl::Coalesce() {
     else if (precolored.count(u)) {
         ///@note George check
         // {isa, ...}
-        // 对于任意一个v的邻接结点: 冲突小于k || 预着色 || 与u冲突
 
         bool flag = true;
         for (const auto &t : Adjacent(v)) {
@@ -344,7 +349,7 @@ void RegisterAllocImpl::Coalesce() {
         }
 
     } else if (!precolored.count(u) && Conservative(getUnion<MIROperand_p>(Adjacent(u), Adjacent(v)))) {
-    ///@note Briggs check
+    ///@note Briggs check, more common
     __Combine_try:
         addBySet(coalescedMoves, Moves{m});
         Combine(u, v);
@@ -389,8 +394,6 @@ void RegisterAllocImpl::Freeze() {
 
     auto u = *freezeWorkList.begin();
 
-    // auto u = *it;
-
     delBySet(freezeWorkList, WorkList{u});
 
     addBySet(simplifyWorkList, WorkList{u});
@@ -431,6 +434,7 @@ void RegisterAllocImpl::SelectSpill() {
 }
 
 void RegisterAllocImpl::AssignColors() {
+
     while (!selectStack.empty()) {
         auto &n = selectStack.back();
         selectStack.pop_back();
@@ -581,7 +585,7 @@ bool RegisterAllocImpl::NodeMovesEmpty(const MIROperand_p &n) {
 bool RegisterAllocImpl::MoveRelated(const MIROperand_p &n) { return !NodeMovesEmpty(n); }
 
 bool RegisterAllocImpl::OK(const MIROperand_p &t, const MIROperand_p &r) {
-    if (degree[t] < K) {
+    if (degree[t] < 2 * K) { // custom
         return true;
     } else if (t->isISA()) {
         return true;
@@ -596,7 +600,7 @@ bool RegisterAllocImpl::Conservative(const Nodes &nodes) {
     unsigned int k = 0;
 
     for (const auto &n : nodes) {
-        if (degree[n] >= K) {
+        if (degree[n] >= 2 * K) { // custom
             ++k;
         }
     }

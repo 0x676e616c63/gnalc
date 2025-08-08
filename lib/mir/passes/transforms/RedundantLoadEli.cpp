@@ -202,6 +202,7 @@ void RedundantLoadEliImpl::ApplyCopys_inFunc(loadInfo &info, const ldValue &cons
             ApplyCopys_inBlks(mblk, uses, constVal);
             continue;
         }
+
         auto &minsts = mblk->Insts();
         for (auto &[mop, miter] : uses) {
             auto &minst_loadImm = *miter;
