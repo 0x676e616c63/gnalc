@@ -52,10 +52,9 @@ def get_commit_info():
     return commit_hash, iso_utc_str, commit_message
 
 def parse_test_data():
-    """解析 educg-data.txt 文件并返回结果字典。"""
+    """解析 rank.txt 文件并返回结果字典。"""
     print(f"📋 请将测试结果复制到当前目录下的 {TEST_DATA_FILE} 文件中。")
-    print("   文件格式要求：每行代表一个测例，列之间用空格或制表符分隔。")
-    print("   例如: '1  01_mm1  通过  4.98 ...'")
+    print("   文件格式要求：每行代表一个测例，列之间用空格或制表符分隔。例: '1 01_mm1 AC 4.98 PASSED - 运行时间: 4.98秒'")
     input("👉 完成后请按 Enter 键继续...")
 
     results = {}
@@ -68,29 +67,30 @@ def parse_test_data():
 
             print("\n🔍 开始解析测试数据...")
             for i, line in enumerate(lines, 1):
-                parts = line.split()
-                if not parts: # 跳过空行
+                parts = line.strip().split()
+                if not parts:
                     continue
 
                 if len(parts) < 4:
                     print(f"⚠️ 第 {i} 行格式不正确 (少于4列)，已跳过: '{line.strip()}'")
                     continue
-                
-                if parts[2] == "未通过":
-                    print(f"ℹ️  第 {i} 行测试用例 '{parts[1]}' 未通过，已跳过。")
+
+                status = parts[2]
+                if status != "AC":
+                    print(f"ℹ️  第 {i} 行测试用例 '{parts[1]}' 状态非 AC，已跳过。")
                     continue
 
                 test_name = parts[1]
                 try:
                     score = float(parts[3])
                     if score < 0:
-                        print(f"⚠️ 第 {i} 行测试用例 '{parts[1]}' 成绩为负数，已跳过。")
+                        print(f"⚠️ 第 {i} 行测试用例 '{test_name}' 成绩为负数，已跳过。")
                         continue
                     results[test_name] = score
                 except ValueError:
                     print(f"⚠️ 第 {i} 行成绩无法解析为数字，已跳过: '{line.strip()}'")
                     continue
-            
+
             if not results:
                 print("❌ 未能从文件中解析出任何有效的测试数据。")
                 sys.exit(1)
