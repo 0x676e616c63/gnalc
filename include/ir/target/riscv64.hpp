@@ -40,7 +40,7 @@ public:
         return 32;
     }
     size_t getGlobalizeSizeThreshold() const override {
-        return 64;
+        return 1024;
     }
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {
