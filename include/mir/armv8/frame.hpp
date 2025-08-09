@@ -29,7 +29,7 @@ public:
     bool isFuncCall(const MIRInst_p &op) const override;
 
     unsigned getStackObjectMinAlignment() const override {
-        return 8;
+        return 4;
     }
 };
 }
