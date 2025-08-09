@@ -307,8 +307,8 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
         // float: -(x * y) -> (-x * y)
         REWRITE_BEG(M::Fneg(M::Fmul(M::Bind(x), M::Bind(y))))
-        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
-        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, fneg, y);
+        auto fneg = builder.makeFNeg(x);
+        auto fmul = builder.makeFMul(fneg, y);
         REWRITE_END(fmul)
 
         // float: -(x / y)  -> (-x / y)

@@ -72,7 +72,7 @@ template <typename T> constexpr auto isBoolTypeImpl() {
 #define isBoolType(a) isBoolTypeImpl<decltype(a)>()
 
 ConstantProxy ConstantProxy::operator+(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs)) {
@@ -90,7 +90,7 @@ ConstantProxy ConstantProxy::operator+(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 ConstantProxy ConstantProxy::operator-(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs)) {
@@ -108,7 +108,7 @@ ConstantProxy ConstantProxy::operator-(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 ConstantProxy ConstantProxy::operator*(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs)) {
@@ -126,8 +126,8 @@ ConstantProxy ConstantProxy::operator*(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 ConstantProxy ConstantProxy::operator/(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs)) {
@@ -145,7 +145,7 @@ ConstantProxy ConstantProxy::operator/(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 ConstantProxy ConstantProxy::operator%(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs) || isFloatType(lhs)) {
@@ -163,7 +163,7 @@ ConstantProxy ConstantProxy::operator%(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 ConstantProxy ConstantProxy::operator&&(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
@@ -176,7 +176,7 @@ ConstantProxy ConstantProxy::operator&&(const ConstantProxy &rhs) const {
 }
 
 ConstantProxy ConstantProxy::operator||(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
@@ -188,7 +188,7 @@ ConstantProxy ConstantProxy::operator||(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 ConstantProxy ConstantProxy::operator&(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs) || isFloatType(lhs)) {
@@ -207,7 +207,7 @@ ConstantProxy ConstantProxy::operator&(const ConstantProxy &rhs) const {
 }
 
 ConstantProxy ConstantProxy::operator|(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs) || isFloatType(lhs)) {
@@ -225,7 +225,7 @@ ConstantProxy ConstantProxy::operator|(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 ConstantProxy ConstantProxy::operator^(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    Err::gassert(pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
             if constexpr (!isTypeMatched(lhs, rhs) || isFloatType(lhs)) {
@@ -343,7 +343,7 @@ ConstantProxy ConstantProxy::operator!() const {
 }
 
 bool ConstantProxy::operator<(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool);
+    Err::gassert(pool == rhs.pool);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> bool {
             if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
@@ -356,7 +356,7 @@ bool ConstantProxy::operator<(const ConstantProxy &rhs) const {
 }
 
 bool ConstantProxy::operator>(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool);
+    Err::gassert(pool == rhs.pool);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> bool {
             if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
@@ -369,7 +369,7 @@ bool ConstantProxy::operator>(const ConstantProxy &rhs) const {
 }
 
 bool ConstantProxy::operator<=(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool);
+    Err::gassert(pool == rhs.pool);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> bool {
             if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
@@ -382,7 +382,7 @@ bool ConstantProxy::operator<=(const ConstantProxy &rhs) const {
 }
 
 bool ConstantProxy::operator>=(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool);
+    Err::gassert(pool == rhs.pool);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> bool {
             if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {

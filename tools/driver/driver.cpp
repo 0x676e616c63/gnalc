@@ -167,6 +167,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--reassociate", "--no-reassociate", reassociate)
         OPT_ARG("--instsimplify", "--no-instsimplify", instsimplify)
         OPT_ARG("--inline", "--no-inline", inliner)
+        OPT_ARG("--funcspec", "--no-funcspec", func_spec)
         OPT_ARG("--licm", "--no-licm", licm)
         OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
         OPT_ARG("--indvars", "--no-indvars", indvars)
@@ -326,6 +327,7 @@ Optimizations Flags:
   --reassociate        - Reassociate commutative expressions
   --instsimplify       - Instruction simplification
   --inline             - Function inlining
+  --funcspec           - Function Specialization
   --loopunroll         - Loop unrolling
   --parallel           - Loop parallelization
   --indvars            - Induction variable simplification

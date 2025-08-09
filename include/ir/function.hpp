@@ -228,6 +228,7 @@ public:
     void updateCFG();
     void updateAndCheckCFG();
     bool removeParam(size_t index);
+    bool removeParams(const std::vector<size_t>& indices);
 
 private:
     void updateBBIndex();

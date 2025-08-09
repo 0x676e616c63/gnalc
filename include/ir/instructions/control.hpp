@@ -136,6 +136,7 @@ public:
     // bool isNoName();
     std::string getFuncName() const;
     pFuncDecl getFunc() const; // WeakValue转换为SharedFunction
+    void setFunc(const pFuncDecl &func);
     std::vector<pVal> getArgs() const;
 
     void accept(IRVisitor &visitor) override;
@@ -144,6 +145,7 @@ public:
     bool isTailCall() const;
 
     bool removeArg(size_t index);
+    bool removeArgs(const std::vector<size_t>& indices);
 private:
     pVal cloneImpl() const override {
         if (isVoid()) {

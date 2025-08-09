@@ -14,38 +14,35 @@
 
 namespace IR {
 struct InlineCandidate {
-    std::vector<pCall> call_points;
+    std::vector<pCall> call_sites;
     pFunc callee;
 };
 
 bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate, FAM& fam, const TargetInfo::InlineThreshold& threshold) {
     auto &callee = *candidate.callee;
-    auto &call_points = candidate.call_points;
+    auto &call_sites = candidate.call_sites;
 
     if (isSafeToMemoize(callee, fam))
         return false;
 
-    // Expand recursive call once can have better performance
     if (callee.isRecursive()) {
-        if (&caller != &callee)
-            return false;
-
-        if (callee.getInstCount() * call_points.size() > threshold.recursion_expand_max_inst) {
-            Logger::logDebug("[Inline]: Canceled expanding recursive function '", callee.getName(),
-                             "', due to too many instructions.(", call_points.size(), " calls, with each ",
-                             callee.getInstCount(), " instructions)");
-            return false;
+        if (&caller == &callee) {
+            if (callee.getInstCount() * call_sites.size() > threshold.recursion_expand_max_inst) {
+                Logger::logDebug("[Inline]: Canceled expanding recursive function '", callee.getName(),
+                                 "', due to too many instructions.(", call_sites.size(), " calls, with each ",
+                                 callee.getInstCount(), " instructions)");
+                return false;
+            }
+            return true;
         }
-
-        return true;
     }
 
-    if (call_points.size() < threshold.call_points)
+    if (call_sites.size() < threshold.call_sites)
         return true;
 
-    if (callee.getInstCount() * call_points.size() > threshold.inst_threshold) {
+    if (callee.getInstCount() * call_sites.size() > threshold.inst_threshold) {
         Logger::logDebug("[Inline]: Canceled inlining '", callee.getName(), "' into '", caller.getName(),
-                         "', due to too many instructions. (", call_points.size(), " calls, with each ",
+                         "', due to too many instructions. (", call_sites.size(), " calls, with each ",
                          callee.getInstCount(), " instructions)");
         return false;
     }
@@ -58,7 +55,7 @@ void doInline(Function &caller, const pCall &call) {
     auto candidate = call->getFunc()->as<Function>();
     Err::gassert(candidate != nullptr);
 
-    if (candidate->isRecursive())
+    if (&caller == call->getFunc().get())
         Logger::logDebug("[Inline]: Expanding recursive function '", candidate->getName(), "'.");
     else
         Logger::logDebug("[Inline]: Inlining function '", candidate->getName(), "' into '", caller.getName(), "'.");
@@ -170,7 +167,7 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
                 auto callee_def = call->getFunc()->as<Function>();
                 if (callee_def != nullptr) {
                     auto &candidate = candidates[callee_def];
-                    candidate.call_points.emplace_back(call);
+                    candidate.call_sites.emplace_back(call);
                     candidate.callee = callee_def;
                 }
             }
@@ -190,7 +187,7 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         return PreserveAll();
 
     for (const auto &[callee, candidate] : candidates) {
-        for (const auto &call : candidate.call_points)
+        for (const auto &call : candidate.call_sites)
             doInline(function, call);
     }
 
