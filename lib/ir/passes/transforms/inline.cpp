@@ -18,7 +18,8 @@ struct InlineCandidate {
     pFunc callee;
 };
 
-bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate, FAM& fam, const TargetInfo::InlineThreshold& threshold) {
+bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate, FAM &fam,
+                          const TargetInfo::InlineThreshold &threshold) {
     auto &callee = *candidate.callee;
     auto &call_sites = candidate.call_sites;
 
@@ -26,15 +27,17 @@ bool isProfitableToInline(const Function &caller, const InlineCandidate &candida
         return false;
 
     if (callee.isRecursive()) {
-        if (&caller == &callee) {
-            if (callee.getInstCount() * call_sites.size() > threshold.recursion_expand_max_inst) {
-                Logger::logDebug("[Inline]: Canceled expanding recursive function '", callee.getName(),
-                                 "', due to too many instructions.(", call_sites.size(), " calls, with each ",
-                                 callee.getInstCount(), " instructions)");
-                return false;
-            }
-            return true;
+        if (&caller != &callee)
+            return false;
+
+        if (callee.getInstCount() * call_sites.size() > threshold.recursion_expand_max_inst) {
+            Logger::logDebug("[Inline]: Canceled expanding recursive function '", callee.getName(),
+                             "', due to too many instructions.(", call_sites.size(), " calls, with each ",
+                             callee.getInstCount(), " instructions)");
+            return false;
         }
+
+        return true;
     }
 
     if (call_sites.size() < threshold.call_sites)
@@ -174,8 +177,8 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         }
     }
 
-    auto& target = fam.getResult<TargetAnalysis>(function);
-    auto& threshold = target->getInlineThreshold();
+    auto &target = fam.getResult<TargetAnalysis>(function);
+    auto &threshold = target->getInlineThreshold();
     for (auto it = candidates.begin(); it != candidates.end();) {
         if (!isProfitableToInline(function, it->second, fam, threshold))
             it = candidates.erase(it);
