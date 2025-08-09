@@ -140,7 +140,6 @@ struct ParallelLoopInfo {
         pVal base;
         pVal inc;
         pVal mod;
-        IRBuilder update_point;
         IntrinsicID atomic_fn;
         std::unordered_set<pInst> update_insts;
     };
@@ -295,7 +294,6 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
             .base = reduction_base,
             .inc = inc,
             .mod = mod,
-            .update_point = IRBuilder(reduction_update->getParent(), reduction_update->iter()),
             .atomic_fn = AssociativeOps.at(op),
             .update_insts = reduction_updates});
     }
@@ -440,9 +438,10 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
             continue;
 
         auto body_ret = std::make_shared<BasicBlock>("%parallel.exit");
+        IRBuilder body_builder(body_ret);
 
         // Rewrite Reduction into global variables
-        for (auto &[reduction, reduction_base, reduction_inc, reduction_mod, update_point, atomic_fn, upd_insts] :
+        for (auto &[reduction, reduction_base, reduction_inc, reduction_mod, atomic_fn, upd_insts] :
              reductions) {
             static int global_var_id = 0;
             auto gv_name = gv_prefix + std::string{".reduction."} + reduction->getName().substr(1) + "." +
@@ -486,23 +485,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
 
             Err::gassert(reduction->getParent() == header);
 
-            if (!reduction_mod) {
-                update_point.makeCall(module->lookupIntrinsic(atomic_fn), {global_var, reduction_inc});
-
-                for (const auto &utmp : upd_insts) {
-                    if (auto phi = utmp->as<PHIInst>())
-                        utmp->getParent()->delFirstOfPhiInst(phi);
-                    else
-                        utmp->getParent()->delFirstOfInst(utmp);
-                }
-                // Clear the temporary immediately since we're going to rewrite the uses
-                // of outside loop values.
-                upd_insts.clear();
-            } else {
-                // For modular addition, we have an optimized way
-                IRBuilder body_builder(body_ret);
-                body_builder.makeCall(module->lookupIntrinsic(atomic_fn), {global_var, reduction});
-            }
+            body_builder.makeCall(module->lookupIntrinsic(atomic_fn), {global_var, reduction});
 
             Logger::logDebug("[Para]: Rewritten reduction '", reduction->getName(), "' into Global Variable '",
                              global_var->getName(), "'.");

@@ -41,7 +41,7 @@ public:
 
     struct InlineThreshold {
         size_t recursion_expand_max_inst;
-        size_t call_points;
+        size_t call_sites;
         size_t inst_threshold;
     };
     virtual const InlineThreshold& getInlineThreshold() const = 0;

@@ -129,10 +129,18 @@ size_t GEPInst::getConstantOffset() const {
     size_t offset = 0;
     pType curr_type = getBaseType();
     for (const auto &i : idx) {
-        auto ci = i->as<ConstantInt>();
-        Err::gassert(ci != nullptr, "Not constant offset.");
         Err::gassert(curr_type != nullptr, "Invalid GEPInst, type mismatched with indices.");
-        offset += ci->getVal() * curr_type->getBytes();
+
+        auto ci32 = i->as<ConstantInt>();
+        auto ci64 = i->as<ConstantI64>();
+        int64_t cint = 0;
+        if (ci32 != nullptr)
+            cint = ci32->getVal();
+        else if (ci64 != nullptr)
+            cint = ci64->getVal();
+        else Err::unreachable("Not constant offset.");
+
+        offset += cint * curr_type->getBytes();
         curr_type = getElm(curr_type);
     }
 

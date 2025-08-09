@@ -17,6 +17,8 @@
 #include "type_alias.hpp"
 #include "utils/exception.hpp"
 
+#include <algorithm>
+
 namespace IR {
 /**
  * @brief IR BASIC TYPE只包含简单Type类型，亦是Value的类型
@@ -229,6 +231,19 @@ public:
     size_t getBytes() const override {
         Err::unreachable("Cannot get bytes of function type.");
         return 0;
+    }
+
+    bool removeParam(size_t idx) {
+        return params.erase(params.begin() + idx) != params.end();
+    }
+
+    bool removeParams(const std::vector<size_t> &idxs) {
+        bool changed = false;
+        auto sorted = idxs;
+        std::sort(sorted.begin(), sorted.end(), std::greater{});
+        for (auto idx : sorted)
+            changed |= removeParam(idx);
+        return changed;
     }
 };
 

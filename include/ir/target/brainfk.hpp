@@ -27,7 +27,7 @@ public:
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {
             .recursion_expand_max_inst = 0,
-            .call_points = 0,
+            .call_sites = 0,
             .inst_threshold = 0,
         };
         return ret;

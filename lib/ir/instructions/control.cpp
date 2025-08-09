@@ -149,6 +149,7 @@ bool CALLInst::isVoid() const { return toBType(getType())->getInner() == IRBTYPE
 std::string CALLInst::getFuncName() const { return getFunc()->getName(); }
 
 pFuncDecl CALLInst::getFunc() const { return getOperand(0)->getValue()->as<FunctionDecl>(); }
+void CALLInst::setFunc(const pFuncDecl &func) { setOperand(0, func); }
 
 std::vector<pVal> CALLInst::getArgs() const {
     std::vector<pVal> ret;
@@ -164,6 +165,15 @@ bool CALLInst::isTailCall() const { return is_tail_call; }
 bool CALLInst::removeArg(size_t index) {
     Err::gassert(index + 1 < getNumOperands());
     return delOperand(index + 1);
+}
+
+bool CALLInst::removeArgs(const std::vector<size_t>& indices) {
+    bool changed = false;
+    auto sorted = indices;
+    std::sort(sorted.begin(), sorted.end(), std::greater{});
+    for (auto index : sorted)
+        changed |= delOperand(index + 1);
+    return changed;
 }
 
 SELECTInst::SELECTInst(NameRef name, const pVal &cond, const pVal &true_val, const pVal &false_val)

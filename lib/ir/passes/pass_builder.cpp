@@ -23,6 +23,7 @@
 #include "ir/passes/transforms/dae.hpp"
 #include "ir/passes/transforms/dce.hpp"
 #include "ir/passes/transforms/dse.hpp"
+#include "ir/passes/transforms/function_specialization.hpp"
 #include "ir/passes/transforms/gep_flatten.hpp"
 #include "ir/passes/transforms/globalize.hpp"
 #include "ir/passes/transforms/gvn_pre.hpp"
@@ -213,6 +214,7 @@ auto make_enabling(const PMOptions &options) {
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
     FUNCTION_TRANSFORM(inliner, InlinePass());
+    FUNCTION_TRANSFORM(func_spec, FunctionSpecializationPass());
     FUNCTION_TRANSFORM(internalize, InternalizePass());
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     return fpm;
@@ -226,10 +228,12 @@ auto make_loop(const PMOptions &options) {
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
-    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass(LoopUnrollPass::PO_Peel))
+    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
+                       LoopUnrollPass(LoopUnrollPass::PO_Peel))
     FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(adce, CFGSimplifyPass(), ADCEPass())
-    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass(LoopUnrollPass::PO_Unroll))
+    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
+                       LoopUnrollPass(LoopUnrollPass::PO_Unroll))
     return fpm;
 }
 
