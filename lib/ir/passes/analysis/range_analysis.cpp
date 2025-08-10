@@ -65,9 +65,7 @@ IRng RangeResult::getIntRange(Value *val, ICtxRng::Edge edge) const {
         return IRng();
     return it->second.getEdge(edge);
 }
-IRng RangeResult::getIntRange(const pVal &val, ICtxRng::Edge edge) const {
-    return getIntRange(val.get(), edge);
-}
+IRng RangeResult::getIntRange(const pVal &val, ICtxRng::Edge edge) const { return getIntRange(val.get(), edge); }
 FRng RangeResult::getFloatRange(Value *val, FCtxRng::Edge edge) const {
     if (auto ci32 = val->as<ConstantFloat>())
         return FRng(ci32->getVal());
@@ -77,9 +75,7 @@ FRng RangeResult::getFloatRange(Value *val, FCtxRng::Edge edge) const {
         return FRng();
     return it->second.getEdge(edge);
 }
-FRng RangeResult::getFloatRange(const pVal &val, FCtxRng::Edge edge) const {
-    return getFloatRange(val.get(), edge);
-}
+FRng RangeResult::getFloatRange(const pVal &val, FCtxRng::Edge edge) const { return getFloatRange(val.get(), edge); }
 
 bool RangeResult::knownNonNegative(Value *val, BasicBlock *bb) const {
     if (auto ci32 = val->as<ConstantInt>())
@@ -130,36 +126,35 @@ bool RangeResult::knownNonNegative(Value *val, BasicBlockEdge edge) const {
     return false;
 }
 
-
 bool RangeResult::knownNonNegative(const pVal &val, BasicBlockEdge edge) const {
     return knownNonNegative(val.get(), edge);
 }
 
-bool RangeResult::update(Value *val, const IRng &range) { return int_range_map[val].updateGlobal(range); }
-bool RangeResult::update(Value *val, const IRng &range, BasicBlock *bb) {
+bool RangeResult::intersect(Value *val, const IRng &range) { return int_range_map[val].intersectGlobal(range); }
+bool RangeResult::intersect(Value *val, const IRng &range, BasicBlock *bb) {
     if (auto inst = val->as_raw<Instruction>()) {
         if (inst->getParent().get() == bb) {
-            return update(inst, range);
+            return intersect(inst, range);
         }
     }
-    return int_range_map[val].updateContextual(range, bb);
+    return int_range_map[val].intersectContextual(range, bb);
 }
 
-bool RangeResult::update(Value *val, const FRng &range) { return float_range_map[val].updateGlobal(range); }
-bool RangeResult::update(Value *val, const FRng &range, BasicBlock *bb) {
+bool RangeResult::intersect(Value *val, const FRng &range) { return float_range_map[val].intersectGlobal(range); }
+bool RangeResult::intersect(Value *val, const FRng &range, BasicBlock *bb) {
     if (auto inst = val->as_raw<Instruction>()) {
         if (inst->getParent().get() == bb) {
-            return update(inst, range);
+            return intersect(inst, range);
         }
     }
-    return float_range_map[val].updateContextual(range, bb);
+    return float_range_map[val].intersectContextual(range, bb);
 }
 
-bool RangeResult::update(Value *val, const IRng &range, ICtxRng::Edge edge) {
-    return int_range_map[val].updateEdge(range, edge);
+bool RangeResult::intersect(Value *val, const IRng &range, ICtxRng::Edge edge) {
+    return int_range_map[val].intersectEdge(range, edge);
 }
-bool RangeResult::update(Value *val, const FRng &range, FCtxRng::Edge edge) {
-    return float_range_map[val].updateEdge(range, edge);
+bool RangeResult::intersect(Value *val, const FRng &range, FCtxRng::Edge edge) {
+    return float_range_map[val].intersectEdge(range, edge);
 }
 
 bool RangeResult::merge(Value *val, const IRng &range) { return int_range_map[val].mergeGlobal(range); }
@@ -182,10 +177,30 @@ bool RangeResult::merge(Value *val, const FRng &range, BasicBlock *bb) {
     return float_range_map[val].mergeContextual(range, bb);
 }
 
-void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) {
+void RangeAnalysis::analyzeCallSites(RangeResult &res, Function *func, FAM *fam) {
     if (func->isRecursive())
         return;
 
+    auto unique_retval = [&]() -> Value * {
+        if (func->getRetType()->isVoid())
+            return nullptr;
+
+        Value *retval = nullptr;
+        for (const auto &bb : *func) {
+            for (const auto &inst : *bb) {
+                if (auto ret = inst->as<RETInst>()) {
+                    if (retval)
+                        return nullptr;
+                    retval = ret->getRetVal().get();
+                }
+            }
+        }
+        if (!retval)
+            Logger::logWarning("Non-void function '", func->getName(), "' has no return value");
+        return retval;
+    }();
+
+    bool initial_range_set = false;
     for (const auto &inst_user : func->inst_users()) {
         auto call = inst_user->as<CALLInst>();
         Err::gassert(call != nullptr);
@@ -195,15 +210,34 @@ void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) 
         if (caller_func.get() != func) {
             const auto caller_res = fam->getResult<RangeAnalysis>(*caller_func);
             auto actual_args = call->getArgs();
-            for (const auto &fp : func->getParams()) {
-                if (fp->getType()->is<BType>()) {
-                    auto btype = fp->getType()->as<BType>()->getInner();
-                    if (btype == IRBTYPE::I32)
+
+            if (!initial_range_set) {
+                initial_range_set = true;
+                if (unique_retval) {
+                    if (unique_retval->getType()->isInteger())
+                        res.intersect(unique_retval, caller_res.getIntRange(call, call->getParent()));
+                    else if (unique_retval->getType()->isFloatingPoint())
+                        res.intersect(unique_retval, caller_res.getFloatRange(call, call->getParent()));
+                }
+                for (const auto &fp : func->getParams()) {
+                    if (fp->getType()->isInteger())
+                        res.intersect(fp.get(), caller_res.getIntRange(actual_args[fp->getIndex()], call->getParent()));
+                    else if (fp->getType()->isFloatingPoint())
+                        res.intersect(fp.get(),
+                                      caller_res.getFloatRange(actual_args[fp->getIndex()], call->getParent()));
+                }
+            } else {
+                if (unique_retval) {
+                    if (unique_retval->getType()->isInteger())
+                        res.merge(unique_retval, caller_res.getIntRange(call, call->getParent()));
+                    else if (unique_retval->getType()->isFloatingPoint())
+                        res.merge(unique_retval, caller_res.getFloatRange(call, call->getParent()));
+                }
+                for (const auto &fp : func->getParams()) {
+                    if (fp->getType()->isInteger())
                         res.merge(fp.get(), caller_res.getIntRange(actual_args[fp->getIndex()], call->getParent()));
-                    else if (btype == IRBTYPE::FLOAT)
+                    else if (fp->getType()->isFloatingPoint())
                         res.merge(fp.get(), caller_res.getFloatRange(actual_args[fp->getIndex()], call->getParent()));
-                    else
-                        Err::unreachable();
                 }
             }
         }
@@ -217,7 +251,7 @@ std::tuple<unsigned, unsigned, unsigned> countOperSign(RangeResult &res, PHIInst
     auto phi_bb = phi->getParent().get();
     if (phi->getType()->isInteger()) {
         for (const auto &[val, bb] : phi->incomings()) {
-            auto rng = res.getIntRange(val, BasicBlockEdge{bb.get(), phi_bb });
+            auto rng = res.getIntRange(val, BasicBlockEdge{bb.get(), phi_bb});
             if (rng.min > 0)
                 known_positive++;
             if (rng.max < 0)
@@ -239,15 +273,9 @@ std::tuple<unsigned, unsigned, unsigned> countOperSign(RangeResult &res, PHIInst
     return {known_negative, zero, known_positive};
 }
 
-enum class PhiOperSign {
-    Same,
-    PositiveIfPositive,
-    NegativeIfNegative,
-    Determined,
-    Unknown
-};
+enum class PhiOperSign { Same, PositiveIfPositive, NegativeIfNegative, Determined, Unknown };
 PhiOperSign analyzePhiOperSign(RangeResult &res, PHIInst *phi, Value *oper, BasicBlock *oper_bb = nullptr) {
-    BasicBlockEdge edge = {oper_bb, phi->getParent().get() };
+    BasicBlockEdge edge = {oper_bb, phi->getParent().get()};
     if (phi->getType()->isInteger()) {
         auto rng = res.getIntRange(oper, edge);
         if (rng.min >= 0 || rng.max <= 0)
@@ -343,19 +371,45 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
         }
     };
 
-    auto updateInt = [&](Value *v, const IRng &rng) {
+    std::function<void(Value *, const IRng &)> intersectInt;
+    intersectInt = [&](Value *v, const IRng &rng) {
         if (!v->is<Instruction, FormalParam>())
             return;
 
-        if (res.update(v, rng))
+        // Backward propagation to operands
+        if (auto binary = v->as_raw<BinaryInst>()) {
+            if (binary->getOpcode() == OP::MUL || binary->getOpcode() == OP::SDIV || binary->getOpcode() == OP::SREM) {
+                if (res.knownNonNegative(v)) {
+                    if (res.knownNonNegative(binary->getLHS().get()))
+                        intersectInt(binary->getRHS().get(), IRng(0, IRng::MAX));
+                    if (res.knownNonNegative(binary->getRHS().get()))
+                        intersectInt(binary->getLHS().get(), IRng(0, IRng::MAX));
+                }
+            }
+        }
+
+        if (res.intersect(v, rng))
             propagateToUsers(v);
     };
 
-    auto updateFloat = [&](Value *v, const FRng &rng) {
+    std::function<void(Value *, const FRng &)> intersectFloat;
+    intersectFloat = [&](Value *v, const FRng &rng) {
         if (!v->is<Instruction, FormalParam>())
             return;
 
-        if (res.update(v, rng))
+        // Backward propagation to operands
+        if (auto binary = v->as_raw<BinaryInst>()) {
+            if (binary->getOpcode() == OP::FMUL || binary->getOpcode() == OP::FDIV || binary->getOpcode() == OP::FREM) {
+                if (res.knownNonNegative(v)) {
+                    if (res.knownNonNegative(binary->getLHS().get()))
+                        intersectFloat(binary->getRHS().get(), FRng(0.0f, FRng::MAX));
+                    if (res.knownNonNegative(binary->getRHS().get()))
+                        intersectFloat(binary->getLHS().get(), FRng(0.0f, FRng::MAX));
+                }
+            }
+        }
+
+        if (res.intersect(v, rng))
             propagateToUsers(v);
     };
     // Instructions
@@ -374,62 +428,62 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                 auto lrng = res.getIntRange(binary->getLHS());
                 auto rrng = res.getIntRange(binary->getRHS());
                 if (binary->getOpcode() == OP::ADD)
-                    updateInt(binary, lrng + rrng);
+                    intersectInt(binary, lrng + rrng);
                 else if (binary->getOpcode() == OP::SUB)
-                    updateInt(binary, lrng - rrng);
+                    intersectInt(binary, lrng - rrng);
                 else if (binary->getOpcode() == OP::MUL)
-                    updateInt(binary, lrng * rrng);
+                    intersectInt(binary, lrng * rrng);
                 else if (binary->getOpcode() == OP::SDIV || binary->getOpcode() == OP::UDIV)
-                    updateInt(binary, lrng / rrng);
+                    intersectInt(binary, lrng / rrng);
                 else if (binary->getOpcode() == OP::SREM)
-                    updateInt(binary, lrng % rrng);
+                    intersectInt(binary, lrng % rrng);
                 else if (binary->getOpcode() == OP::UREM)
-                    updateInt(binary, lrng.urem(rrng));
+                    intersectInt(binary, lrng.urem(rrng));
                 else if (binary->getOpcode() == OP::SHL)
-                    updateInt(binary, lrng.shl(rrng));
+                    intersectInt(binary, lrng.shl(rrng));
                 else if (binary->getOpcode() == OP::LSHR)
-                    updateInt(binary, lrng.lshr(rrng));
+                    intersectInt(binary, lrng.lshr(rrng));
                 else if (binary->getOpcode() == OP::ASHR)
-                    updateInt(binary, lrng.ashr(rrng));
+                    intersectInt(binary, lrng.ashr(rrng));
                 else if (binary->getOpcode() == OP::AND)
-                    updateInt(binary, lrng & rrng);
+                    intersectInt(binary, lrng & rrng);
                 else if (binary->getOpcode() == OP::OR)
-                    updateInt(binary, lrng | rrng);
+                    intersectInt(binary, lrng | rrng);
                 else if (binary->getOpcode() == OP::XOR)
-                    updateInt(binary, lrng ^ rrng);
+                    intersectInt(binary, lrng ^ rrng);
                 else
                     Err::unreachable();
             } else if (is_float) {
                 auto lrng = res.getFloatRange(binary->getLHS());
                 auto rrng = res.getFloatRange(binary->getRHS());
                 if (binary->getOpcode() == OP::FADD)
-                    updateFloat(binary, lrng + rrng);
+                    intersectFloat(binary, lrng + rrng);
                 else if (binary->getOpcode() == OP::FSUB)
-                    updateFloat(binary, lrng - rrng);
+                    intersectFloat(binary, lrng - rrng);
                 else if (binary->getOpcode() == OP::FMUL)
-                    updateFloat(binary, lrng * rrng);
+                    intersectFloat(binary, lrng * rrng);
                 else if (binary->getOpcode() == OP::FDIV)
-                    updateFloat(binary, lrng / rrng);
+                    intersectFloat(binary, lrng / rrng);
                 else if (binary->getOpcode() == OP::FREM)
-                    updateFloat(binary, lrng % rrng);
+                    intersectFloat(binary, lrng % rrng);
                 else
                     Err::unreachable();
             }
         } else if (auto fneg = inst->as_raw<FNEGInst>()) {
             const auto &vrng = res.getFloatRange(fneg->getVal());
-            updateFloat(fneg, -vrng);
+            intersectFloat(fneg, -vrng);
         } else if (auto fptosi = inst->as_raw<FPTOSIInst>()) {
             const auto &vrng = res.getFloatRange(fptosi->getOVal());
-            updateInt(fptosi, range_cast<int>(vrng));
+            intersectInt(fptosi, range_cast<int>(vrng));
         } else if (auto sitofp = inst->as_raw<SITOFPInst>()) {
             const auto &vrng = res.getIntRange(sitofp->getOVal());
-            updateFloat(sitofp, range_cast<float>(vrng));
+            intersectFloat(sitofp, range_cast<float>(vrng));
         } else if (auto zext = inst->as_raw<ZEXTInst>()) {
             const auto &vrng = res.getIntRange(zext->getOVal());
-            updateInt(zext, vrng);
+            intersectInt(zext, vrng);
         } else if (auto sext = inst->as_raw<SEXTInst>()) {
             const auto &vrng = res.getIntRange(sext->getOVal());
-            updateInt(sext, vrng);
+            intersectInt(sext, vrng);
         } else if (auto phi = inst->as_raw<PHIInst>()) {
             auto phi_opers = phi->getPhiOpers();
             auto phi_sign = analyzePhiSign(res, phi);
@@ -454,7 +508,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                     Err::unreachable();
                 }
 
-                updateInt(phi, base);
+                intersectInt(phi, base);
             } else if (is_float) {
                 auto base = res.getFloatRange(phi_opers[0].value);
                 for (size_t i = 1; i < phi_opers.size(); i++)
@@ -476,35 +530,35 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                     Err::unreachable();
                 }
 
-                updateFloat(phi, base);
+                intersectFloat(phi, base);
             }
         } else if (auto select = inst->as_raw<SELECTInst>()) {
             if (is_int) {
                 auto trng = res.getIntRange(select->getTrueVal());
                 auto frng = res.getIntRange(select->getFalseVal());
-                updateInt(select, merge(trng, frng));
+                intersectInt(select, merge(trng, frng));
             } else if (is_float) {
                 auto trng = res.getFloatRange(select->getTrueVal());
                 auto frng = res.getFloatRange(select->getFalseVal());
-                updateFloat(select, merge(trng, frng));
+                intersectFloat(select, merge(trng, frng));
             }
         } else if (auto call = inst->as_raw<CALLInst>()) {
             if (is_int && call->getFunc()->hasFnAttr(FuncAttr::PromoteFromChar))
-                updateInt(call, IRng(0, 256));
+                intersectInt(call, IRng(0, 256));
             else {
                 if (is_int)
-                    updateInt(call, IRng());
+                    intersectInt(call, IRng());
                 else if (is_float)
-                    updateFloat(call, FRng());
+                    intersectFloat(call, FRng());
             }
         } else if (inst->is<ICMPInst, FCMPInst>())
-            updateInt(inst, IRng(0, 2));
+            intersectInt(inst, IRng(0, 2));
         else {
             if (is_btype) {
                 if (is_int)
-                    updateInt(inst, IRng());
+                    intersectInt(inst, IRng());
                 else if (is_float)
-                    updateFloat(inst, FRng());
+                    intersectFloat(inst, FRng());
             }
         }
     }
@@ -544,44 +598,71 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             }
         }
     };
-    auto updateContextualInt = [&](Value *v, BasicBlock *bb, const IRng &rng) {
+
+    std::function<bool(Value *, BasicBlock *, const IRng &)> intersectContextualInt;
+    intersectContextualInt = [&](Value *v, BasicBlock *bb, const IRng &rng) {
         if (!v->is<Instruction, FormalParam>())
             return false;
 
         auto domdfv = domtree[bb]->getBFVisitor();
         bool modified = false;
         for (auto &node : domdfv)
-            modified |= res.update(v, rng, node->raw_block());
+            modified |= res.intersect(v, rng, node->raw_block());
+
+        // Backward propagation to operands
+        if (auto binary = v->as_raw<BinaryInst>()) {
+            if (binary->getOpcode() == OP::MUL || binary->getOpcode() == OP::SDIV || binary->getOpcode() == OP::SREM) {
+                if (res.knownNonNegative(v, bb)) {
+                    if (res.knownNonNegative(binary->getLHS().get(), bb))
+                        intersectContextualInt(binary->getRHS().get(), bb, IRng(0, IRng::MAX));
+                    if (res.knownNonNegative(binary->getRHS().get(), bb))
+                        intersectContextualInt(binary->getLHS().get(), bb, IRng(0, IRng::MAX));
+                }
+            }
+        }
 
         if (modified)
             propagateToDomUsers(v, bb);
         return modified;
     };
 
-    auto updateContextualFloat = [&](Value *v, BasicBlock *bb, const FRng &rng) {
+    std::function<bool(Value *, BasicBlock *, const FRng &)> intersectContextualFloat;
+    intersectContextualFloat = [&](Value *v, BasicBlock *bb, const FRng &rng) {
         if (!v->is<Instruction, FormalParam>())
             return false;
 
         auto domdfv = domtree[bb]->getBFVisitor();
         bool modified = false;
         for (auto &node : domdfv)
-            modified |= res.update(v, rng, node->raw_block());
+            modified |= res.intersect(v, rng, node->raw_block());
+
+        // Backward propagation to operands
+        if (auto binary = v->as_raw<BinaryInst>()) {
+            if (binary->getOpcode() == OP::FMUL || binary->getOpcode() == OP::FDIV || binary->getOpcode() == OP::FREM) {
+                if (res.knownNonNegative(v, bb)) {
+                    if (res.knownNonNegative(binary->getLHS().get(), bb))
+                        intersectContextualFloat(binary->getRHS().get(), bb, FRng(0.0f, FRng::MAX));
+                    if (res.knownNonNegative(binary->getRHS().get(), bb))
+                        intersectContextualFloat(binary->getLHS().get(), bb, FRng(0.0f, FRng::MAX));
+                }
+            }
+        }
 
         if (modified)
             propagateToDomUsers(v, bb);
         return modified;
     };
 
-    auto updateEdgeInt = [&](Value *v, const ICtxRng::Edge &edge, const IRng &rng) {
+    auto intersectEdgeInt = [&](Value *v, const ICtxRng::Edge &edge, const IRng &rng) {
         if (!v->is<Instruction, FormalParam>())
             return false;
-        return res.update(v, rng, edge);
+        return res.intersect(v, rng, edge);
     };
 
-    auto updateEdgeFloat = [&](Value *v, const FCtxRng::Edge &edge, const FRng &rng) {
+    auto intersectEdgeFloat = [&](Value *v, const FCtxRng::Edge &edge, const FRng &rng) {
         if (!v->is<Instruction, FormalParam>())
             return false;
-        return res.update(v, rng, edge);
+        return res.intersect(v, rng, edge);
     };
 
     auto &scev = fam->getResult<SCEVAnalysis>(*func);
@@ -675,13 +756,13 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
 
             auto trec = scev.getSCEVAtBlock(inst, bb);
             if (trec->isExpr()) {
-                if (updateContextualInt(inst, bb, analyzeSCEVExpr(trec->getExpr())))
+                if (intersectContextualInt(inst, bb, analyzeSCEVExpr(trec->getExpr())))
                     continue;
             } else if (trec->isAddRec()) {
-                if (updateContextualInt(inst, bb, analyzeAddRec(trec)))
+                if (intersectContextualInt(inst, bb, analyzeAddRec(trec)))
                     continue;
             } else if (trec->isPeeled()) {
-                if (updateContextualInt(inst, bb, analyzePeeledTREC(trec)))
+                if (intersectContextualInt(inst, bb, analyzePeeledTREC(trec)))
                     continue;
             }
         }
@@ -691,62 +772,62 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 auto lrng = res.getIntRange(binary->getLHS().get(), bb);
                 auto rrng = res.getIntRange(binary->getRHS().get(), bb);
                 if (binary->getOpcode() == OP::ADD)
-                    updateContextualInt(binary, bb, lrng + rrng);
+                    intersectContextualInt(binary, bb, lrng + rrng);
                 else if (binary->getOpcode() == OP::SUB)
-                    updateContextualInt(binary, bb, lrng - rrng);
+                    intersectContextualInt(binary, bb, lrng - rrng);
                 else if (binary->getOpcode() == OP::MUL)
-                    updateContextualInt(binary, bb, lrng * rrng);
+                    intersectContextualInt(binary, bb, lrng * rrng);
                 else if (binary->getOpcode() == OP::SDIV || binary->getOpcode() == OP::UDIV)
-                    updateContextualInt(binary, bb, lrng / rrng);
+                    intersectContextualInt(binary, bb, lrng / rrng);
                 else if (binary->getOpcode() == OP::SREM)
-                    updateContextualInt(binary, bb, lrng % rrng);
+                    intersectContextualInt(binary, bb, lrng % rrng);
                 else if (binary->getOpcode() == OP::UREM)
-                    updateContextualInt(binary, bb, lrng.urem(rrng));
+                    intersectContextualInt(binary, bb, lrng.urem(rrng));
                 else if (binary->getOpcode() == OP::SHL)
-                    updateContextualInt(binary, bb, lrng.shl(rrng));
+                    intersectContextualInt(binary, bb, lrng.shl(rrng));
                 else if (binary->getOpcode() == OP::LSHR)
-                    updateContextualInt(binary, bb, lrng.lshr(rrng));
+                    intersectContextualInt(binary, bb, lrng.lshr(rrng));
                 else if (binary->getOpcode() == OP::ASHR)
-                    updateContextualInt(binary, bb, lrng.ashr(rrng));
+                    intersectContextualInt(binary, bb, lrng.ashr(rrng));
                 else if (binary->getOpcode() == OP::AND)
-                    updateContextualInt(binary, bb, lrng & rrng);
+                    intersectContextualInt(binary, bb, lrng & rrng);
                 else if (binary->getOpcode() == OP::OR)
-                    updateContextualInt(binary, bb, lrng | rrng);
+                    intersectContextualInt(binary, bb, lrng | rrng);
                 else if (binary->getOpcode() == OP::XOR)
-                    updateContextualInt(binary, bb, lrng ^ rrng);
+                    intersectContextualInt(binary, bb, lrng ^ rrng);
                 else
                     Err::unreachable();
             } else if (is_float) {
                 auto lrng = res.getFloatRange(binary->getLHS().get(), bb);
                 auto rrng = res.getFloatRange(binary->getRHS().get(), bb);
                 if (binary->getOpcode() == OP::FADD)
-                    updateContextualFloat(binary, bb, lrng + rrng);
+                    intersectContextualFloat(binary, bb, lrng + rrng);
                 else if (binary->getOpcode() == OP::FSUB)
-                    updateContextualFloat(binary, bb, lrng - rrng);
+                    intersectContextualFloat(binary, bb, lrng - rrng);
                 else if (binary->getOpcode() == OP::FMUL)
-                    updateContextualFloat(binary, bb, lrng * rrng);
+                    intersectContextualFloat(binary, bb, lrng * rrng);
                 else if (binary->getOpcode() == OP::FDIV)
-                    updateContextualFloat(binary, bb, lrng / rrng);
+                    intersectContextualFloat(binary, bb, lrng / rrng);
                 else if (binary->getOpcode() == OP::FREM)
-                    updateContextualFloat(binary, bb, lrng % rrng);
+                    intersectContextualFloat(binary, bb, lrng % rrng);
                 else
                     Err::unreachable();
             }
         } else if (auto fneg = inst->as_raw<FNEGInst>()) {
             const auto &vrng = res.getFloatRange(fneg->getVal().get(), bb);
-            updateContextualFloat(fneg, bb, -vrng);
+            intersectContextualFloat(fneg, bb, -vrng);
         } else if (auto fptosi = inst->as_raw<FPTOSIInst>()) {
             const auto &vrng = res.getFloatRange(fptosi->getOVal().get(), bb);
-            updateContextualInt(fptosi, bb, range_cast<int>(vrng));
+            intersectContextualInt(fptosi, bb, range_cast<int>(vrng));
         } else if (auto sitofp = inst->as_raw<SITOFPInst>()) {
             const auto &vrng = res.getIntRange(sitofp->getOVal().get(), bb);
-            updateContextualFloat(sitofp, bb, range_cast<float>(vrng));
+            intersectContextualFloat(sitofp, bb, range_cast<float>(vrng));
         } else if (auto zext = inst->as_raw<ZEXTInst>()) {
             const auto &vrng = res.getIntRange(zext->getOVal().get(), bb);
-            updateContextualInt(zext, bb, vrng);
+            intersectContextualInt(zext, bb, vrng);
         } else if (auto sext = inst->as_raw<SEXTInst>()) {
             const auto &vrng = res.getIntRange(sext->getOVal().get(), bb);
-            updateContextualInt(sext, bb, vrng);
+            intersectContextualInt(sext, bb, vrng);
         } else if (auto phi = inst->as_raw<PHIInst>()) {
             auto phi_opers = phi->getPhiOpers();
             auto phi_sign = analyzePhiSign(res, phi);
@@ -772,7 +853,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     Err::unreachable();
                 }
 
-                updateContextualInt(phi, bb, base);
+                intersectContextualInt(phi, bb, base);
             } else if (is_float) {
                 auto base = res.getFloatRange(phi_opers[0].value, phi_opers[0].block);
                 for (size_t i = 1; i < phi_opers.size(); i++)
@@ -794,17 +875,17 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     Err::unreachable();
                 }
 
-                updateContextualFloat(phi, bb, base);
+                intersectContextualFloat(phi, bb, base);
             }
         } else if (auto select = inst->as_raw<SELECTInst>()) {
             if (is_int) {
                 auto trng = res.getIntRange(select->getTrueVal().get(), bb);
                 auto frng = res.getIntRange(select->getFalseVal().get(), bb);
-                updateContextualInt(select, bb, merge(trng, frng));
+                intersectContextualInt(select, bb, merge(trng, frng));
             } else if (is_float) {
                 auto trng = res.getFloatRange(select->getTrueVal().get(), bb);
                 auto frng = res.getFloatRange(select->getFalseVal().get(), bb);
-                updateContextualFloat(select, bb, merge(trng, frng));
+                intersectContextualFloat(select, bb, merge(trng, frng));
             }
         } else if (auto icmp = inst->as_raw<ICMPInst>()) {
             auto lhs = icmp->getLHS().get();
@@ -821,77 +902,77 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     bool truebb_can_set = truebb->getNumPreds() == 1;
                     bool falsebb_can_set = falsebb->getNumPreds() == 1;
 
-                    auto tryUpdateTrue = [&](Value *val, const IRng &rng) {
-                        updateEdgeInt(val, BasicBlockEdge{icmp_bb, truebb}, rng);
+                    auto tryIntersectTrue = [&](Value *val, const IRng &rng) {
+                        intersectEdgeInt(val, BasicBlockEdge{icmp_bb, truebb}, rng);
                         if (truebb_can_set)
-                            updateContextualInt(val, truebb, rng);
+                            intersectContextualInt(val, truebb, rng);
                     };
-                    auto tryUpdateFalse = [&](Value *val, const IRng &rng) {
-                        updateEdgeInt(val, BasicBlockEdge{icmp_bb, falsebb}, rng);
+                    auto tryIntersectFalse = [&](Value *val, const IRng &rng) {
+                        intersectEdgeInt(val, BasicBlockEdge{icmp_bb, falsebb}, rng);
                         if (falsebb_can_set)
-                            updateContextualInt(val, falsebb, rng);
+                            intersectContextualInt(val, falsebb, rng);
                     };
 
                     switch (icmp->getCond()) {
                     case ICMPOP::eq:
-                        tryUpdateTrue(lhs, rrng);
-                        tryUpdateTrue(rhs, lrng);
+                        tryIntersectTrue(lhs, rrng);
+                        tryIntersectTrue(rhs, lrng);
                         break;
                     case ICMPOP::ne:
-                        tryUpdateFalse(lhs, rrng);
-                        tryUpdateFalse(rhs, lrng);
+                        tryIntersectFalse(lhs, rrng);
+                        tryIntersectFalse(rhs, lrng);
                         break;
                     case ICMPOP::slt:
                         // lhs < rhs
                         if (rrng.max != IRng::MAX)
-                            tryUpdateTrue(lhs, IRng(IRng::MIN, rrng.max - 1));
+                            tryIntersectTrue(lhs, IRng(IRng::MIN, rrng.max - 1));
                         if (lrng.min != IRng::MIN)
-                            tryUpdateTrue(rhs, IRng(lrng.min + 1, IRng::MAX));
+                            tryIntersectTrue(rhs, IRng(lrng.min + 1, IRng::MAX));
 
                         // lhs >= rhs
                         if (rrng.min != IRng::MIN)
-                            tryUpdateFalse(lhs, IRng(rrng.min, IRng::MAX));
+                            tryIntersectFalse(lhs, IRng(rrng.min, IRng::MAX));
                         if (lrng.max != IRng::MAX)
-                            tryUpdateFalse(rhs, IRng(IRng::MIN, lrng.max));
+                            tryIntersectFalse(rhs, IRng(IRng::MIN, lrng.max));
                         break;
                     case ICMPOP::sle:
                         // lhs <= rhs
                         if (rrng.max != IRng::MAX)
-                            tryUpdateTrue(lhs, IRng(IRng::MIN, rrng.max));
+                            tryIntersectTrue(lhs, IRng(IRng::MIN, rrng.max));
                         if (lrng.min != IRng::MIN)
-                            tryUpdateTrue(rhs, IRng(lrng.min, IRng::MAX));
+                            tryIntersectTrue(rhs, IRng(lrng.min, IRng::MAX));
 
                         // lhs > rhs
                         if (rrng.min != IRng::MIN)
-                            tryUpdateFalse(lhs, IRng(rrng.min + 1, IRng::MAX));
+                            tryIntersectFalse(lhs, IRng(rrng.min + 1, IRng::MAX));
                         if (lrng.max != IRng::MAX)
-                            tryUpdateFalse(rhs, IRng(IRng::MIN, lrng.max - 1));
+                            tryIntersectFalse(rhs, IRng(IRng::MIN, lrng.max - 1));
                         break;
                     case ICMPOP::sgt:
                         // lhs > rhs
                         if (rrng.min != IRng::MIN)
-                            tryUpdateTrue(lhs, IRng(rrng.min + 1, IRng::MAX));
+                            tryIntersectTrue(lhs, IRng(rrng.min + 1, IRng::MAX));
                         if (lrng.max != IRng::MAX)
-                            tryUpdateTrue(rhs, IRng(IRng::MIN, lrng.max - 1));
+                            tryIntersectTrue(rhs, IRng(IRng::MIN, lrng.max - 1));
 
                         // lhs <= rhs
                         if (rrng.max != IRng::MAX)
-                            tryUpdateFalse(lhs, IRng(IRng::MIN, rrng.max));
+                            tryIntersectFalse(lhs, IRng(IRng::MIN, rrng.max));
                         if (lrng.min != IRng::MIN)
-                            tryUpdateFalse(rhs, IRng(lrng.min, IRng::MAX));
+                            tryIntersectFalse(rhs, IRng(lrng.min, IRng::MAX));
                         break;
                     case ICMPOP::sge:
                         // lhs >= rhs
                         if (rrng.min != IRng::MIN)
-                            tryUpdateTrue(lhs, IRng(rrng.min, IRng::MAX));
+                            tryIntersectTrue(lhs, IRng(rrng.min, IRng::MAX));
                         if (lrng.max != IRng::MAX)
-                            tryUpdateTrue(rhs, IRng(IRng::MIN, lrng.max));
+                            tryIntersectTrue(rhs, IRng(IRng::MIN, lrng.max));
 
                         // lhs < rhs
                         if (rrng.max != IRng::MAX)
-                            tryUpdateFalse(lhs, IRng(IRng::MIN, rrng.max - 1));
+                            tryIntersectFalse(lhs, IRng(IRng::MIN, rrng.max - 1));
                         if (lrng.min != IRng::MIN)
-                            tryUpdateFalse(rhs, IRng(lrng.min + 1, IRng::MAX));
+                            tryIntersectFalse(rhs, IRng(lrng.min + 1, IRng::MAX));
                         break;
                     default:
                         Err::unreachable();
@@ -912,27 +993,28 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     bool truebb_can_set = truebb->getNumPreds() == 1;
                     bool falsebb_can_set = falsebb->getNumPreds() == 1;
 
-                    auto tryUpdateTrue = [&](Value *val, const FRng &rng) {
-                        updateEdgeFloat(val, {fcmp_bb, truebb}, rng);
+                    auto tryIntersectTrue = [&](Value *val, const FRng &rng) {
+                        intersectEdgeFloat(val, {fcmp_bb, truebb}, rng);
                         if (truebb_can_set)
-                            updateContextualFloat(val, truebb, rng);
+                            intersectContextualFloat(val, truebb, rng);
                     };
-                    auto tryUpdateFalse = [&](Value *val, const FRng &rng) {
-                        updateEdgeFloat(val, {fcmp_bb, falsebb}, rng);
+                    auto tryIntersectFalse = [&](Value *val, const FRng &rng) {
+                        intersectEdgeFloat(val, {fcmp_bb, falsebb}, rng);
                         if (falsebb_can_set)
-                            updateContextualFloat(val, falsebb, rng);
+                            intersectContextualFloat(val, falsebb, rng);
                     };
 
                     switch (fcmp->getCond()) {
                     case FCMPOP::oeq:
-                        tryUpdateTrue(lhs, rrng);
-                        tryUpdateTrue(rhs, lrng);
+                        tryIntersectTrue(lhs, rrng);
+                        tryIntersectTrue(rhs, lrng);
                         break;
                     case FCMPOP::one:
-                        tryUpdateFalse(lhs, rrng);
-                        tryUpdateFalse(rhs, lrng);
+                        tryIntersectFalse(lhs, rrng);
+                        tryIntersectFalse(rhs, lrng);
                         break;
-                    default: break;
+                    default:
+                        break;
                     }
                 }
             }
@@ -940,7 +1022,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             auto idxs = gep->getIdxs();
             for (const auto &idx : idxs) {
                 if (idx->is<Instruction>())
-                    updateContextualInt(idx.get(), bb, IRng(0, IRng::MAX));
+                    intersectContextualInt(idx.get(), bb, IRng(0, IRng::MAX));
             }
         }
     }
@@ -948,7 +1030,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
 
 RangeResult RangeAnalysis::run(Function &function, FAM &manager) {
     RangeResult res;
-    analyzeArgument(res, &function, &manager);
+    analyzeCallSites(res, &function, &manager);
     analyzeGlobal(res, &function, &manager);
     analyzeContextual(res, &function, &manager);
     return res;

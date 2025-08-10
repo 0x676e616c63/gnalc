@@ -206,6 +206,11 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             }
         }
 
+        // x * 2^n = x << n
+        REWRITE_BEG(M::Mul(M::Bind(x), M::PowerOfTwo(M::Bind(c1))))
+        auto shl = builder.makeShl(x, function.getInteger(ctz_wrapper(c1), x->getType()));
+        REWRITE_END(shl)
+
         // x + c1 + c2 = x + (c1 + c2)
         REWRITE_BEG(M::Add(M::Add(M::Bind(x), M::Bind(c1)), M::Bind(c2)))
         auto add = builder.makeAdd(x, function.getInteger(c1 + c2, x->getType()));
@@ -247,6 +252,11 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         REWRITE_BEG(M::Select(M::Bind(x), M::Is(true), M::Bind(y)))
         auto ori = builder.makeOr(x, y);
         REWRITE_END(ori)
+
+        // x - (x + y) -> -y
+        REWRITE_BEG(M::Sub(M::Bind(x), M::Add(M::Is(x), M::Bind(y))))
+        auto neg = builder.makeSub(i32_zero, y);
+        REWRITE_END(neg)
 
         // x - -y -> x + y
         REWRITE_BEG(M::Sub(M::Bind(x), M::Sub(M::IsIntegerVal(0), M::Bind(y))))

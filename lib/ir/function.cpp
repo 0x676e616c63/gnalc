@@ -44,6 +44,8 @@ bool FunctionDecl::hasFnAttr(FuncAttr attr_) const { return attr().get<FuncAttrs
 void FunctionDecl::addFnAttr(FuncAttr attr_) { attr().get<FuncAttrs>()->set(attr_); }
 FuncAttr FunctionDecl::getFnAttrs() const { return attr().get<FuncAttrs>()->val(); }
 
+pType FunctionDecl::getRetType() const { return getType()->as<FunctionType>()->getRet(); }
+
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 bool FunctionDecl::isSylib() const { return hasFnAttr(FuncAttr::Sylib); }

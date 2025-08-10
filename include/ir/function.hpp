@@ -96,6 +96,8 @@ public:
     void addFnAttr(FuncAttr attr);
     FuncAttr getFnAttrs() const;
 
+    pType getRetType() const;
+
     void setParent(Module *module);
     Module *getParent() const;
 

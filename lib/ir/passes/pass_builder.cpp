@@ -58,6 +58,7 @@
 #include "ir/passes/utilities/cfg_export.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/run_test.hpp"
+#include "ir/passes/utilities/trace.hpp"
 #include "ir/passes/utilities/verifier.hpp"
 
 // Target
@@ -211,7 +212,7 @@ auto make_memo(const PMOptions &options) {
 
 auto make_enabling(const PMOptions &options) {
     FPM fpm;
-    FUNCTION_TRANSFORM(mem2reg, PromotePass());
+    // FUNCTION_TRANSFORM(mem2reg, PromotePass());
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
     FUNCTION_TRANSFORM(inliner, InlinePass());
     FUNCTION_TRANSFORM(func_spec, FunctionSpecializationPass());
@@ -255,6 +256,17 @@ auto make_vectorizer(const PMOptions &options) {
     return fpm;
 }
 
+auto make_pre_canonicalize(const PMOptions &options) {
+    FPM fpm;
+    FUNCTION_TRANSFORM(mem2reg, PromotePass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    FUNCTION_TRANSFORM(sccp, SCCPPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    return fpm;
+}
+
 auto make_post_legalize(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(globalize, GlobalizePass())
@@ -262,6 +274,7 @@ auto make_post_legalize(const PMOptions &options) {
 
     if (!options.advance_name_norm)
         fpm.addPass(NameNormalizePass());
+
     return fpm;
 }
 
@@ -289,7 +302,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
     fpm.addPass(make_memo(options));
     fpm.addPass(make_arithmetic(options));
     fpm.addPass(make_loop(options));
-    // Loop pass can expose many optimization opportunities, a deep clean after them is needed.
+    // Loop pass can expose many optimization opportunities
     fpm.addPass(make_deep_clean(options));
     fpm.addPass(make_vectorizer(options));
     fpm.addPass(make_fast_clean(options));
@@ -300,6 +313,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
     // Note:
     // `--ann` moved to make_post_legalize()
 
+
     return fpm;
 }
 
@@ -307,6 +321,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
 
 MPM PassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
     MPM mpm;
+    mpm.addPass(makeModulePass(make_pre_canonicalize(options)));
     mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
     mpm.addPass(makeModulePass(make_post_legalize(options)));
     // mpm.addPass(makeModulePass(make_gep_opt(options)));

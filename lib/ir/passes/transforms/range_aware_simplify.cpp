@@ -21,6 +21,12 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
         return PreserveAll();
     }
 
+    // PrintFunctionPass printer(std::cerr);
+    // printer.run(function, fam);
+    // PrintRangePass printer1(std::cerr);
+    // printer1.run(function, fam);
+
+
     bool rng_cfg_modified = false;
     bool rng_inst_modified = false;
     auto& ranges = fam.getResult<RangeAnalysis>(function);

@@ -398,7 +398,7 @@ private:
     std::unordered_map<Edge, Range<T>, BasicBlockEdgeHash, BasicBlockEdgeEq> edge_map;
     Range<T> global;
 
-    bool updateGlobal(const Range<T> &range) {
+    bool intersectGlobal(const Range<T> &range) {
         if (range.isFull())
             return false;
         if (global.intersect(range)) {
@@ -411,7 +411,7 @@ private:
         return false;
     }
 
-    bool updateContextual(const Range<T> &range, BasicBlock *bb) {
+    bool intersectContextual(const Range<T> &range, BasicBlock *bb) {
         if (range.isFull())
             return false;
         if (range.contains(global))
@@ -420,7 +420,7 @@ private:
         return context_map[bb].intersect(range);
     }
 
-    bool updateEdge(const Range<T> &range, Edge edge) {
+    bool intersectEdge(const Range<T> &range, Edge edge) {
         if (range.isFull())
             return false;
         if (range.contains(getContextual(edge.dst)))
@@ -488,14 +488,14 @@ public:
     bool knownNonNegative(const pVal &val, BasicBlockEdge edge) const;
 
 private:
-    bool update(Value *val, const IRng &range);
-    bool update(Value *val, const IRng &range, BasicBlock *bb);
+    bool intersect(Value *val, const IRng &range);
+    bool intersect(Value *val, const IRng &range, BasicBlock *bb);
 
-    bool update(Value *val, const FRng &range);
-    bool update(Value *val, const FRng &range, BasicBlock *bb);
+    bool intersect(Value *val, const FRng &range);
+    bool intersect(Value *val, const FRng &range, BasicBlock *bb);
 
-    bool update(Value *val, const IRng &range, BasicBlockEdge edge);
-    bool update(Value *val, const FRng &range, BasicBlockEdge edge);
+    bool intersect(Value *val, const IRng &range, BasicBlockEdge edge);
+    bool intersect(Value *val, const FRng &range, BasicBlockEdge edge);
 
     bool merge(Value *val, const IRng &range);
     bool merge(Value *val, const IRng &range, BasicBlock *bb);
@@ -509,7 +509,7 @@ public:
     RangeResult run(Function &f, FAM &fpm);
 
 private:
-    void analyzeArgument(RangeResult &res, Function *func, FAM *fam);
+    void analyzeCallSites(RangeResult &res, Function *func, FAM *fam);
     void analyzeGlobal(RangeResult &res, Function *func, FAM *fam);
     void analyzeContextual(RangeResult &res, Function *func, FAM *fam);
 
