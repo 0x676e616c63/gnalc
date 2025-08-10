@@ -220,7 +220,7 @@ void MIR::lowerInst_v(const IR::pBinary &binary, LoweringContext &ctx) {
     }
 
     if (mop == OpC::InstVShl) {
-        auto shift = MIROperand::asImme(binary->getRHS()->as<IR::ConstantIntVector>()->getVector(), OpT::Int64);
+        auto shift = MIROperand::asImme(binary->getRHS()->as<IR::ConstantIntVector>()->getVector()[0], OpT::Int64);
 
         ctx.newInst(MIRInst::make(OpC::InstVShl)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
