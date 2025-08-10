@@ -648,6 +648,22 @@ string ARMA64Printer::binaryPrinter_v(const MIRInst &minst) {
     return str;
 }
 
+string ARMA64Printer::shlPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &lhs = minst.getOp(1);
+    const auto &imme = minst.getOp(2)->imme();
+    auto op = minst.opcode<OpC>();
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
+
+    string str;
+    str += ARMv8::OpC2S(op) + '\t';
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(lhs, 16, true) + mode + ",\t";
+    str += "#" + std::to_string(imme);
+
+    return str;
+}
+
 string ARMA64Printer::selectPrinter_v(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &true_val = minst.getOp(1);

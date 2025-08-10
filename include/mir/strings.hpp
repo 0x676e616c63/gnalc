@@ -153,8 +153,9 @@ inline string OpC2S(OpC op) {
     case OpC::InstVXor:
         return "eor";
     case OpC::InstShl:
-    case OpC::InstVShl:
         return "lsl";
+    case OpC::InstVShl:
+        return "shl";
     case OpC::InstLShr:
         return "lsr";
     case OpC::InstAShr:

@@ -218,8 +218,10 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstVAnd:
         case OpC::InstVOr:
         case OpC::InstVXor:
-        case OpC::InstVShl:
             outStream << binaryPrinter_v(minst);
+            break;
+        case OpC::InstVShl:
+            outStream << shlPrinter_v(minst);
             break;
         case OpC::InstVFNeg:
         case OpC::InstVNeg:

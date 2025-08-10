@@ -219,11 +219,19 @@ void MIR::lowerInst_v(const IR::pBinary &binary, LoweringContext &ctx) {
         Err::todo("");
     }
 
-    ctx.newInst(MIRInst::make(mop)
-                    ->setOperand<0>(def, ctx.CodeGenCtx())
-                    ->setOperand<1>(try_vector_flatting(binary->getLHS(), ctx), ctx.CodeGenCtx())
-                    ->setOperand<2>(try_vector_flatting(binary->getRHS(), ctx), ctx.CodeGenCtx())); // 可能带常数
+    if (mop == OpC::InstVShl) {
+        auto shift = MIROperand::asImme(binary->getRHS()->as<IR::ConstantIntVector>()->getVector(), OpT::Int64);
 
+        ctx.newInst(MIRInst::make(OpC::InstVShl)
+                        ->setOperand<0>(def, ctx.CodeGenCtx())
+                        ->setOperand<1>(try_vector_flatting(binary->getLHS(), ctx), ctx.CodeGenCtx())
+                        ->setOperand<2>(shift, ctx.CodeGenCtx()));
+    } else {
+        ctx.newInst(MIRInst::make(mop)
+                        ->setOperand<0>(def, ctx.CodeGenCtx())
+                        ->setOperand<1>(try_vector_flatting(binary->getLHS(), ctx), ctx.CodeGenCtx())
+                        ->setOperand<2>(try_vector_flatting(binary->getRHS(), ctx), ctx.CodeGenCtx()));
+    }
     ctx.addOperand(binary, def);
 }
 

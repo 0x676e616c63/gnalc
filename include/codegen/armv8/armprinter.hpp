@@ -64,6 +64,7 @@ public:
 
     // vectors
     [[nodiscard]] string binaryPrinter_v(const MIRInst &);
+    [[nodiscard]] string shlPrinter_v(const MIRInst &);
     [[nodiscard]] string selectPrinter_v(const MIRInst &);
     [[nodiscard]] string unaryPrinter_v(const MIRInst &);
     [[nodiscard]] string cmpPrinter_v(const MIRInst &);
