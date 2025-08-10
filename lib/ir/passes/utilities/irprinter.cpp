@@ -251,6 +251,15 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
             }
         }
     }
+    writeln("Edge Ranges: ");
+    for (const auto& [val, ctxrng] : ranges.int_range_map) {
+        for (const auto& [edge, rng] : ctxrng.edge_map)
+            writeln(val->getName(), " at edge ", edge.src->getName(), " -> ", edge.dst->getName(), ": ", rng);
+    }
+    for (const auto& [val, ctxrng] : ranges.float_range_map) {
+        for (const auto& [edge, rng] : ctxrng.edge_map)
+            writeln(val->getName(), " at edge ", edge.src->getName(), " -> ", edge.dst->getName(), ": ", rng);
+    }
     return PreserveAll();
 }
 

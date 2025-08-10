@@ -368,31 +368,65 @@ template <typename To, typename From> Range<To> range_cast(const Range<From> &ra
     return Range<To>(ret_min, ret_max);
 }
 
+struct BasicBlockEdge {
+    BasicBlock *src;
+    BasicBlock *dst;
+};
+
+struct BasicBlockEdgeHash {
+    size_t operator()(const BasicBlockEdge &edge) const {
+        auto seed = std::hash<BasicBlock *>()(edge.src);
+        Util::hashSeedCombine(seed, std::hash<BasicBlock *>()(edge.dst));
+        return seed;
+    }
+};
+
+struct BasicBlockEdgeEq {
+    bool operator()(const BasicBlockEdge &a, const BasicBlockEdge &b) const {
+        return a.src == b.src && a.dst == b.dst;
+    }
+};
+
 template <typename T> struct ContextualRange {
     friend class RangeResult;
+    friend class PrintRangePass;
+
+    using Edge = BasicBlockEdge;
 
 private:
     std::unordered_map<BasicBlock *, Range<T>> context_map;
+    std::unordered_map<Edge, Range<T>, BasicBlockEdgeHash, BasicBlockEdgeEq> edge_map;
     Range<T> global;
 
-    bool updateGlobal(const Range<T> &range) {
+    bool intersectGlobal(const Range<T> &range) {
         if (range.isFull())
             return false;
         if (global.intersect(range)) {
             for (auto &[bb, range] : context_map)
+                range.intersect(global);
+            for (auto &[edge, range] : edge_map)
                 range.intersect(global);
             return true;
         }
         return false;
     }
 
-    bool updateContextual(const Range<T> &range, BasicBlock *bb) {
+    bool intersectContextual(const Range<T> &range, BasicBlock *bb) {
         if (range.isFull())
             return false;
         if (range.contains(global))
             return false;
 
         return context_map[bb].intersect(range);
+    }
+
+    bool intersectEdge(const Range<T> &range, Edge edge) {
+        if (range.isFull())
+            return false;
+        if (range.contains(getContextual(edge.dst)))
+            return false;
+
+        return edge_map[edge].intersect(range);
     }
 
     bool mergeGlobal(const Range<T> &range) {
@@ -415,6 +449,12 @@ public:
         return it->second;
     }
     const Range<T> &getGlobal() const { return global; }
+    const Range<T> &getEdge(Edge edge) const {
+        auto it = edge_map.find(edge);
+        if (it == edge_map.end())
+            return getContextual(edge.dst);
+        return it->second;
+    }
 };
 
 using IRng = Range<int>;
@@ -424,6 +464,7 @@ using FCtxRng = ContextualRange<float>;
 
 class RangeResult {
     friend class RangeAnalysis;
+    friend class PrintRangePass;
 
     std::unordered_map<Value *, ICtxRng> int_range_map;
     std::unordered_map<Value *, FCtxRng> float_range_map;
@@ -436,15 +477,25 @@ public:
     FRng getFloatRange(Value *val, BasicBlock *bb = nullptr) const;
     FRng getFloatRange(const pVal &val, const pBlock &bb = nullptr) const;
 
+    IRng getIntRange(Value* val, BasicBlockEdge edge) const;
+    IRng getIntRange(const pVal &val, BasicBlockEdge edge) const;
+    FRng getFloatRange(Value* val, BasicBlockEdge edge) const;
+    FRng getFloatRange(const pVal &val, BasicBlockEdge edge) const;
+
     bool knownNonNegative(Value *val, BasicBlock *bb = nullptr) const;
     bool knownNonNegative(const pVal &val, const pBlock &bb = nullptr) const;
+    bool knownNonNegative(Value *val, BasicBlockEdge edge) const;
+    bool knownNonNegative(const pVal &val, BasicBlockEdge edge) const;
 
 private:
-    bool update(Value *val, const IRng &range);
-    bool update(Value *val, const IRng &range, BasicBlock *bb);
+    bool intersect(Value *val, const IRng &range);
+    bool intersect(Value *val, const IRng &range, BasicBlock *bb);
 
-    bool update(Value *val, const FRng &range);
-    bool update(Value *val, const FRng &range, BasicBlock *bb);
+    bool intersect(Value *val, const FRng &range);
+    bool intersect(Value *val, const FRng &range, BasicBlock *bb);
+
+    bool intersect(Value *val, const IRng &range, BasicBlockEdge edge);
+    bool intersect(Value *val, const FRng &range, BasicBlockEdge edge);
 
     bool merge(Value *val, const IRng &range);
     bool merge(Value *val, const IRng &range, BasicBlock *bb);
@@ -458,7 +509,7 @@ public:
     RangeResult run(Function &f, FAM &fpm);
 
 private:
-    void analyzeArgument(RangeResult &res, Function *func, FAM *fam);
+    void analyzeCallSites(RangeResult &res, Function *func, FAM *fam);
     void analyzeGlobal(RangeResult &res, Function *func, FAM *fam);
     void analyzeContextual(RangeResult &res, Function *func, FAM *fam);
 

@@ -154,6 +154,86 @@ void lowerMemcpy(Module &module, const pFuncDecl &memcpy_decl) {
     memcpy_impl->updateCFG();
     cleanup(memcpy_impl);
 }
+
+// define dso_local i32 @__gnalc_intrinsic_ipow(i32 %0, i32 %1) {
+// entry:
+//   %3 = and i32 %1, 1
+//   %4 = icmp eq i32 %3, 0
+//   %5 = select i1 %4, i32 1, i32 %0
+//   %6 = icmp slt i32 %1, 2
+//   br i1 %6, label %exit, label %body
+//
+// body:
+//   %8 = phi i32 [ %16, %body ], [ %5, %entry ]
+//   %9 = phi i32 [ %11, %body ], [ %1, %entry ]
+//   %10 = phi i32 [ %12, %body ], [ %0, %entry ]
+//   %11 = ashr i32 %9, 1
+//   %12 = mul nsw i32 %10, %10
+//   %13 = and i32 %9, 2
+//   %14 = icmp eq i32 %13, 0
+//   %15 = select i1 %14, i32 1, i32 %12
+//   %16 = mul i32 %15, %8
+//   %17 = icmp slt i32 %11, 2
+//   br i1 %17, label %exit, label %body
+//
+// exit:
+//   %19 = phi i32 [ %5, %entry ], [ %16, %body ]
+//   ret i32 %19
+// }
+
+void lowerIntPow(Module &module, const pFuncDecl &ipow_decl) {
+    auto v0 = std::make_shared<FormalParam>("%a", makeBType(IRBTYPE::I32), 0);
+    auto v1 = std::make_shared<FormalParam>("%b", makeBType(IRBTYPE::I32), 1);
+    auto ipow_impl =
+        std::make_shared<Function>("@__gnalc_intrinsic_ipow", std::vector{v0, v1}, makeBType(IRBTYPE::I32),
+                                   &module.getConstantPool(), FuncAttr::NotBuiltin | FuncAttr::LoweredIntrinsic);
+    ipow_decl->replaceSelf(ipow_impl);
+    module.addFunction(ipow_impl);
+    module.delFunctionDecl(ipow_decl);
+
+    auto entry = std::make_shared<BasicBlock>("%entry");
+    auto body = std::make_shared<BasicBlock>("%body");
+    auto exit = std::make_shared<BasicBlock>("%exit");
+    ipow_impl->addBlock(entry);
+    ipow_impl->addBlock(body);
+    ipow_impl->addBlock(exit);
+
+    IRBuilder entry_builder(entry);
+    auto v3 = entry_builder.makeAnd(v1, module.getConst(1));
+    auto v4 = entry_builder.makeIcmp(ICMPOP::eq, v3, module.getConst(0));
+    auto v5 = entry_builder.makeSelect(v4, module.getConst(1), v0);
+    auto v6 = entry_builder.makeIcmp(ICMPOP::slt, v1, module.getConst(2));
+    (void)entry_builder.makeBr(v6, exit, body);
+
+    IRBuilder body_builder(body);
+    auto v8 = body_builder.makePhi(makeBType(IRBTYPE::I32));
+    auto v9 = body_builder.makePhi(makeBType(IRBTYPE::I32));
+    auto v10 = body_builder.makePhi(makeBType(IRBTYPE::I32));
+    auto v11 = body_builder.makeAShr(v9, module.getConst(1));
+    auto v12 = body_builder.makeMul(v10, v10);
+    auto v13 = body_builder.makeAnd(v9, module.getConst(2));
+    auto v14 = body_builder.makeIcmp(ICMPOP::eq, v13, module.getConst(0));
+    auto v15 = body_builder.makeSelect(v14, module.getConst(1), v12);
+    auto v16 = body_builder.makeMul(v15, v8);
+    auto v17 = body_builder.makeIcmp(ICMPOP::slt, v11, module.getConst(2));
+    (void)body_builder.makeBr(v17, exit, body);
+
+    v8->addPhiOper(v5, entry);
+    v8->addPhiOper(v16, body);
+    v9->addPhiOper(v1, entry);
+    v9->addPhiOper(v11, body);
+    v10->addPhiOper(v0, entry);
+    v10->addPhiOper(v12, body);
+
+    IRBuilder exit_builder(exit);
+    auto v19 = exit_builder.makePhi(makeBType(IRBTYPE::I32));
+    v19->addPhiOper(v5, entry);
+    v19->addPhiOper(v16, body);
+    (void)exit_builder.makeRet(v19);
+    ipow_impl->updateCFG();
+    cleanup(ipow_impl);
+}
+
 PM::PreservedAnalyses LowerIntrinsicsPass::run(Module &module, MAM &manager) {
     auto &target = manager.getResult<TargetAnalysis>(module);
 
@@ -172,6 +252,8 @@ PM::PreservedAnalyses LowerIntrinsicsPass::run(Module &module, MAM &manager) {
             lowerMemset(module, func_decl);
         else if (func_decl->getIntrinsicID() == IntrinsicID::Memcpy)
             lowerMemcpy(module, func_decl);
+        else if (func_decl->getIntrinsicID() == IntrinsicID::IntPow)
+            lowerIntPow(module, func_decl);
         else
             Err::unreachable("Unhandled intrinsic");
     }

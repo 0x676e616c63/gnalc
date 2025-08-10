@@ -34,16 +34,15 @@ public:
     size_t getMinVectorRegisterSize() const override { return 64; }
 
     size_t getInternalizeSizeThreshold() const override {
-        return 1024 * 1024;
+        return 32;
     }
     size_t getGlobalizeSizeThreshold() const override {
-        // No globalize
-        return std::numeric_limits<size_t>::max();
+        return 1024;
     }
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {
             .recursion_expand_max_inst = 100,
-            .call_points = 3,
+            .call_sites = 3,
             .inst_threshold = 200,
         };
         return ret;
@@ -92,7 +91,7 @@ public:
         int cost = is_fp ? 2 : 1;
 
         // sdiv -> add + cmp + select + ashr
-        if (op == OP::DIV && rhs.kind == OperandKind::UniformConstant && rhs.prop == OperandProp::PowerOfTwo) {
+        if (op == OP::SDIV && rhs.kind == OperandKind::UniformConstant && rhs.prop == OperandProp::PowerOfTwo) {
             cost += getBinaryCost(OP::ADD, ty, OperandTrait::none(), OperandTrait::none());
             cost += getBinaryCost(OP::SUB, ty, OperandTrait::none(), OperandTrait::none());
             cost += getSelectCost(ty);
@@ -134,7 +133,8 @@ public:
     }
     bool canVectorize(OP op) const override {
         switch (op) {
-        case OP::DIV:
+        case OP::SDIV:
+        case OP::UDIV:
         case OP::LSHR:
         case OP::ASHR:
         case OP::SREM:

@@ -613,7 +613,7 @@ void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
     case OP::FMUL:
         MIR::lowerInst(inst->as<IR::BinaryInst>(), ctx);
         break;
-    case OP::DIV:
+    case OP::SDIV:
     case OP::SREM:
     case OP::UREM:
     case OP::FDIV:
@@ -691,7 +691,7 @@ void MIR::lowerInst_v(const IRInst_p &inst, LoweringContext &ctx) {
     case OP::FMUL:
         MIR::lowerInst_v(inst->as<IR::BinaryInst>(), ctx);
         break;
-    case OP::DIV:
+    case OP::SDIV:
     case OP::SREM:
     case OP::UREM:
     case OP::FDIV:

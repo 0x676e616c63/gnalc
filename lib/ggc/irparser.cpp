@@ -1528,7 +1528,7 @@ namespace yyy {
 
   case 73: // BinaryOp: I_DIV
 #line 177 "irparser.y"
-                        { yylhs.value.as < OP > () = OP::DIV; }
+                        { yylhs.value.as < OP > () = OP::SDIV; }
 #line 1532 "irparser.cpp"
     break;
 

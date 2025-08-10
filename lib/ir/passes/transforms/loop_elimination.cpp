@@ -4,10 +4,10 @@
 #include "ir/passes/transforms/loop_elimination.hpp"
 #include "config/config.hpp"
 #include "ir/block_utils.hpp"
+#include "ir/match.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/match.hpp"
 
 namespace IR {
 // If all values defined in the loop have no uses outside the loop, or uses outside the loop
@@ -30,9 +30,10 @@ bool isSafeAndProfitableToEliminate(const pLoop &loop, FAM &fam, SCEVHandle &sce
                 if (!loop->contains(user_block)) {
                     // Skip Phi. SCEVExpr can not be expanded before phi.
                     if (!user->is<PHIInst>()) {
+                        SCEVSynthesizer synthesizer(&scev, &user_block->getParent()->getConstantPool());
                         auto s = scev.getSCEVAtBlock(inst, user_block);
                         if (s && s->isExpr()) {
-                            auto e = scev.estimateExpansionCost(s->getExpr(), user_block);
+                            auto e = synthesizer.estimateCost(s->getExpr(), user_block);
                             if (!e)
                                 return false;
                             cost += *e;
@@ -78,7 +79,9 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
                 if (onlyConstant &&
                     (!expr->isIRValue() || expr->getIRValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL))
                     continue;
-                auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->iter());
+                SCEVSynthesizer synthesizer(user_block, user_inst->iter(), &scev,
+                                            &user_block->getParent()->getConstantPool());
+                auto exit_value = synthesizer.synthesizeExpr(expr);
                 if (exit_value != nullptr) {
                     use->setValue(exit_value);
                     modified = true;

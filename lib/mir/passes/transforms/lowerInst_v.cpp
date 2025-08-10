@@ -66,7 +66,7 @@ OpC MIR::IROpCodeConvert_v(IR::OP op) {
         return OpC::InstVMul;
     case OP::FMUL:
         return OpC::InstVFMul;
-    case OP::DIV:
+    case OP::SDIV:
         return OpC::InstVSDiv;
     case OP::FDIV:
         return OpC::InstVFDiv;

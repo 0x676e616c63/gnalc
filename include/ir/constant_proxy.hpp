@@ -5,10 +5,9 @@
 // Warning:
 //   1. This is not a part of the IR, due to its "dynamic" type. (NOT a derived
 //      class from `IR::Value`)
-//   2. If type mismatched, ONLY `operator==`/`operator!=` returns false/true,
-//      other operators will throw an exception.
-//   3. It depends on ConstantPool only in operators that generates new
-//   constant.
+//   2. If arithmetic operations are performed between int/float, an exception
+//      will be thrown.
+//   3. It depends on ConstantPool only in operators that generates new constant.
 #pragma once
 #ifndef GNALC_IR_CONSTANT_PROXY_HPP
 #define GNALC_IR_CONSTANT_PROXY_HPP

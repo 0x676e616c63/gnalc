@@ -23,6 +23,7 @@
 #include "ir/passes/transforms/dae.hpp"
 #include "ir/passes/transforms/dce.hpp"
 #include "ir/passes/transforms/dse.hpp"
+#include "ir/passes/transforms/function_specialization.hpp"
 #include "ir/passes/transforms/gep_flatten.hpp"
 #include "ir/passes/transforms/globalize.hpp"
 #include "ir/passes/transforms/gvn_pre.hpp"
@@ -57,6 +58,7 @@
 #include "ir/passes/utilities/cfg_export.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/run_test.hpp"
+#include "ir/passes/utilities/trace.hpp"
 #include "ir/passes/utilities/verifier.hpp"
 
 // Target
@@ -210,9 +212,10 @@ auto make_memo(const PMOptions &options) {
 
 auto make_enabling(const PMOptions &options) {
     FPM fpm;
-    FUNCTION_TRANSFORM(mem2reg, PromotePass());
+    // FUNCTION_TRANSFORM(mem2reg, PromotePass());
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
     FUNCTION_TRANSFORM(inliner, InlinePass());
+    FUNCTION_TRANSFORM(func_spec, FunctionSpecializationPass());
     FUNCTION_TRANSFORM(internalize, InternalizePass());
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     return fpm;
@@ -226,10 +229,12 @@ auto make_loop(const PMOptions &options) {
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
-    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass(LoopUnrollPass::PO_Peel))
+    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
+                       LoopUnrollPass(LoopUnrollPass::PO_Peel))
     FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(adce, CFGSimplifyPass(), ADCEPass())
-    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass(LoopUnrollPass::PO_Unroll))
+    FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
+                       LoopUnrollPass(LoopUnrollPass::PO_Unroll))
     return fpm;
 }
 
@@ -251,6 +256,17 @@ auto make_vectorizer(const PMOptions &options) {
     return fpm;
 }
 
+auto make_pre_canonicalize(const PMOptions &options) {
+    FPM fpm;
+    FUNCTION_TRANSFORM(mem2reg, PromotePass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    FUNCTION_TRANSFORM(sccp, SCCPPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    return fpm;
+}
+
 auto make_post_legalize(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(globalize, GlobalizePass())
@@ -258,6 +274,7 @@ auto make_post_legalize(const PMOptions &options) {
 
     if (!options.advance_name_norm)
         fpm.addPass(NameNormalizePass());
+
     return fpm;
 }
 
@@ -285,7 +302,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
     fpm.addPass(make_memo(options));
     fpm.addPass(make_arithmetic(options));
     fpm.addPass(make_loop(options));
-    // Loop pass can expose many optimization opportunities, a deep clean after them is needed.
+    // Loop pass can expose many optimization opportunities
     fpm.addPass(make_deep_clean(options));
     fpm.addPass(make_vectorizer(options));
     fpm.addPass(make_fast_clean(options));
@@ -296,6 +313,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
     // Note:
     // `--ann` moved to make_post_legalize()
 
+
     return fpm;
 }
 
@@ -303,6 +321,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
 
 MPM PassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
     MPM mpm;
+    mpm.addPass(makeModulePass(make_pre_canonicalize(options)));
     mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
     mpm.addPass(makeModulePass(make_post_legalize(options)));
     // mpm.addPass(makeModulePass(make_gep_opt(options)));
@@ -382,7 +401,19 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass());
+    fpm.addPass(BreakCriticalEdgesPass());
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(ADCEPass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(RangeAwareSimplifyPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LoopEliminationPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(PrintRangePass(std::cerr));
+    fpm.addPass(NameNormalizePass(true));
     return fpm;
     // // Parallel
     // FPM fpm;
@@ -484,6 +515,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
 MPM PassBuilder::buildModuleDebugPipeline() {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionDebugPipeline()));
+    mpm.addPass(LowerIntrinsicsPass());
     return mpm;
 }
 

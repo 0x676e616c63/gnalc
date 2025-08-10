@@ -217,6 +217,7 @@ REGISTER_GNALC_FIXED_EXCEPT_PASS(internalize)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(lsr)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(affinelicm)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(relayout)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(treeshaking)
 
 void register_gnalc_fixed_no_inline_lsr() {
     auto entry = gnalc_register_helper("--no-inline --no-lsr");
@@ -347,6 +348,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_codesink();
     register_gnalc_fixed_no_affinelicm();
     register_gnalc_fixed_no_relayout();
+    register_gnalc_fixed_no_treeshaking();
 
     register_gnalc_sir_debug();
     register_gnalc_debug();

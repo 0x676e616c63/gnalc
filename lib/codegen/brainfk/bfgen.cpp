@@ -129,7 +129,7 @@ void BF3t32bGen::visit(IR::BinaryInst &node) {
     case IR::OP::FSUB:
     case IR::OP::MUL:
     case IR::OP::FMUL:
-    case IR::OP::DIV:
+    case IR::OP::SDIV:
     case IR::OP::FDIV:
     case IR::OP::SREM:
     case IR::OP::FREM:

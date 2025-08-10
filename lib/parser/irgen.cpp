@@ -59,11 +59,11 @@ void IRGenerator::visit(CompUnit &node) {
          IR::IntrinsicID::None, /* va arg */ true);
 
     // builtin
-    // memset (dest, val, len, isvolatile)
+    // memset(dest, val, len, isvolatile)
     make_decl(Config::IR::MEMSET_INTRINSIC_NAME + 1, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
               IR::FuncAttr::Intrinsic | IR::FuncAttr::builtinMemWriteOnly, IR::IntrinsicID::Memset);
 
-    // memcpy (dest, src, len, isvolatile)
+    // memcpy(dest, src, len, isvolatile)
     make_decl(Config::IR::MEMCPY_INTRINSIC_NAME + 1, {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type,
               IR::FuncAttr::Intrinsic | IR::FuncAttr::builtinMemReadWrite, IR::IntrinsicID::Memcpy);
 
@@ -80,6 +80,10 @@ void IRGenerator::visit(CompUnit &node) {
     make_decl(Config::IR::LOOP_PARALLEL_ATOMIC_ADD_F32 + 1, {f32ptr_type, f32_type}, void_type,
               IR::FuncAttr::Intrinsic | IR::FuncAttr::Runtime |
                   IR::FuncAttr::builtinMemReadWrite, IR::IntrinsicID::AtomicFAdd);
+
+    // ipow(int, int)
+    make_decl(Config::IR::SCEV_INT_POW_INTRINSIC_NAME + 1, {i32_type, i32_type}, i32_type,
+        IR::FuncAttr::Intrinsic | IR::FuncAttr::builtinMemNoReadWrite, IR::IntrinsicID::IntPow);
 
     for (auto &n : node.getNodes()) {
         n->accept(*this);
@@ -785,7 +789,7 @@ void IRGenerator::visit(BinaryOp &node) {
             MAKE_OP(BiOp::ADD, IR::OP::ADD, IR::OP::FADD, +)
             MAKE_OP(BiOp::SUB, IR::OP::SUB, IR::OP::FSUB, -)
             MAKE_OP(BiOp::MUL, IR::OP::MUL, IR::OP::FMUL, *)
-            MAKE_OP(BiOp::DIV, IR::OP::DIV, IR::OP::FDIV, /)
+            MAKE_OP(BiOp::DIV, IR::OP::SDIV, IR::OP::FDIV, /)
 
         case BiOp::MOD:
             Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32);

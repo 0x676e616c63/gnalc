@@ -38,7 +38,7 @@ OpC MIR::IROpCodeConvert(IR::OP op) {
         return OpC::InstMul;
     case OP::FMUL:
         return OpC::InstFMul;
-    case OP::DIV:
+    case OP::SDIV:
         return OpC::InstSDiv;
     case OP::FDIV:
         return OpC::InstFDiv;

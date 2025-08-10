@@ -44,6 +44,8 @@ bool FunctionDecl::hasFnAttr(FuncAttr attr_) const { return attr().get<FuncAttrs
 void FunctionDecl::addFnAttr(FuncAttr attr_) { attr().get<FuncAttrs>()->set(attr_); }
 FuncAttr FunctionDecl::getFnAttrs() const { return attr().get<FuncAttrs>()->val(); }
 
+pType FunctionDecl::getRetType() const { return getType()->as<FunctionType>()->getRet(); }
+
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 bool FunctionDecl::isSylib() const { return hasFnAttr(FuncAttr::Sylib); }
@@ -244,8 +246,31 @@ bool Function::removeParam(size_t index) {
     size_t i = 0;
     for (const auto &param : params)
         param->setIndex(i++);
+
+    getType()->as<FunctionType>()->removeParam(index);
     return true;
 }
+
+bool Function::removeParams(const std::vector<size_t> &indices) {
+    bool changed = false;
+    for (const auto &index : indices) {
+        for (auto it = params.begin(); it != params.end(); ++it) {
+            if (index == (*it)->getIndex()) {
+                params.erase(it);
+                changed = true;
+                break;
+            }
+        }
+    }
+
+    size_t i = 0;
+    for (const auto &param : params)
+        param->setIndex(i++);
+
+    getType()->as<FunctionType>()->removeParams(indices);
+    return changed;
+}
+
 
 void Function::updateBBIndex() {
     size_t i = 0;
@@ -279,7 +304,8 @@ pVal Function::cloneImpl() const {
     }
 
     auto cloned_fn =
-        std::make_shared<Function>(getName(), cloned_params, getType()->as<FunctionType>()->getRet(), constant_pool);
+        std::make_shared<Function>(getName() + ".dup" + std::to_string(name_cnt++),
+            cloned_params, getType()->as<FunctionType>()->getRet(), constant_pool);
 
     for (const auto &blk : blks) {
         auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".dup" + std::to_string(name_cnt++));

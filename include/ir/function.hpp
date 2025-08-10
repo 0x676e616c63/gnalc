@@ -70,6 +70,8 @@ enum class IntrinsicID {
     AtomicXor,
     AtomicFAdd,
     AtomicFMul,
+    // SCEV
+    IntPow,
 };
 
 GNALC_ENUM_OPERATOR(FuncAttr)
@@ -93,6 +95,8 @@ public:
     bool hasFnAttr(FuncAttr attr) const;
     void addFnAttr(FuncAttr attr);
     FuncAttr getFnAttrs() const;
+
+    pType getRetType() const;
 
     void setParent(Module *module);
     Module *getParent() const;
@@ -226,6 +230,7 @@ public:
     void updateCFG();
     void updateAndCheckCFG();
     bool removeParam(size_t index);
+    bool removeParams(const std::vector<size_t>& indices);
 
 private:
     void updateBBIndex();
