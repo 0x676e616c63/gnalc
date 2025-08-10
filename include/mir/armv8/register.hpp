@@ -64,7 +64,7 @@ public:
         }
 
         if (mfunc->isLeafFunc()) {
-            bitmap &= ~0x20000000; // no lr
+            bitmap &= ~0x40000000; // no lr
         }
     }
 };
