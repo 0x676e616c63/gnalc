@@ -24,6 +24,7 @@
 #include "sir/passes/transforms/relayout.hpp"
 
 // Utilities
+#include "sir/passes/transforms/loop_annotator.hpp"
 #include "sir/passes/utilities/sirprinter.hpp"
 
 #include <algorithm>
@@ -99,9 +100,10 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(EarlyDCEPass());
     lfpm.addPass(While2ForPass());
     lfpm.addPass(ReshapeFoldPass());
+    lfpm.addPass(AffineLICMPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintAffineAAPass(std::cerr));
-    lfpm.addPass(AffineLICMPass());
+    lfpm.addPass(LoopAnnotatorPass());
     lfpm.addPass(EarlyDCEPass());
     return lfpm;
 }

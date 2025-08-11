@@ -6,8 +6,14 @@
 #include "sir/utils.hpp"
 
 namespace SIR {
+struct AnnotateVisitor : ContextVisitor {
+    void visit(Context ctx, FORInst &for_inst) override {
+        ContextVisitor::visit(ctx, for_inst);
+    }
+};
 PM::PreservedAnalyses LoopAnnotatorPass::run(LinearFunction &function, LFAM &lfam) {
-    // TODO
+    AnnotateVisitor visitor;
+    function.accept(visitor);
     return PreserveAll();
 }
 } // namespace SIR

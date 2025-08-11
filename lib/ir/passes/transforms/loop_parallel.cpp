@@ -26,8 +26,11 @@ namespace IR {
 bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const pLoop &loop) {
     // See if SIR has prepared this for us
     if (auto loop_attrs = loop->getHeader()->attr().get<SIR::LoopAttrs>()) {
-        if (loop_attrs && loop_attrs->has(SIR::LoopAttr::NoCarriedDependency))
+        if (loop_attrs && loop_attrs->has(SIR::LoopAttr::NoCarriedDependency)) {
+            Logger::logDebug("[Para]: Loop '", loop->getHeader()->getName(),
+                             "' has 'SIR::LoopAttr::NoCarriedDependency'.");
             return true;
+        }
     }
 
     // Fallback analysis
@@ -280,7 +283,8 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
             else
                 FAIL_IF(true);
         } else
-            FAIL_IF_MSG(true, "Skipped loop '", header->getName(), "' with unparallelizable reduction variable. (non-binary)");
+            FAIL_IF_MSG(true, "Skipped loop '", header->getName(),
+                        "' with unparallelizable reduction variable. (non-binary)");
 
         for (const auto &inst_user : reduction->inst_users()) {
             FAIL_IF_MSG(top_level->contains(inst_user->getParent()) && !reduction_updates.count(inst_user),
@@ -289,13 +293,12 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
 
         reduction_updates.emplace(reduction);
         reduction_updates.emplace(reduction_update);
-        reductions.emplace_back(ParallelLoopInfo::Reduction{
-            .phi = reduction,
-            .base = reduction_base,
-            .inc = inc,
-            .mod = mod,
-            .atomic_fn = AssociativeOps.at(op),
-            .update_insts = reduction_updates});
+        reductions.emplace_back(ParallelLoopInfo::Reduction{.phi = reduction,
+                                                            .base = reduction_base,
+                                                            .inc = inc,
+                                                            .mod = mod,
+                                                            .atomic_fn = AssociativeOps.at(op),
+                                                            .update_insts = reduction_updates});
     }
 
     // Ensure resolvable data racing in scalar global variables
@@ -341,7 +344,8 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
             } else
                 FAIL_IF(true);
         } else
-            FAIL_IF_MSG(true, "Skipped loop '", header->getName(), "' with unparallelizable scalar global variable.(non-binary)");
+            FAIL_IF_MSG(true, "Skipped loop '", header->getName(),
+                        "' with unparallelizable scalar global variable.(non-binary)");
 
         scalar_gvs.emplace_back(ParallelLoopInfo::ScalarGV{.gv = store->getPtr()->as<GlobalVariable>(),
                                                            .inc = inc,
@@ -441,8 +445,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         IRBuilder body_builder(body_ret);
 
         // Rewrite Reduction into global variables
-        for (auto &[reduction, reduction_base, reduction_inc, reduction_mod, atomic_fn, upd_insts] :
-             reductions) {
+        for (auto &[reduction, reduction_base, reduction_inc, reduction_mod, atomic_fn, upd_insts] : reductions) {
             static int global_var_id = 0;
             auto gv_name = gv_prefix + std::string{".reduction."} + reduction->getName().substr(1) + "." +
                            std::to_string(global_var_id++);
