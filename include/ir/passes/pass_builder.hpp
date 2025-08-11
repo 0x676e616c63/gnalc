@@ -25,7 +25,7 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(reassociate)                                                                               \
     GNALC_SIR_IR_PASS_ENTRY(instsimplify)                                                                              \
     GNALC_SIR_IR_PASS_ENTRY(inliner)                                                                                   \
-    GNALC_SIR_IR_PASS_ENTRY(func_spec)                                                                                   \
+    GNALC_SIR_IR_PASS_ENTRY(func_spec)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(licm)                                                                                      \
     GNALC_SIR_IR_PASS_ENTRY(loop_strength_reduce)                                                                      \
     GNALC_SIR_IR_PASS_ENTRY(loopelim)                                                                                  \
@@ -56,7 +56,8 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(loop_fuse)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(loop_interchange)                                                                          \
     GNALC_SIR_IR_PASS_ENTRY(affine_licm)                                                                               \
-    GNALC_SIR_IR_PASS_ENTRY(relayout)
+    GNALC_SIR_IR_PASS_ENTRY(relayout)                                                                                  \
+    GNALC_SIR_IR_PASS_ENTRY(loop_annotator)
 
 struct PMOptions {
 #define GNALC_SIR_IR_PASS_ENTRY(name) bool name;

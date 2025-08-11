@@ -212,7 +212,7 @@ auto make_memo(const PMOptions &options) {
 
 auto make_enabling(const PMOptions &options) {
     FPM fpm;
-    // FUNCTION_TRANSFORM(mem2reg, PromotePass());
+    FUNCTION_TRANSFORM(mem2reg, PromotePass());
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
     FUNCTION_TRANSFORM(inliner, InlinePass());
     FUNCTION_TRANSFORM(func_spec, FunctionSpecializationPass());
@@ -321,7 +321,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
 
 MPM PassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
     MPM mpm;
-    mpm.addPass(makeModulePass(make_pre_canonicalize(options)));
+    // mpm.addPass(makeModulePass(make_pre_canonicalize(options)));
     mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
     mpm.addPass(makeModulePass(make_post_legalize(options)));
     // mpm.addPass(makeModulePass(make_gep_opt(options)));
@@ -401,18 +401,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(ADCEPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(RangeAwareSimplifyPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(LoopEliminationPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(PrintRangePass(std::cerr));
     fpm.addPass(NameNormalizePass(true));
     return fpm;
     // // Parallel

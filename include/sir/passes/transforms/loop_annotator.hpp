@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 // Loop Annotator
+//   Annotate affine for loops with loop attributes
+//
+// Reference:
+//   - "The Omega test: A fast and practical integer programming algorithm for dependence analysis"
+//       https://ieeexplore.ieee.org/document/5348959
+//       expanded version: https://www.cs.utexas.edu/~pingali/CS380C/2025/papers/pugh92omega.pdf
 #pragma once
 #ifndef GNALC_SIR_PASSES_TRANSFORMS_LOOP_ANNOTATOR_HPP
 #define GNALC_SIR_PASSES_TRANSFORMS_LOOP_ANNOTATOR_HPP

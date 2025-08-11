@@ -196,6 +196,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--unswitch", "--no-unswitch", loop_unswitch)
         OPT_ARG("--fuse", "--no-fuse", loop_fuse)
         OPT_ARG("--affinelicm", "--no-affinelicm", affine_licm)
+        OPT_ARG("--loopannotator", "--no-loopannotator", loop_annotator)
         // IR Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
         // SIR Module Transforms
@@ -313,6 +314,7 @@ Optimizations Flags:
   --interchange        - Loop interchange
   --unswitch           - Loop unswitch
   --fuse               - Loop fusion
+  --loopannotator      - Loop Annotator
   --affinelicm         - Affine loop invariant code motion
   --mem2reg            - Promote memory to register
   --sccp               - Sparse conditional constant propagation
