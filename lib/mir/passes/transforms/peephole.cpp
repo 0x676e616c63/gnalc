@@ -175,16 +175,12 @@ bool GenericPeepholeImpl::Arithmetic(MatchInfo &info) {
     };
 
     auto findLoadImmtoOp2 = [&minst, &minsts, &iter]() {
-        // 对于mul, isel 中已经将可能的常数转移到op2, 并load
-        // 对于div, op1为常数很难优化
-
         auto mop2 = minst->getOp(2);
 
-        if (!mop2->isVReg()) {   // Loadimme 应该不会使用isa reg
-            return minsts.end(); // nullopt
+        if (!mop2->isVReg()) {
+            return minsts.end();
         }
 
-        // 这个阶段应该还是InstLoadImme
         auto backiter = iter;
         do {
             --backiter;
@@ -418,7 +414,8 @@ bool GenericPeepholeImpl::Arithmetic(MatchInfo &info) {
         }
     }
 
-    if (isDIV() && arch == Arch::ARMv8) { // 实际上这个优化能有多大的效果很存疑
+    if (isDIV() && arch == Arch::ARMv8) {
+
         auto loadIter = findLoadImmtoOp2();
 
         if (loadIter == minsts.end()) {
@@ -434,7 +431,7 @@ bool GenericPeepholeImpl::Arithmetic(MatchInfo &info) {
             ///@note 如果能预测到被除数范围, 对于正数则不必修正结果
             // asr1 获取补码符号
             // lsr 生成修正量
-            // add 修正计算结果(虽然还没算)
+            // add 修正计算结果
             // asr2 除法计算
 
             if (divisor_const < 0) {
@@ -469,7 +466,7 @@ bool GenericPeepholeImpl::Arithmetic(MatchInfo &info) {
             auto add = MIRInst::make(OpC::InstAdd)
                            ->setOperand<0>(middle_result_2, ctx)
                            ->setOperand<1>(dividend, ctx)
-                           ->setOperand<2>(middle_result_1, ctx); // 修正取舍方向
+                           ->setOperand<2>(middle_result_1, ctx);
 
             auto asr2 = MIRInst::make(OpC::InstAShr)
                             ->setOperand<0>(mdef, ctx)

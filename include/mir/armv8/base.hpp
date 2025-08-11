@@ -70,10 +70,6 @@ template <typename T> inline bool is12ImmeWithProbShift(T imm) {
         Err::unreachable("is12ImmeWithShift: cant convert to encode");
     }
 
-    if (imme < 0) {
-        int debug;
-    }
-
     if (imme < 4096 && imme > -4095 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
         return true;
     } else {

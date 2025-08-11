@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/MIR.hpp"
+#include "mir/armv8/base.hpp"
 #include "mir/info.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/tools.hpp"
@@ -230,12 +231,12 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::reloadConstVal(const MIROperand_p &m
                 continue;
             }
 
-            load_template.emplace_back(*it); // 按次序遍历应该能保证movz movk 的顺序
+            load_template.emplace_back(*it);
             minsts.erase(it++);
         }
 
         if (!load_template.empty()) {
-            continue;
+            break;
         }
     }
 

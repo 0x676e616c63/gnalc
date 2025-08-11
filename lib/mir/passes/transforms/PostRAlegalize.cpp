@@ -28,10 +28,6 @@ void PostRAlegalizeImpl::runOnBlk(MIRBlk_p mblk, CodeGenContext &ctx) {
 
     for (auto iter = minsts.begin(); iter != minsts.end(); ++iter) {
 
-        if (mblk->getmSym() == "main_39") {
-            int debug;
-        }
-
         runOnInst(*iter, minsts, iter, ctx, mblk);
     }
 }

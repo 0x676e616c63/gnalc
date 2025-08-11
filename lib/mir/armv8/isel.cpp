@@ -476,6 +476,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         auto imm = static_cast<unsigned>(imme->imme()); ///@bug
 
         auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+        dst->setUseTrait(MIROperand::usage::StoreConst);
         if (ARMv8::isBitMaskImme(imm) || ARMv8::is12ImmeWithProbShift(imm)) {
             ///@note mov + copy
 
@@ -550,6 +551,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             ///@brief movz + movk + fmov + copy
 
             auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+            dst->setUseTrait(MIROperand::usage::StoreConst);
 
             auto movz = MIRInst::make(ARMOpC::MOVZ)
                             ->setOperand<0>(dst, ctx)
@@ -581,6 +583,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             ///@brief movi + copy
             auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Floatvec4);
             auto movi = MIRInst::make(ARMOpC::MOVI)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
+            fdst->setUseTrait(MIROperand::usage::StoreConst);
 
             minsts.insert(iter, movi);
 

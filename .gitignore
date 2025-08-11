@@ -56,3 +56,4 @@ perf/
 test/ASMperf_result/
 test/ASMperf/target/
 test/gnalc2
+build_ggc/
