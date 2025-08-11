@@ -93,7 +93,7 @@ def copy_to_submit(git_root, arch):
 def rewrite_includes(submit_dir):
     include_dir = os.path.join(submit_dir, "include")
     rewrite_dirs = ['codegen', 'config', 'ggc', 'graph', 'ir', 'mir', 'legacy_mir',
-                    'parser', 'pass_manager', 'match', 'sir', 'utils', 'runtime']
+                    'parser', 'pass_manager', 'match', 'sir', 'utils', 'runtime', 'constraint']
 
     def process_file(file_path):
         print(f"Processing file: {file_path}")
