@@ -13,9 +13,6 @@
 using namespace CSTR;
 
 void dump(OmegaSolver &solver) {
-    std::cout << "Problem: \n";
-    std::cout << solver.dump() << std::endl;
-
     solver.enableDebugDump(std::cout);
 
     auto ret = solver.mayHasIntSolutions();
@@ -52,7 +49,7 @@ void nightmare() {
     // 27 <= 11x + 13y <= 45
     // 10 <= 7x - 9y <= 4
 
-    auto nightmare = parser.parse({"27 <= 11x + 13y", "11x + 13y <= 45", "10 <= 7x - 9y", "7x - 9y <= 4"});
+    auto nightmare = parser.parse({"27 <= 11x + 13y", "11x + 13y <= 45", "-10 <= 7x - 9y", "7x - 9y <= 4"});
 
     solver.addConstraints(nightmare);
 

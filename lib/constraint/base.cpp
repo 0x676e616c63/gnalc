@@ -37,7 +37,6 @@ void VarHandle::reset() {
     greek_pos = 0;
 }
 
-
 Expr Expr::operator+(const Expr &rhs) const {
     Expr ret;
     ret.constant = constant + rhs.constant;
@@ -175,6 +174,7 @@ bool Constraint::normalize() {
     }
 
     std::vector<CoeT> coeffs_only;
+    coeffs_only.reserve(coeffs.size());
     for (auto &t : coeffs)
         coeffs_only.push_back(t.second);
 

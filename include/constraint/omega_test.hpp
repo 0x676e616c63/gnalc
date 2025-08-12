@@ -67,6 +67,7 @@ public:
 
     void reset();
 
+    // Returns if there can be integer solutions for the given constraints.
     bool mayHasIntSolutions();
 
     void dump(std::ostream &os);
@@ -83,10 +84,12 @@ private:
     // Substitute variable v by integer value val and remove v from V.
     void substitute(VarID v, CoeT val);
 
-    // Eliminate equality constraints following Pugh's method.
+    // Eliminate equality constraints.
     // Returns false if we detect unsatisfiable constraint during process.
     bool eliminateEqualities();
 
+    // Eliminate inequality constraint.
+    // Returns false if we detect unsatisfiable constraint during process.
     bool eliminateInequalities();
 };
 } // namespace CSTR

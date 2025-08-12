@@ -234,6 +234,28 @@ bool OmegaSolver::eliminateEqualities() {
     return true;
 }
 
+// If the dark and real shadow resulting from each combination of an upper and lower
+// bound are identical, the projection is called an exact projection.
+// This will happen, for example, if all the coefficients of z in lower bounds on z are 1,
+// or if all the coefficients of z in upper bounds on z are -1.
+// The projection is also guaranteed to be exact if the only constraints having
+// non-unit coefficients produce inequalities of the form a0 >= 0.
+bool guaranteedExactProjection(const std::list<Constraint> &S, VarID v) {
+    const Constraint *only_one_non_unit = nullptr;
+    for (auto &con : S) {
+        if (std::abs(con.coeffs.at(v)) != 1) {
+            if (only_one_non_unit)
+                return false;
+            only_one_non_unit = &con;
+        }
+    }
+
+    if (only_one_non_unit)
+        return only_one_non_unit->constant >= 0;
+
+    return true;
+}
+
 bool OmegaSolver::eliminateInequalities() {
     // First simplify `S` by single-variable constraints.
     while (true) {
@@ -334,7 +356,291 @@ bool OmegaSolver::eliminateInequalities() {
 
     // Otherwise, we reduce the problem to one or more integer programming problems in fewer
     // dimensions and repeat the above process, eventually getting to problems in one dimension.
-    // TODO: Fourier-Motzkin variable elimination
+
+    // Eliminate unbounded variables first (variables that have no upper or no lower bound)
+    while (true) {
+        std::vector<VarID> to_remove;
+        for (auto v : V) {
+            bool has_pos = false, has_neg = false;
+            for (const auto &con : S) {
+                auto it = con.coeffs.find(v);
+                if (it == con.coeffs.end())
+                    continue;
+                if (it->second > 0)
+                    has_pos = true;
+                if (it->second < 0)
+                    has_neg = true;
+                if (has_pos && has_neg)
+                    break;
+            }
+            // v is unbounded on one side -> drop all constraints involving v
+            if (!has_pos || !has_neg)
+                to_remove.push_back(v);
+        }
+
+        if (to_remove.empty())
+            break;
+
+        if (debug_dump_stream) {
+            *debug_dump_stream << "Removing unbounded vars:";
+            for (auto v : to_remove)
+                *debug_dump_stream << " " << VH.name(v);
+            *debug_dump_stream << "\n";
+        }
+
+        // Performing Fourier-Motzkin elimination on an unbounded variable simply deletes
+        // all the constraints involving it.
+        for (auto v : to_remove) {
+            for (auto it = S.begin(); it != S.end();) {
+                if (it->coeffs.find(v) != it->coeffs.end())
+                    it = S.erase(it);
+                else
+                    ++it;
+            }
+            V.erase(v);
+        }
+        if (!normalize())
+            return false;
+    }
+
+    // If we found no multi-variable constraints, the system must have solutions.
+    if (V.size() <= 1)
+        return true;
+
+    while (V.size() > 1) {
+        // 1. We first decide which variable to eliminate. We choose this variable so as to perform
+        //    an exact projection if possible, and to minimize the number of constraints resulting from
+        //    the combination of upper and lower bounds. If we are forced to perform non-exact reductions,
+        //    we choose a variable with coefficients as close to zero as possible.
+        //
+        // If there are no exact projections, use heuristic below:
+        //   heuristic = minimize |P| * |N|, where P for positive constraints (upper bounds) and N for negative.
+        VarID pick = BAD_VAR_ID;
+        uint64_t best_cost = std::numeric_limits<uint64_t>::max();
+        size_t best_pcount = 0, best_ncount = 0;
+
+        bool must_exact_proj = false;
+        for (auto v : V) {
+            if (guaranteedExactProjection(S, v)) {
+                pick = v;
+                must_exact_proj = true;
+
+                if (debug_dump_stream)
+                    *debug_dump_stream << "Pick " << VH.name(v) << " which has guaranteed exact projection :)\n";
+                break;
+            }
+            size_t pcount = 0, ncount = 0;
+            for (const auto &con : S) {
+                auto itv = con.coeffs.find(v);
+                if (itv == con.coeffs.end())
+                    continue;
+                if (itv->second > 0)
+                    ++pcount;
+                else if (itv->second < 0)
+                    ++ncount;
+            }
+            uint64_t cost = pcount * ncount;
+            if (cost < best_cost ||
+                (cost == best_cost && std::max(pcount, ncount) < std::max(best_pcount, best_ncount))) {
+                best_cost = cost;
+                pick = v;
+                best_pcount = pcount;
+                best_ncount = ncount;
+            }
+        }
+
+        Err::gassert(pick != BAD_VAR_ID, "No variable picked for elimination");
+
+        // must_exact_proj has logged before.
+        if (!must_exact_proj && debug_dump_stream)
+            *debug_dump_stream << "Pick " << VH.name(pick) << " with cost " << best_cost << "\n";
+
+        // Partition constraints into P (positive coeff of `pick`), N (negative coeff), Z (no `pick`)
+        std::list<Constraint> P_cons, N_cons, Z_cons;
+        for (const auto &con : S) {
+            auto itv = con.coeffs.find(pick);
+            if (itv == con.coeffs.end())
+                Z_cons.push_back(con);
+            else {
+                if (itv->second > 0)
+                    P_cons.push_back(con);
+                else if (itv->second < 0)
+                    N_cons.push_back(con);
+                else
+                    Err::unreachable("Bad Constraint with zero coeff for " + VH.name(pick));
+            }
+        }
+
+        // If either P or N empty: `pick` is an unbounded variable.
+        // Drop constraints containing `pick`, which simply replaces `S` with `Zcons`.
+        if (P_cons.empty() || N_cons.empty()) {
+            S = Z_cons;
+            V.erase(pick);
+            if (!normalize())
+                return false;
+            setDebugDumpPoint("After eliminating unbounded variable " + VH.name(pick) + ":");
+            continue;
+        }
+
+        // 2. Calculate the real and dark shadows of the set of constraints along that dimension.
+
+        // Do Fourier-Motzkin variable elimination:
+        // Combine every P x N pair
+        auto real_shadow = Z_cons;
+        auto dark_shadow = Z_cons;
+        for (const auto &p : P_cons) {
+            CoeT a_p = p.coeffs.at(pick); // > 0
+            for (const auto &n : N_cons) {
+                CoeT a_n = n.coeffs.at(pick); // < 0
+
+                // multipliers so that `pick` cancels:
+                //   mp * p + mn * n -> new constraint without `pick`
+                CoeT mp = -a_n;
+                CoeT mn = a_p;
+                Err::gassert(mp > 0 && mn > 0);
+
+                Constraint combined = p * mp + n * mn;
+
+                // At this point, `combined` is in real shadow, so if it is already contradictory,
+                // there can't be integer solutions.
+                if (!combined.normalize()) {
+                    if (debug_dump_stream) {
+                        *debug_dump_stream << "Contradiction found in real shadow during elimination of "
+                                           << VH.name(pick) << ":\n";
+                        *debug_dump_stream << "Combining '" << p.dump(VH) << "' and '" << n.dump(VH) << "' and got '"
+                                           << combined.dump(VH) << "'\n";
+                    }
+                    return false;
+                }
+
+                if (!combined.isTriviallyTrue())
+                    real_shadow.push_back(combined);
+
+                // Don't bother with projections that are guaranteed to be exact.
+                // Dark shadows for them is the same as real shadows.
+                if (must_exact_proj)
+                    continue;
+
+                // Now build `combined` for dark shadow.
+                // Here we reuse `combined` since it has been copied to `real_shadow`.
+                //
+                // Paper's dark criterion (for a pair of upper and lower bounds):
+                //   dark holds if bα − aβ ≥ (a − 1)(b − 1)
+                // In our implementation,
+                //   - `mp`: `a` (multiplier of an upper bound)
+                //   - `mn`: `b` (multiplier of a lower bound)
+                //   - `combined`: `b * alpha - a * beta`
+                //
+                // Thus, the criterion is
+                //   combined >= (mp - 1) * (mn - 1)  ---> combined - (mp - 1) * (mn - 1) >= 0
+
+                combined.constant -= (mp - 1) * (mn - 1);
+
+                // Now `combined` is in dark shadow, so contradiction doesn't mean no
+                // integer solutions, since there can be solutions between dark and real shadows.
+                // Anyway, add it to the set, we'll handle them later.
+                if (!combined.normalize()) {
+                    if (debug_dump_stream) {
+                        *debug_dump_stream << "Contradiction found in dark shadow during elimination of "
+                                           << VH.name(pick) << ":\n";
+                        *debug_dump_stream << "Combining '" << p.dump(VH) << "' and '" << n.dump(VH)
+                                           << "', and sub offset " << (mp - 1) * (mn - 1) << ", got '"
+                                           << combined.dump(VH) << "'\n";
+                    }
+                }
+
+                if (!combined.isTriviallyTrue())
+                    dark_shadow.push_back(combined);
+            }
+        }
+
+        // 3. If the real and dark shadows are identical, there are integer solutions to the original
+        //    set of constraints iff there are integer solutions to the shadow.
+        //
+        // `real_shadow == dark_shadow` can happen if during every round of elimination,
+        // (mp - 1) * (mn - 1) == 0. This might not be captured by `must_exact_proj`.
+        // Besides, the real shadow and dark shadow are build together, thus the order of constraints
+        // are identical. So a std::list compare is enough.
+        if (must_exact_proj || real_shadow == dark_shadow) {
+            // Don't use dark_shadow here, they're empty by design for performance.
+            S = std::move(real_shadow);
+            V.erase(pick);
+            if (!normalize())
+                return false;
+            setDebugDumpPoint("After Fourier-Motzkin elimination round (exact projection):");
+            continue;
+        }
+
+        // 4. Otherwise:
+
+        // (a) If there are no integer solutions to the real shadow, we know there are no integer
+        //     solutions to the original set of constraints.
+
+        // Build tmp solver for real shadow
+        OmegaSolver real_shadow_solver = *this;
+        real_shadow_solver.S = std::move(real_shadow);
+        real_shadow_solver.V.erase(pick);
+        // no integer solutions to the real shadow
+        if (!real_shadow_solver.normalize())
+            return false;
+
+        // (b) If there are integer solutions to the dark shadow, we know there are integer
+        //     solutions to the original constraints.
+        OmegaSolver dark_shadow_solver = *this;
+        dark_shadow_solver.S = std::move(dark_shadow);
+        dark_shadow_solver.V.erase(pick);
+
+        if (!dark_shadow_solver.normalize()) {
+            if (debug_dump_stream)
+                *debug_dump_stream << "Dark shadow has no integer solutions. :(\n";
+        } else if (dark_shadow_solver.V.size() <= 1 || dark_shadow_solver.mayHasIntSolutions())
+            return true;
+
+        // (c) Otherwise, we know if an integer solution exists, it must be closely nestled
+        //     between an upper bound and a lower bound. Therefore, we consider a set of planes
+        //     that are parallel to a lower bound and close to a lower bound. Any integer solution
+        //     closely nestled between an upper bound and a lower bound must lie on one of these planes.
+        //     Computationally, we analyze the problem as follows:
+        //     We know that if there exists an integer solution to the original set of constraints,
+        //     there must exist a pair of constraints α ≥ az and bz ≥ β on z such that
+        //                     ab − a − b ≥ bα − aβ ≥ 0 ∧ bα ≥ abz ≥ aβ
+        //                          ab − a − b + aβ ≥ abz ≥ aβ
+        //    We check this by determining the largest coefficient a of z in any upper bound on z,
+        //    and, for each lower bound bz ≥ β on z, testing if there are integer solutions to the
+        //    original problem combined with bz = β + i for each i such that (ab − a − b)/a ≥ i ≥ 0.
+
+        CoeT largest_coe = 0; // the largest coefficient a of z
+        for (const auto &n : N_cons)
+            largest_coe = std::max(largest_coe, std::abs(n.coeffs.at(pick)));
+        Err::gassert(largest_coe != 0, "Bad Constraints: largest_coe == 0");
+
+        // For each lower bound bz ≥ β
+        for (const auto &p : P_cons) {
+            CoeT b = p.coeffs.at(pick);                         // > 0
+            CoeT numerator = largest_coe * b - largest_coe - b; // ab - a - b
+            CoeT i_upper_bound = numerator / largest_coe;       // (ab - a - b) / a
+            for (CoeT i = 0; i <= i_upper_bound; ++i) {
+                OmegaSolver sub_solver = *this;
+
+                // Construct subproblem: original constraints + "b * pick == beta + i"
+                Constraint eq = p;
+                eq.kind = ConstraintKind::EQ;
+                // shift constant to construct "beta + i"
+                eq.constant -= i;
+
+                sub_solver.S.push_back(eq);
+                if (!sub_solver.normalize())
+                    continue;
+                if (sub_solver.mayHasIntSolutions())
+                    return true;
+            }
+        }
+
+        if (debug_dump_stream)
+            *debug_dump_stream << "No integer solution found.\n";
+        // If none of the above found a solution, the problem has no integer solution.
+        return false;
+    }
 
     return true;
 }

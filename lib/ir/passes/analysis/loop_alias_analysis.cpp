@@ -70,6 +70,7 @@ std::tuple<size_t, size_t, size_t> analyzeAccessSet(const AccessSet &set) {
 }
 
 // Simple GCD test
+// FIXME: Use Omega Test in `constraint/omega_test.hpp`.
 bool overlap(const AccessSet &set1, const AccessSet &set2) {
     auto [min_offset1, max_offset1, stride_gcd1] = analyzeAccessSet(set1);
     auto [min_offset2, max_offset2, stride_gcd2] = analyzeAccessSet(set2);
