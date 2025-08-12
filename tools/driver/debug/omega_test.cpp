@@ -20,7 +20,7 @@ void dump(OmegaSolver &solver) {
 
     auto ret = solver.mayHasIntSolutions();
 
-    std::cout << "May Has integer solutions: " << std::boolalpha << ret << std::endl;
+    std::cout << "May Has Integer Solutions: " << std::boolalpha << ret << std::endl;
     std::cout << "------------ Done ------------" << std::endl;
 }
 

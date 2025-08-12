@@ -162,7 +162,7 @@ void IRGenerator::visit(VarDef &node) {
 
     if (curr_func != nullptr) // Check if global
     {
-        auto alloca_inst = std::make_shared<IR::ALLOCAInst>(name(node.getId()), irtype);
+        auto alloca_inst = std::make_shared<IR::ALLOCAInst>(name(node.getId() + ".alloc"), irtype);
         curr_func->addInst(alloca_inst); // CURR_FUNC
 
         curr_initializer.reset(node_type);

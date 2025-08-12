@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "sir/passes/analysis/affine_alias_analysis.hpp"
+
+#include "constraint/omega_test.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/converse.hpp"
@@ -28,9 +30,11 @@ std::ostream &operator<<(std::ostream &os, const AffineExpr &expr) {
             os << " + ";
         first = false;
 
-        if (coeff.second != 1)
+        if (coeff.second == -1)
+            os << "-";
+        else if (coeff.second != 1)
             os << coeff.second << " * ";
-        os << coeff.first->getName();
+        os << coeff.first->getName().substr(1);
     }
 
     if (expr.constant != 0) {
@@ -43,7 +47,7 @@ std::ostream &operator<<(std::ostream &os, const AffineExpr &expr) {
     if (expr.invariant != nullptr) {
         if (!first)
             os << " + ";
-        os << expr.invariant->getName();
+        os << expr.invariant->getName().substr(1);
         first = false;
     }
 
@@ -70,7 +74,7 @@ std::ostream &operator<<(std::ostream &os, const ArrayAccess &access) {
         for (const auto &kv : access.domain) {
             if (!first)
                 os << "; ";
-            os << kv.first->getName() << " in " << kv.second;
+            os << kv.first->getName().substr(1) << " in " << kv.second;
             first = false;
         }
         os << " }";
@@ -373,6 +377,9 @@ bool ArrayAccess::isLoopInvariant() const {
     });
 }
 
+bool ArrayAccess::operator==(const ArrayAccess &other) const {
+    return base == other.base && indices == other.indices && domain == other.domain;
+}
 
 bool MemoryAccess::covers(const MemoryAccess &other) const {
     if (type() != other.type())
@@ -698,6 +705,202 @@ bool AffineAAResult::isIndependent(const pInst &lhs, const pInst &rhs) const {
 
 AffineAAResult AffineAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return AffineAAResult(&f, &fam); }
 
+using namespace CSTR;
+
+VarID getIDFrom(std::map<Value *, VarID> &map, VarHandle &VH, Value *val) {
+    auto it = map.find(val);
+    if (it != map.end())
+        return it->second;
+    return map[val] = VH.newVar(val->getName().substr(1));
+}
+
+Expr buildConstraintExpr(const AffineExpr &ae, const std::map<IndVar *, VarID> &iv_map, VarHandle &VH,
+                         std::map<Value *, VarID> &invariant_map) {
+    Expr e;
+    e.constant = ae.constant;
+    for (auto &[iv, c] : ae.coeffs) {
+        auto it = iv_map.find(iv);
+        if (it != iv_map.end())
+            e.coeffs[it->second] = c;
+        else {
+            // This can happen when an iv occurs in another iv's base/bound,
+            // and it should be treated as an invariant.
+            auto var = getIDFrom(invariant_map, VH, iv);
+            e.coeffs[var] = c;
+        }
+    }
+
+    if (ae.invariant != nullptr) {
+        VarID var = getIDFrom(invariant_map, VH, ae.invariant);
+        e.coeffs[var] = 1;
+    }
+    return e;
+}
+
+Expr buildConstraintExpr(VarID id) { return Expr{.coeffs = {{id, 1}}, .constant = 0}; }
+
+bool AffineAAResult::hasLoopCarriedDependence(FORInst *affine_for) {
+    const auto &rw = queryInstRW(affine_for);
+    if (!rw)
+        return true;
+
+    OmegaSolver solver;
+    // solver.enableDebugDump(std::cerr);
+
+    auto has_deps = [&](const std::set<Value *> &set1, const std::set<Value *> &set2) {
+        for (const auto &v1 : set1) {
+            const auto &a1 = queryPointer(v1);
+            if (!a1)
+                return true;
+            if (a1->isScalar())
+                continue;
+
+            auto acc1 = a1->array();
+
+            for (const auto &v2 : set2) {
+                if (v1 == v2)
+                    continue;
+
+                const auto &a2 = queryPointer(v2);
+                if (!a2)
+                    return true;
+                if (a2->isScalar())
+                    continue;
+
+                auto acc2 = a2->array();
+
+                // Skip same access, not same base or different dimensions
+                if (acc1 == acc2 || acc1.base != acc2.base || acc1.indices.size() != acc2.indices.size())
+                    continue;
+
+                solver.reset();
+
+                // Build constraints for existence of two iterations.
+                // iv map -> VarID for each iteration
+                std::map<IndVar *, VarID> iv1_map;
+                std::map<IndVar *, VarID> iv2_map;
+                std::map<Value *, VarID> invariant_map;
+
+                std::set<IndVar *> iv_in_expr;
+                for (auto &[iv, rng] : acc1.domain)
+                    iv_in_expr.insert(iv);
+                for (auto &[iv, rng] : acc2.domain)
+                    iv_in_expr.insert(iv);
+
+                for (IndVar *iv : iv_in_expr) {
+                    auto id = iv->getName().substr(1);
+                    iv1_map[iv] = solver.VH.newVar(id + "_1");
+                    iv2_map[iv] = solver.VH.newVar(id + "_2");
+                }
+
+                // For all iv outer than curr iv, ensure v1 == v2.
+                auto curr_iv = affine_for->getIndVar().get();
+                for (auto iv : iv_in_expr) {
+                    if (iv->getDepth() >= curr_iv->getDepth())
+                        continue;
+                    auto iv1 = buildConstraintExpr(iv1_map.at(iv));
+                    auto iv2 = buildConstraintExpr(iv2_map.at(iv));
+                    solver.addConstraint(Constraint::newEqual(iv1, iv2));
+                }
+
+                // Ensure indices are equal
+                // We've ensured the dims are equal above.
+                size_t dims = acc1.indices.size();
+                for (size_t d = 0; d < dims; ++d) {
+                    auto e1 = buildConstraintExpr(acc1.indices[d], iv1_map, solver.VH, invariant_map);
+                    auto e2 = buildConstraintExpr(acc2.indices[d], iv2_map, solver.VH, invariant_map);
+                    solver.addConstraint(Constraint::newEqual(e1, e2));
+                }
+
+                // Add iteration domain constraints for each iv
+                // TODO: When step != 1, there can be more accurate result.
+                for (IndVar *iv : iv_in_expr) {
+                    auto it1 = acc1.domain.find(iv);
+                    if (it1 != acc1.domain.end()) {
+                        auto base = buildConstraintExpr(it1->second.base, iv1_map, solver.VH, invariant_map);
+                        auto bound = buildConstraintExpr(it1->second.bound, iv1_map, solver.VH, invariant_map);
+                        auto iv_var = buildConstraintExpr(iv1_map.at(iv));
+                        solver.addConstraint(Constraint::newGreaterEqual(iv_var, base));
+                        solver.addConstraint(Constraint::newLessThan(iv_var, bound));
+                    }
+
+                    auto it2 = acc2.domain.find(iv);
+                    if (it2 != acc2.domain.end()) {
+                        auto base = buildConstraintExpr(it2->second.base, iv2_map, solver.VH, invariant_map);
+                        auto bound = buildConstraintExpr(it2->second.bound, iv2_map, solver.VH, invariant_map);
+                        auto iv_var = buildConstraintExpr(iv2_map.at(iv));
+                        solver.addConstraint(Constraint::newGreaterEqual(iv_var, base));
+                        solver.addConstraint(Constraint::newLessThan(iv_var, bound));
+                    }
+                }
+
+                // Add invariant iv range
+                // Don't introduce more parameters here, they are not related to current problem.
+                for (const auto &[invariant, var] : invariant_map) {
+                    auto iv = invariant->as<IndVar>();
+                    if (!iv)
+                        continue;
+
+                    auto expr = buildConstraintExpr(var);
+                    if (auto base_ci = iv->getBase()->as<ConstantInt>())
+                        solver.addConstraint(Constraint::newGreaterEqual(expr, {.constant = base_ci->getVal()}));
+                    else if (auto it = invariant_map.find(iv->getBase().get()); it != invariant_map.end())
+                        solver.addConstraint(Constraint::newGreaterEqual(expr, buildConstraintExpr(it->second)));
+
+                    if (auto bound_ci = iv->getBound()->as<ConstantInt>())
+                        solver.addConstraint(Constraint::newLessThan(expr, {.constant = bound_ci->getVal()}));
+                    else if (auto it = invariant_map.find(iv->getBound().get()); it != invariant_map.end())
+                        solver.addConstraint(Constraint::newLessThan(expr, buildConstraintExpr(it->second)));
+                }
+
+                // std::cerr << "Candidate: " << v1->getName() << " and " << v2->getName() << std::endl;
+
+                if (iv_in_expr.count(curr_iv)) {
+                    // Ensure 'iv1 != iv2'
+                    auto curr_iv1 = iv1_map.at(curr_iv);
+                    auto curr_iv2 = iv2_map.at(curr_iv);
+                    auto curr_iv1_expr = buildConstraintExpr(curr_iv1);
+                    auto curr_iv2_expr = buildConstraintExpr(curr_iv2);
+
+                    // iv1 > iv2
+                    {
+                        OmegaSolver s = solver;
+                        s.addConstraint(Constraint::newGreaterThan(curr_iv1_expr, curr_iv2_expr));
+                        if (s.mayHasIntSolutions())
+                            return true;
+                    }
+
+                    //
+                    // or
+                    //
+
+                    // iv1 < iv2
+                    {
+                        OmegaSolver s = solver;
+                        s.addConstraint(Constraint::newLessThan(curr_iv1_expr, curr_iv2_expr));
+                        if (s.mayHasIntSolutions())
+                            return true;
+                    }
+                }
+                // curr_iv is invariant, no need to add constraints for it.
+                else {
+                    if (solver.mayHasIntSolutions())
+                        return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    if (has_deps(rw->read, rw->write) || has_deps(rw->write, rw->write))
+        return true;
+
+    return false;
+}
+bool AffineAAResult::hasLoopCarriedDependence(const pForInst &affine_for) {
+    return hasLoopCarriedDependence(affine_for.get());
+}
+
 pVal AccessSynthesizer::synthesize(const MemoryAccess &access) const {
     if (access.isScalar())
         return synthesize(access.scalar());
@@ -714,8 +917,8 @@ pVal AccessSynthesizer::synthesize(const pVal &base, const std::vector<AffineExp
         if (curr->is<FormalParam>()) {
             gep = std::make_shared<GEPInst>("%acsyn.a" + std::to_string(name_cnt++), curr, index_val);
         } else {
-            gep = std::make_shared<GEPInst>("%acsyn.a" + std::to_string(name_cnt++),
-                curr, pool->getConst(0), index_val);
+            gep =
+                std::make_shared<GEPInst>("%acsyn.a" + std::to_string(name_cnt++), curr, pool->getConst(0), index_val);
         }
         ilist->insert(iter, gep);
         curr = gep;

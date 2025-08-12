@@ -11,6 +11,7 @@
 #include "sir/passes/analysis/affine_alias_analysis.hpp"
 
 // Transforms
+#include "sir/passes/transforms/affine_renamer.hpp"
 #include "sir/passes/transforms/early_mem2reg.hpp"
 #include "sir/passes/transforms/early_dce.hpp"
 #include "sir/passes/transforms/constant_fold.hpp"
@@ -62,6 +63,7 @@ LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options
     FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
     // FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
     // FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
+    FUNCTION_TRANSFORM(loop_annotator, LoopAnnotatorPass())
 
 #undef FUNCTION_TRANSFORM
     return lfpm;
@@ -101,6 +103,7 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(While2ForPass());
     lfpm.addPass(ReshapeFoldPass());
     lfpm.addPass(AffineLICMPass());
+    lfpm.addPass(AffineRenamePass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintAffineAAPass(std::cerr));
     lfpm.addPass(LoopAnnotatorPass());

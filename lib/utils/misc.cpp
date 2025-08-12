@@ -9,9 +9,17 @@ bool beginsWith(const std::string &a, const std::string &b) {
     if (a.size() < b.size())
         return false;
     for (size_t i = 0; i < b.size(); ++i) {
-        if (a[i] != b[i]) {
+        if (a[i] != b[i])
             return false;
-        }
+    }
+    return true;
+}
+bool endsWith(const std::string &a, const std::string &b) {
+    if (a.size() < b.size())
+        return false;
+    for (size_t i = 0; i < b.size(); ++i) {
+        if (a[a.size() - i - 1] != b[b.size() - i - 1])
+            return false;
     }
     return true;
 }

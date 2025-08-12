@@ -241,10 +241,10 @@ PM::PreservedAnalyses AffineLICMPass::run(LinearFunction &function, LFAM &lfam) 
             // Log before splice.
             // After splicing, the region.beg is moved to outer_ilist, while region.end is still
             // in inner_ilist, which makes difficult to iterate the region.
-            auto for_name = (*for_iter)->as<FORInst>()->getIndVar()->getName();
+            auto for_name = (*for_iter)->as<FORInst>()->getIndVar()->getName().substr(1);
             Logger::logDebug("[AffineLICM]: Hoisted ", dumpRegion(region), " out of ", for_name, ".");
             for (auto it = region.beg; it != region.end; ++it)
-                (*it)->appendDbgData("affine_licm_hoisted_from_" + for_name);
+                (*it)->appendDbgData("affine-licm-hoisted-from-" + for_name);
 
             outer_ilist->splice(for_iter, *inner_ilist, region.beg, region.end);
             licm_modified = true;

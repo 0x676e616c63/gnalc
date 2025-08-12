@@ -52,17 +52,26 @@ class OmegaSolver {
     std::ostream *debug_dump_stream = nullptr;
 
 public:
+    OmegaSolver() = default;
+    OmegaSolver(const OmegaSolver&) = default;
+    OmegaSolver(OmegaSolver&&) = default;
+    ~OmegaSolver() = default;
+    OmegaSolver& operator=(const OmegaSolver&) = default;
+    OmegaSolver& operator=(OmegaSolver&&) = default;
+
     VarHandle VH;
 
     void addConstraint(const Constraint &con);
 
     void addConstraints(const std::vector<Constraint> &constraints);
 
+    void reset();
+
     bool mayHasIntSolutions();
 
     void dump(std::ostream &os);
     std::string dump();
-    void debugDumpPoint(const std::string &msg = "");
+    void setDebugDumpPoint(const std::string &msg = "");
     void enableDebugDump(std::ostream &os);
 
 private:

@@ -206,11 +206,28 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &lfam) {
     function.accept(visitor);
 
     size_t num_transformed = 0;
-    static size_t name_cnt = 0;
+
+    // Induction variable's names are frequently used when debugging.
+    // Give it a pretty name.
+    // :(
+    std::unordered_map<std::string, size_t> name_cnts;
+    auto name_iv = [&](const std::string& basename) -> std::string {
+        auto base = basename;
+
+        // Remove trailing ".alloc"
+        if (Util::endsWith(base, ".alloc"))
+            base = base.substr(0, base.size() - 6);
+
+        if (name_cnts[base]++ != 0)
+            base += std::to_string(name_cnts[base]);
+
+        return base;
+    };
+
     for (auto &[ilist, iter, while_inst, depth] : replace_map) {
         if (auto for_info_opt = transformWhile(*ilist, *while_inst, function)) {
             auto info = *for_info_opt;
-            auto iv = std::make_shared<IndVar>(info.indvar_mem->getName() + ".iv." + std::to_string(name_cnt++),
+            auto iv = std::make_shared<IndVar>(name_iv(info.indvar_mem->getName()),
                                                info.indvar_mem, info.base, info.bound, info.step, depth);
             auto for_inst = std::make_shared<FORInst>(iv, while_inst->getBodyInsts());
             Err::gassert(while_inst->getCondInsts().back()->is<ICMPInst>());

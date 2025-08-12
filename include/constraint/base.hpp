@@ -12,6 +12,7 @@
 #include <limits>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <unordered_set>
 #include <vector>
 
@@ -49,6 +50,7 @@ class VarHandle {
 public:
     VarID newVar(std::string name = "");
     std::string name(VarID v) const;
+    void reset();
 };
 
 struct Expr {
@@ -99,6 +101,12 @@ public:
 
     Constraint operator+(const Constraint &rhs) const;
     Constraint operator*(CoeT rhs) const;
+
+    bool operator==(const Constraint &rhs) const;
+
+    bool contradict(const Constraint &rhs) const;
+    bool subsume(const Constraint &rhs) const;
+
     bool isEq() const;
 
     // Returns false if this constraint is unsatisfiable

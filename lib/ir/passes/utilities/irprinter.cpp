@@ -23,12 +23,8 @@ void IRPrinter::visit(Instruction &node) {
     }
 
     auto inst_str = IRFormatter::formatInst(node);
-    const auto& dbg = node.getDbgData();
-    if (!dbg.empty()) {
-        inst_str += "        ;" + dbg[0];
-        for (size_t i = 1; i < dbg.size(); ++i)
-            inst_str += ", " + dbg[i];
-    }
+    if (!node.getDbgData().empty())
+        inst_str += "        ;" + node.formatDbgData();
     writeln(inst_str);
 }
 

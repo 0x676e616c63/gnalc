@@ -21,6 +21,9 @@ void OmegaSolver::addConstraint(const Constraint &con) {
     for (auto &[var, coe] : con.coeffs)
         V.insert(var);
     S.push_back(con);
+
+    if (debug_dump_stream)
+        *debug_dump_stream << "Adding Constraint: " << con.dump(VH) << "\n";
 }
 
 void OmegaSolver::addConstraints(const std::vector<Constraint> &constraints) {
@@ -28,19 +31,29 @@ void OmegaSolver::addConstraints(const std::vector<Constraint> &constraints) {
         addConstraint(con);
 }
 
+void OmegaSolver::reset() {
+    S.clear();
+    V.clear();
+    VH.reset();
+}
+
 bool OmegaSolver::mayHasIntSolutions() {
     if (!normalize())
         return false;
 
-    debugDumpPoint("Starting with:");
+    setDebugDumpPoint("Solving:");
 
-    if (!eliminateEqualities())
+    if (!eliminateEqualities()) {
+        setDebugDumpPoint("Contradictions found when eliminating equalities:");
         return false;
+    }
 
-    if (!eliminateInequalities())
+    if (!eliminateInequalities()) {
+        setDebugDumpPoint("Contradictions found when eliminating inequalities:");
         return false;
+    }
 
-    debugDumpPoint("Finally:");
+    setDebugDumpPoint("Problem may has integer solutions:");
     return true;
 }
 
@@ -56,7 +69,7 @@ std::string OmegaSolver::dump() {
     return oss.str();
 }
 
-void OmegaSolver::debugDumpPoint(const std::string &msg) {
+void OmegaSolver::setDebugDumpPoint(const std::string &msg) {
     if (debug_dump_stream) {
         if (!msg.empty())
             *debug_dump_stream << msg << std::endl;
@@ -173,7 +186,7 @@ bool OmegaSolver::eliminateEqualities() {
             if (!normalize())
                 return false;
 
-            debugDumpPoint("elimEQ: After Unit Round:");
+            setDebugDumpPoint("elimEQ: After Unit Round:");
             continue;
         }
 
@@ -215,7 +228,7 @@ bool OmegaSolver::eliminateEqualities() {
         if (!normalize())
             return false;
 
-        debugDumpPoint("elimEQ: After Round:");
+        setDebugDumpPoint("elimEQ: After Round:");
     }
 
     return true;
@@ -285,6 +298,30 @@ bool OmegaSolver::eliminateInequalities() {
                     return false;
                 changed = true;
             }
+        }
+        if (!changed)
+            break;
+    }
+
+    // Remove subsumed constraints, while searching for contradictions
+    while (true) {
+        bool changed = false;
+        for (const auto &con : S) {
+            for (auto it = S.begin(); it != S.end(); ++it) {
+                if (&*it == &con)
+                    continue;
+
+                if (con.contradict(*it))
+                    return false;
+
+                if (con.subsume(*it)) {
+                    S.erase(it);
+                    changed = true;
+                    break;
+                }
+            }
+            if (changed)
+                break;
         }
         if (!changed)
             break;

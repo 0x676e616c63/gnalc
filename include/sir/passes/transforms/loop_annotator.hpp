@@ -12,7 +12,7 @@
 
 namespace SIR {
 enum class LoopAttr {
-    NoCarriedDependency,
+    NoCarriedDependency = 1 << 0,
 };
 GNALC_ENUM_OPERATOR(LoopAttr)
 using LoopAttrs = Attr::BitFlagsAttr<LoopAttr>;

@@ -126,6 +126,7 @@ public:
     bool isCommutative() const;
 
     const std::vector<std::string>& getDbgData() const;
+    std::string formatDbgData() const;
     void appendDbgData(const std::string& data);
     void appendDbgData(const std::vector<std::string>& data);
     void clearDbgData();

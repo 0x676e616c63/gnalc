@@ -83,6 +83,8 @@ struct ArrayAccess {
     bool covers(const ArrayAccess &other) const;
     bool overlaps(const ArrayAccess &other) const;
     bool isLoopInvariant() const;
+
+    bool operator==(const ArrayAccess &other) const;
 };
 
 std::ostream& operator<<(std::ostream &os, const AffineExpr &expr);
@@ -145,6 +147,10 @@ public:
     // without interference from scalar dependencies.
     bool isScalarIndependent(const pInst &lhs, const pInst &rhs) const;
     bool isScalarIndependent(Instruction *lhs, Instruction *rhs) const;
+
+    // Determines whether an Affine FORInst has loop-carried dependence
+    bool hasLoopCarriedDependence(FORInst* affine_for);
+    bool hasLoopCarriedDependence(const pForInst &affine_for);
 };
 
 class AffineAliasAnalysis : public PM::AnalysisInfo<AffineAliasAnalysis> {

@@ -31,6 +31,13 @@ VarID VarHandle::newVar(std::string name) {
 }
 std::string VarHandle::name(VarID v) const { return var_names[v]; }
 
+void VarHandle::reset() {
+    var_names.clear();
+    var_names_set.clear();
+    greek_pos = 0;
+}
+
+
 Expr Expr::operator+(const Expr &rhs) const {
     Expr ret;
     ret.constant = constant + rhs.constant;
@@ -75,10 +82,10 @@ Constraint Constraint::newGreaterThanZero(const Expr &expr) {
 // a + b < 0 -> a + b + 1 <= 0
 Constraint Constraint::newLessThanZero(const Expr &expr) { return newLessEqualZero({expr.coeffs, expr.constant + 1}); }
 Constraint Constraint::newEqual(const Expr &lhs, const Expr &rhs) { return newEqualZero(lhs - rhs); }
-Constraint Constraint::newGreaterEqual(const Expr &lhs, const Expr &rhs) { return newGreaterEqualZero(rhs - lhs); }
+Constraint Constraint::newGreaterEqual(const Expr &lhs, const Expr &rhs) { return newGreaterEqualZero(lhs - rhs); }
 Constraint Constraint::newGreaterThan(const Expr &lhs, const Expr &rhs) { return newGreaterThanZero(lhs - rhs); }
 Constraint Constraint::newLessEqual(const Expr &lhs, const Expr &rhs) { return newLessEqualZero(lhs - rhs); }
-Constraint Constraint::newLessThan(const Expr &lhs, const Expr &rhs) { return newLessThanZero(rhs - lhs); }
+Constraint Constraint::newLessThan(const Expr &lhs, const Expr &rhs) { return newLessThanZero(lhs - rhs); }
 
 bool Constraint::isTriviallyTrue() const {
     if (!coeffs.empty())
@@ -110,6 +117,51 @@ Constraint Constraint::operator*(CoeT rhs) const {
         coe *= rhs;
     ret.constant *= rhs;
     return ret;
+}
+
+bool Constraint::operator==(const Constraint &rhs) const {
+    return kind == rhs.kind && coeffs == rhs.coeffs && constant == rhs.constant;
+}
+
+bool Constraint::contradict(const Constraint &rhs) const {
+    Err::gassert(kind == rhs.kind);
+
+    if (isEq())
+        return false;
+
+    // 'x + y + c1 >= 0' and '-x - y + c2 >= 0' are contradictory iff 'c1 + c2 < 0'
+    if (coeffs.size() != rhs.coeffs.size())
+        return false;
+    auto beg1 = coeffs.begin(), end1 = coeffs.end(), beg2 = rhs.coeffs.begin();
+    while (beg1 != end1) {
+        if (beg1->first + beg2->first != 0)
+            return false;
+        if (beg1->second != beg2->second)
+            return false;
+        ++beg1;
+        ++beg2;
+    }
+
+    return constant + rhs.constant < 0;
+}
+bool Constraint::subsume(const Constraint &rhs) const {
+    Err::gassert(kind == rhs.kind);
+
+    if (isEq())
+        return false;
+
+    // 'x + y + c1 >= 0' subsumes 'x + y + c2 >= 0' iff 'c1 <= c2'
+    if (coeffs.size() != rhs.coeffs.size())
+        return false;
+    auto beg1 = coeffs.begin(), end1 = coeffs.end(), beg2 = rhs.coeffs.begin();
+    while (beg1 != end1) {
+        if (*beg1 != *beg2)
+            return false;
+        ++beg1;
+        ++beg2;
+    }
+
+    return constant <= rhs.constant;
 }
 
 bool Constraint::isEq() const { return kind == ConstraintKind::EQ; }
