@@ -63,6 +63,15 @@ Expr ConstraintEliminationPass::asExpr(const pVal &val) {
 
         return asVarExpr(val);
     }
+
+    // TODO: Support div and rem.
+    // "The Omega Test: a fast and practical integer programming algorithm for dependence analysis":
+    // Chapter 3 Nonlinear subscripts:
+    //   Assume an expression e appears in a program that can be expressed as e = α div m,
+    //   where m is a positive integer. To handle this, we define a new variable σ, add the
+    //   inequality constraints 0 ≤ α − mσ ≤ m − 1 and use σ as the value of e.
+    //   Similarly, if e = α mod m we would add the same inequality constraint
+    //   but use α − mσ as the value of e.
     case OP::SDIV:
     case OP::UDIV: {
         if (auto rhs_coe = toCoeType(binary->getRHS())) {
@@ -167,7 +176,7 @@ PM::PreservedAnalyses ConstraintEliminationPass::run(Function &function, FAM &fa
 
     // Add Range Constraint
     if (with_range_analysis) {
-        auto& ranges = fam.getResult<RangeAnalysis>(function);
+        auto &ranges = fam.getResult<RangeAnalysis>(function);
         for (const auto &[v, ctx_rng] : ranges.getIntRangeMap()) {
             for (const auto &[bb, rng] : ctx_rng.getContextualMap()) {
                 auto &cstr = block_constraints[bb->as<BasicBlock>()];

@@ -3,6 +3,8 @@
 
 // The Omega Test
 //
+// TODO: Support projection to protected variables.
+//
 // Reference:
 //   - "The Omega test: A fast and practical integer programming algorithm for dependence analysis"
 //       https://ieeexplore.ieee.org/document/5348959

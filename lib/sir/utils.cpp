@@ -212,4 +212,16 @@ bool hasNonMemorySideEffect(Instruction *inst) {
 bool hasNonMemorySideEffect(const pInst &inst) {
     return hasNonMemorySideEffect(inst.get());
 }
+
+struct ForIVDepthUpdater : ContextVisitor {
+    void visit(Context ctx, FORInst &for_inst) override {
+        for_inst.getIndVar()->setDepth(ctx.depth);
+        ContextVisitor::visit(ctx, for_inst);
+    }
+};
+
+void updateForIVDepth(LinearFunction& func) {
+    ForIVDepthUpdater visitor;
+    func.accept(visitor);
+}
 } // namespace SIR

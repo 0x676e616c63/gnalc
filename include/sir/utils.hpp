@@ -35,6 +35,8 @@ struct CountInstVistor : Visitor {
 
 bool hasNonMemorySideEffect(Instruction *inst);
 bool hasNonMemorySideEffect(const pInst &inst);
+
+void updateForIVDepth(LinearFunction& func);
 } // namespace SIR
 
 #endif

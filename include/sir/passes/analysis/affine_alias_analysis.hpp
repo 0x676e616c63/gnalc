@@ -11,6 +11,7 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "sir/base.hpp"
 #include "sir/passes/pass_manager.hpp"
+#include "constraint/base.hpp"
 
 #include <optional>
 
@@ -114,6 +115,11 @@ struct InstRW {
     std::set<Value *> read;
     std::set<Value *> write;
 };
+
+CSTR::VarID getCSTRVarFrom(std::map<Value *, CSTR::VarID> &map, CSTR::VarHandle &VH, Value *val);
+
+CSTR::Expr buildConstraintExpr(const AffineExpr &ae, const std::map<IndVar *, CSTR::VarID> &iv_map, CSTR::VarHandle &VH,
+                         std::map<Value *, CSTR::VarID> &invariant_map);
 
 class AffineAAResult {
 private:

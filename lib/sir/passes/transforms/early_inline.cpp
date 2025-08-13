@@ -3,9 +3,10 @@
 
 #include "sir/passes/transforms/early_inline.hpp"
 #include "config/config.hpp"
-#include "ir/instructions/memory.hpp"
 #include "ir/instructions/control.hpp"
+#include "ir/instructions/memory.hpp"
 #include "sir/clone.hpp"
+#include "sir/utils.hpp"
 #include "sir/visitor.hpp"
 
 namespace SIR {
@@ -148,6 +149,8 @@ PM::PreservedAnalyses EarlyInlinePass::run(LinearFunction &function, LFAM &lfam)
                 function.getName(), "' (inst count: ", callee->getInstCount(), ")");
         }
     }
+
+    updateForIVDepth(function);
 
     return PreserveNone();
 }

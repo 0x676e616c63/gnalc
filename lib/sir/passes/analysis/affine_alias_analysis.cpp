@@ -707,7 +707,7 @@ AffineAAResult AffineAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return A
 
 using namespace CSTR;
 
-VarID getIDFrom(std::map<Value *, VarID> &map, VarHandle &VH, Value *val) {
+VarID getCSTRVarFrom(std::map<Value *, VarID> &map, VarHandle &VH, Value *val) {
     auto it = map.find(val);
     if (it != map.end())
         return it->second;
@@ -725,13 +725,13 @@ Expr buildConstraintExpr(const AffineExpr &ae, const std::map<IndVar *, VarID> &
         else {
             // This can happen when an iv occurs in another iv's base/bound,
             // and it should be treated as an invariant.
-            auto var = getIDFrom(invariant_map, VH, iv);
+            auto var = getCSTRVarFrom(invariant_map, VH, iv);
             e.coeffs[var] = c;
         }
     }
 
     if (ae.invariant != nullptr) {
-        VarID var = getIDFrom(invariant_map, VH, ae.invariant);
+        VarID var = getCSTRVarFrom(invariant_map, VH, ae.invariant);
         e.coeffs[var] = 1;
     }
     return e;

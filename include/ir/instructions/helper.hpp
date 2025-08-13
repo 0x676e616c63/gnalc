@@ -268,6 +268,8 @@ public:
     void setBase(const pVal & new_base) { setOperand(0, new_base); }
     void setBound(const pVal & new_bound) { setOperand(1, new_bound); }
     void setStep(const pVal & new_step) { setOperand(2, new_step); }
+    void setDepth(size_t new_depth) { depth = new_depth; }
+    void swapDepth(IndVar & iv) { std::swap(depth, iv.depth); }
 
     bool isConstantDomain() const {
         return getBase()->getVTrait() == ValueTrait::CONSTANT_LITERAL

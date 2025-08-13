@@ -254,6 +254,9 @@ PM::PreservedAnalyses AffineLICMPass::run(LinearFunction &function, LFAM &lfam) 
         }
     }
 
+    if (licm_modified)
+        updateForIVDepth(function);
+
     return licm_modified ? PreserveNone() : PreserveAll();
 }
 } // namespace SIR
