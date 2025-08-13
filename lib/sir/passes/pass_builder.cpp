@@ -80,8 +80,8 @@ MPM make_locality(const PMOptions &options) {
     MPM mpm;
     if (options.relayout)
         mpm.addPass(RelayoutPass());
-    // if (options.loop_interchange)
-    //     mpm.addPass(makeLinearModulePass(LoopInterchangePass()));
+    if (options.loop_interchange)
+        mpm.addPass(makeLinearModulePass(LoopInterchangePass()));
     return mpm;
 }
 
