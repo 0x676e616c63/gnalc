@@ -48,10 +48,10 @@ static CoeT ceil_div(CoeT a, CoeT b) {
 class OmegaSolver {
     std::list<Constraint> S;
     std::set<VarID> V;
-
     std::ostream *debug_dump_stream = nullptr;
-
 public:
+    VarHandle VH;
+
     OmegaSolver() = default;
     OmegaSolver(const OmegaSolver&) = default;
     OmegaSolver(OmegaSolver&&) = default;
@@ -59,11 +59,18 @@ public:
     OmegaSolver& operator=(const OmegaSolver&) = default;
     OmegaSolver& operator=(OmegaSolver&&) = default;
 
-    VarHandle VH;
-
     void addConstraint(const Constraint &con);
 
-    void addConstraints(const std::vector<Constraint> &constraints);
+    template <typename Container>
+    void addConstraints(const Container &constraints) {
+        addConstraints(constraints.begin(), constraints.end());
+    }
+
+    template <typename Iter>
+    void addConstraints(Iter beg, Iter end) {
+        for (; beg != end; ++beg)
+            addConstraint(*beg);
+    }
 
     void reset();
 

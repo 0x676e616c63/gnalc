@@ -56,9 +56,26 @@ void nightmare() {
     dump(solver);
 }
 
+void unsat() {
+    OmegaSolver solver;
+    ExprParser expr_parser(&solver.VH);
+    ConstraintParser parser(&expr_parser);
+
+    // a > b
+    // b > c
+    // c > a
+
+    auto unsat = parser.parse({"a > b", "b > c", "c > a"});
+
+    solver.addConstraints(unsat);
+
+    dump(solver);
+}
+
 int main() {
     Logger::setLogLevel(LogLevel::DEBUG);
     figure_1();
     nightmare();
+    unsat();
     return 0;
 }

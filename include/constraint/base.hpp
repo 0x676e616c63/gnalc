@@ -60,6 +60,12 @@ struct Expr {
     Expr operator+(const Expr &rhs) const;
     Expr operator*(CoeT rhs) const;
     Expr operator-(const Expr &rhs) const;
+
+    Expr() = default;
+
+    static Expr newVar(VarID v);
+    static Expr newVar(VarID v, CoeT coeff);
+    static Expr newConst(CoeT c);
 };
 
 enum class ConstraintKind { EQ, GE }; // EQ: == 0, GE: >= 0
@@ -114,6 +120,10 @@ public:
     void dump(const VarHandle &VH, std::ostream &os) const;
 
     std::string dump(const VarHandle &VH) const;
+};
+
+struct ConstraintHash {
+    size_t operator()(const Constraint &C) const;
 };
 } // namespace CSTR
 

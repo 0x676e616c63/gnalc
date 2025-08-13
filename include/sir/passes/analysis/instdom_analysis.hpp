@@ -1,9 +1,6 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-// Alias Analysis for SIR
-// TODO: Maybe we should preserve these info in IRGen
-//       rather than analyzing it afterwards.
 #pragma once
 #ifndef GNALC_SIR_PASSES_ANALYSIS_INSTDOM_ANALYSIS_HPP
 #define GNALC_SIR_PASSES_ANALYSIS_INSTDOM_ANALYSIS_HPP

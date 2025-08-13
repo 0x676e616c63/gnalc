@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "constraint/base.hpp"
+
 #include "utils/exception.hpp"
 #include "utils/logger.hpp"
+#include "utils/misc.hpp"
 
 #include <algorithm>
 #include <map>
@@ -29,7 +31,10 @@ VarID VarHandle::newVar(std::string name) {
     var_names_set.emplace(std::move(name));
     return var_names.size() - 1;
 }
-std::string VarHandle::name(VarID v) const { return var_names[v]; }
+std::string VarHandle::name(VarID v) const {
+    Err::gassert(v < var_names.size(), "VarID: " + std::to_string(v) + " is out of range.");
+    return var_names[v];
+}
 
 void VarHandle::reset() {
     var_names.clear();
@@ -56,6 +61,10 @@ Expr Expr::operator*(CoeT rhs) const {
     return ret;
 }
 Expr Expr::operator-(const Expr &rhs) const { return *this + rhs * -1; }
+
+Expr Expr::newVar(VarID v) { return {.coeffs = {{v, 1}}}; }
+Expr Expr::newVar(VarID v, CoeT coeff) { return {.coeffs = {{v, coeff}}}; }
+Expr Expr::newConst(CoeT c) { return {.constant = c}; }
 
 Constraint Constraint::newEqualZero(const Expr &expr) {
     return Constraint(expr.coeffs, expr.constant, ConstraintKind::EQ);
@@ -133,9 +142,9 @@ bool Constraint::contradict(const Constraint &rhs) const {
         return false;
     auto beg1 = coeffs.begin(), end1 = coeffs.end(), beg2 = rhs.coeffs.begin();
     while (beg1 != end1) {
-        if (beg1->first + beg2->first != 0)
+        if (beg1->first != beg2->first)
             return false;
-        if (beg1->second != beg2->second)
+        if (beg1->second + beg2->second != 0)
             return false;
         ++beg1;
         ++beg2;
@@ -223,5 +232,15 @@ std::string Constraint::dump(const VarHandle &VH) const {
     std::ostringstream oss;
     dump(VH, oss);
     return oss.str();
+}
+
+size_t ConstraintHash::operator()(const Constraint &C) const {
+    size_t seed = std::hash<CoeT>{}(C.constant);
+    Util::hashSeedCombine(seed, std::hash<ConstraintKind>{}(C.kind));
+    for (auto &[v, c] : C.coeffs) {
+        Util::hashSeedCombine(seed, std::hash<VarID>{}(v));
+        Util::hashSeedCombine(seed, std::hash<CoeT>{}(c));
+    }
+    return seed;
 }
 } // namespace CSTR

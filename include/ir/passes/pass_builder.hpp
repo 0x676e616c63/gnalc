@@ -43,6 +43,7 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(tree_shaking)                                                                              \
     GNALC_SIR_IR_PASS_ENTRY(store_range)                                                                               \
     GNALC_SIR_IR_PASS_ENTRY(code_sink)                                                                                 \
+    GNALC_SIR_IR_PASS_ENTRY(constraint_elimination)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(codegen_prepare)                                                                           \
     GNALC_SIR_IR_PASS_ENTRY(run_test)                                                                                  \
     GNALC_SIR_IR_PASS_ENTRY(verify)                                                                                    \

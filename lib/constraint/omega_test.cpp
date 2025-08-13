@@ -7,11 +7,9 @@
 #include "utils/exception.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <limits>
 #include <list>
 #include <map>
-#include <optional>
 #include <set>
 #include <sstream>
 #include <vector>
@@ -26,15 +24,13 @@ void OmegaSolver::addConstraint(const Constraint &con) {
         *debug_dump_stream << "Adding Constraint: " << con.dump(VH) << "\n";
 }
 
-void OmegaSolver::addConstraints(const std::vector<Constraint> &constraints) {
-    for (auto &con : constraints)
-        addConstraint(con);
-}
-
 void OmegaSolver::reset() {
     S.clear();
     V.clear();
     VH.reset();
+
+    // No need to reset `debug_dump_stream`, they are only used for debugging.
+    // debug_dump_stream = nullptr;
 }
 
 bool OmegaSolver::mayHasIntSolutions() {
@@ -148,7 +144,7 @@ void OmegaSolver::substitute(VarID v, CoeT val) {
     V.erase(v);
 }
 
-// Eliminate equality constraints following Pugh's method.
+// Eliminate equality constraints.
 // Returns false if we detect unsatisfiable constraint during process.
 bool OmegaSolver::eliminateEqualities() {
     // We'll repeatedly scan for equality constraints and eliminate them.
@@ -243,7 +239,11 @@ bool OmegaSolver::eliminateEqualities() {
 bool guaranteedExactProjection(const std::list<Constraint> &S, VarID v) {
     const Constraint *only_one_non_unit = nullptr;
     for (auto &con : S) {
-        if (std::abs(con.coeffs.at(v)) != 1) {
+        auto it = con.coeffs.find(v);
+        if (it == con.coeffs.end())
+            continue;
+
+        if (std::abs(it->second) != 1) {
             if (only_one_non_unit)
                 return false;
             only_one_non_unit = &con;
@@ -256,6 +256,8 @@ bool guaranteedExactProjection(const std::list<Constraint> &S, VarID v) {
     return true;
 }
 
+// Eliminate inequality constraint.
+// Returns false if we detect unsatisfiable constraint during process.
 bool OmegaSolver::eliminateInequalities() {
     // First simplify `S` by single-variable constraints.
     while (true) {
@@ -426,7 +428,7 @@ bool OmegaSolver::eliminateInequalities() {
                 must_exact_proj = true;
 
                 if (debug_dump_stream)
-                    *debug_dump_stream << "Pick " << VH.name(v) << " which has guaranteed exact projection :)\n";
+                    *debug_dump_stream << "Pick " << VH.name(v) << " which has guaranteed exact projection :-)\n";
                 break;
             }
             size_t pcount = 0, ncount = 0;
@@ -605,9 +607,9 @@ bool OmegaSolver::eliminateInequalities() {
         //     there must exist a pair of constraints α ≥ az and bz ≥ β on z such that
         //                     ab − a − b ≥ bα − aβ ≥ 0 ∧ bα ≥ abz ≥ aβ
         //                          ab − a − b + aβ ≥ abz ≥ aβ
-        //    We check this by determining the largest coefficient a of z in any upper bound on z,
-        //    and, for each lower bound bz ≥ β on z, testing if there are integer solutions to the
-        //    original problem combined with bz = β + i for each i such that (ab − a − b)/a ≥ i ≥ 0.
+        //     We check this by determining the largest coefficient a of z in any upper bound on z,
+        //     and, for each lower bound bz ≥ β on z, testing if there are integer solutions to the
+        //     original problem combined with bz = β + i for each i such that (ab − a − b)/a ≥ i ≥ 0.
 
         CoeT largest_coe = 0; // the largest coefficient a of z
         for (const auto &n : N_cons)

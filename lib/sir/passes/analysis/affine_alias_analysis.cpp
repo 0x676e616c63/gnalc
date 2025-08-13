@@ -737,8 +737,6 @@ Expr buildConstraintExpr(const AffineExpr &ae, const std::map<IndVar *, VarID> &
     return e;
 }
 
-Expr buildConstraintExpr(VarID id) { return Expr{.coeffs = {{id, 1}}, .constant = 0}; }
-
 bool AffineAAResult::hasLoopCarriedDependence(FORInst *affine_for) {
     const auto &rw = queryInstRW(affine_for);
     if (!rw)
@@ -798,8 +796,8 @@ bool AffineAAResult::hasLoopCarriedDependence(FORInst *affine_for) {
                 for (auto iv : iv_in_expr) {
                     if (iv->getDepth() >= curr_iv->getDepth())
                         continue;
-                    auto iv1 = buildConstraintExpr(iv1_map.at(iv));
-                    auto iv2 = buildConstraintExpr(iv2_map.at(iv));
+                    auto iv1 = Expr::newVar(iv1_map.at(iv));
+                    auto iv2 = Expr::newVar(iv2_map.at(iv));
                     solver.addConstraint(Constraint::newEqual(iv1, iv2));
                 }
 
@@ -819,7 +817,7 @@ bool AffineAAResult::hasLoopCarriedDependence(FORInst *affine_for) {
                     if (it1 != acc1.domain.end()) {
                         auto base = buildConstraintExpr(it1->second.base, iv1_map, solver.VH, invariant_map);
                         auto bound = buildConstraintExpr(it1->second.bound, iv1_map, solver.VH, invariant_map);
-                        auto iv_var = buildConstraintExpr(iv1_map.at(iv));
+                        auto iv_var = Expr::newVar(iv1_map.at(iv));
                         solver.addConstraint(Constraint::newGreaterEqual(iv_var, base));
                         solver.addConstraint(Constraint::newLessThan(iv_var, bound));
                     }
@@ -828,7 +826,7 @@ bool AffineAAResult::hasLoopCarriedDependence(FORInst *affine_for) {
                     if (it2 != acc2.domain.end()) {
                         auto base = buildConstraintExpr(it2->second.base, iv2_map, solver.VH, invariant_map);
                         auto bound = buildConstraintExpr(it2->second.bound, iv2_map, solver.VH, invariant_map);
-                        auto iv_var = buildConstraintExpr(iv2_map.at(iv));
+                        auto iv_var = Expr::newVar(iv2_map.at(iv));
                         solver.addConstraint(Constraint::newGreaterEqual(iv_var, base));
                         solver.addConstraint(Constraint::newLessThan(iv_var, bound));
                     }
@@ -841,16 +839,16 @@ bool AffineAAResult::hasLoopCarriedDependence(FORInst *affine_for) {
                     if (!iv)
                         continue;
 
-                    auto expr = buildConstraintExpr(var);
+                    auto expr = Expr::newVar(var);
                     if (auto base_ci = iv->getBase()->as<ConstantInt>())
-                        solver.addConstraint(Constraint::newGreaterEqual(expr, {.constant = base_ci->getVal()}));
+                        solver.addConstraint(Constraint::newGreaterEqual(expr, Expr::newConst(base_ci->getVal())));
                     else if (auto it = invariant_map.find(iv->getBase().get()); it != invariant_map.end())
-                        solver.addConstraint(Constraint::newGreaterEqual(expr, buildConstraintExpr(it->second)));
+                        solver.addConstraint(Constraint::newGreaterEqual(expr, Expr::newVar(it->second)));
 
                     if (auto bound_ci = iv->getBound()->as<ConstantInt>())
-                        solver.addConstraint(Constraint::newLessThan(expr, {.constant = bound_ci->getVal()}));
+                        solver.addConstraint(Constraint::newLessThan(expr, Expr::newConst(bound_ci->getVal())));
                     else if (auto it = invariant_map.find(iv->getBound().get()); it != invariant_map.end())
-                        solver.addConstraint(Constraint::newLessThan(expr, buildConstraintExpr(it->second)));
+                        solver.addConstraint(Constraint::newLessThan(expr, Expr::newVar(it->second)));
                 }
 
                 // std::cerr << "Candidate: " << v1->getName() << " and " << v2->getName() << std::endl;
@@ -859,8 +857,8 @@ bool AffineAAResult::hasLoopCarriedDependence(FORInst *affine_for) {
                     // Ensure 'iv1 != iv2'
                     auto curr_iv1 = iv1_map.at(curr_iv);
                     auto curr_iv2 = iv2_map.at(curr_iv);
-                    auto curr_iv1_expr = buildConstraintExpr(curr_iv1);
-                    auto curr_iv2_expr = buildConstraintExpr(curr_iv2);
+                    auto curr_iv1_expr = Expr::newVar(curr_iv1);
+                    auto curr_iv2_expr = Expr::newVar(curr_iv2);
 
                     // iv1 > iv2
                     {
