@@ -12,6 +12,7 @@ PATTERNS: List[Tuple[str, str]] = [
     ("Vectorized", "Vectorized"),
     ("SLP scheduling failed", "Scheduling failed"),
     ("Parallelized loops", "Parallelized"),
+    ("Can't parallel with carried dependencies", "memory dependency"),
     ("Fused loops", "Fused"),
     ("Annotated loops", "Annotated"),
     ("AffineLICM", "AffineLICM]"),

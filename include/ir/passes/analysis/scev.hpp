@@ -28,7 +28,7 @@
 
 namespace IR {
 class SCEVHandle;
-enum class SCEVExprType { Value, Binary };
+enum class SCEVExprType { Value, Binary, Select, Icmp };
 class SCEVExpr {
     friend std::ostream &operator<<(std::ostream &os, const SCEVExpr &expr);
 
@@ -42,8 +42,26 @@ public:
         bool operator==(const Binary &other) const { return op == other.op && lhs == other.lhs && rhs == other.rhs; }
     };
 
+    struct Icmp {
+        ICMPOP cond;
+        SCEVExpr *lhs;
+        SCEVExpr *rhs;
+
+        bool operator==(const Icmp &other) const { return cond == other.cond && lhs == other.lhs && rhs == other.rhs; }
+    };
+
+    struct Select {
+        SCEVExpr *cond;
+        SCEVExpr *lhs;
+        SCEVExpr *rhs;
+
+        bool operator==(const Select &other) const {
+            return cond == other.cond && lhs == other.lhs && rhs == other.rhs;
+        }
+    };
+
 private:
-    std::variant<Value *, Binary> value;
+    std::variant<Value *, Binary, Icmp, Select> value;
     SCEVExprType type;
 
 public:
@@ -54,13 +72,35 @@ public:
         Err::gassert(lhs != nullptr && rhs != nullptr);
     }
 
+    explicit SCEVExpr(ICMPOP cond, SCEVExpr *lhs, SCEVExpr *rhs)
+        : type(SCEVExprType::Icmp), value(Icmp{cond, lhs, rhs}) {
+        Err::gassert(lhs != nullptr && rhs != nullptr);
+    }
+
+    explicit SCEVExpr(SCEVExpr *cond, SCEVExpr *lhs, SCEVExpr *rhs)
+        : type(SCEVExprType::Select), value(Select{cond, lhs, rhs}) {
+        Err::gassert(cond != nullptr && lhs != nullptr && rhs != nullptr);
+    }
+
     bool isIRValue() const { return type == SCEVExprType::Value; }
     bool isBinary() const { return type == SCEVExprType::Binary; }
+    bool isSelect() const { return type == SCEVExprType::Select; }
+    bool isIcmp() const { return type == SCEVExprType::Icmp; }
+
     Value *getRawIRValue() const { return std::get<Value *>(value); }
     pVal getIRValue() const { return std::get<Value *>(value)->as<Value>(); }
+
     SCEVExpr *getLHS() const { return std::get<Binary>(value).lhs; }
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
+
+    SCEVExpr* getSelCond() const { return std::get<Select>(value).cond; }
+    SCEVExpr* getSelLHS() const { return std::get<Select>(value).lhs; }
+    SCEVExpr* getSelRHS() const { return std::get<Select>(value).rhs; }
+
+    ICMPOP getCmpCond() const { return std::get<Icmp>(value).cond; }
+    SCEVExpr* getCmpLHS() const { return std::get<Icmp>(value).lhs; }
+    SCEVExpr* getCmpRHS() const { return std::get<Icmp>(value).rhs; }
 };
 enum class TRECType { AddRec, MulRec, DivRec, Peeled, Expr, Undefined, Untracked };
 // Tree of Recurrences
@@ -198,6 +238,8 @@ public:
     SCEVExpr *getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprPow(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
+    SCEVExpr *getSCEVExprIcmp(ICMPOP cond, SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprSelect(SCEVExpr *cond, SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExpr(int x);
     SCEVExpr *getSCEVExpr(Value *x);
     [[nodiscard]] SCEVExpr *swapOperands(SCEVExpr *x);

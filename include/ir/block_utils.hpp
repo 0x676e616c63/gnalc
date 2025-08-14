@@ -116,6 +116,7 @@ std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, c
 bool AhasUseToB(const pInst &a, const pVal &b);
 std::vector<pInst> collectUsers(const pVal &val);
 std::vector<pVal> collectOperands(const pInst &inst);
+std::vector<pInst> collectOperandInsts(const pInst &inst);
 
 bool isReachableFrom(const pBlock &from, const pBlock &to);
 
