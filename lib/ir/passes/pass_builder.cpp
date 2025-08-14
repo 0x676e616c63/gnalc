@@ -404,6 +404,9 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(ConstraintEliminationPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(NameNormalizePass(true));
     return fpm;

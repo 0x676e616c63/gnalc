@@ -57,9 +57,9 @@ Expr ConstraintEliminationPass::asExpr(const pVal &val) {
         auto lhs_coe = toCoeType(lhs);
         auto rhs_coe = toCoeType(rhs);
         if (lhs_coe)
-            return asExpr(lhs) * *lhs_coe;
+            return asExpr(rhs) * *lhs_coe;
         if (rhs_coe)
-            return asExpr(rhs) * *rhs_coe;
+            return asExpr(lhs) * *rhs_coe;
 
         return asVarExpr(val);
     }

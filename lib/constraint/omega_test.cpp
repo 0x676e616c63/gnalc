@@ -34,10 +34,12 @@ void OmegaSolver::reset() {
 }
 
 bool OmegaSolver::mayHasIntSolutions() {
-    if (!normalize())
-        return false;
-
     setDebugDumpPoint("Solving:");
+
+    if (!normalize()) {
+        setDebugDumpPoint("Contradictions found when normalizing:");
+        return false;
+    }
 
     if (!eliminateEqualities()) {
         setDebugDumpPoint("Contradictions found when eliminating equalities:");

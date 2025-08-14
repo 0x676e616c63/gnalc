@@ -1,11 +1,14 @@
-int main() {
+int main()
+{
+    int N = 1;
     int a = getint();
-    int b = getint();
-    int c = getint();
-    if (a > b && b > c)
-        if (c > a)
-            putint(a);
-        else
-            putint(b);
-
+    while (N > 0) {
+        if (a * -120 > 0) {
+            putch(99);
+        } else {
+            putch(100);
+        }
+        N = N - 1;
+    }
+    return 0;
 }
