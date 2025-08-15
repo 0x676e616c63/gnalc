@@ -17,6 +17,7 @@
 #include "sir/passes/transforms/early_dce.hpp"
 #include "sir/passes/transforms/early_inline.hpp"
 #include "sir/passes/transforms/early_mem2reg.hpp"
+#include "sir/passes/transforms/early_parallel.hpp"
 #include "sir/passes/transforms/loop_fuse.hpp"
 #include "sir/passes/transforms/loop_interchange.hpp"
 #include "sir/passes/transforms/loop_unswitch.hpp"
@@ -123,9 +124,12 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(ReshapeFoldPass());
     lfpm.addPass(AffineLICMPass());
     lfpm.addPass(AffineRenamePass());
+    lfpm.addPass(LoopAnnotatorPass());
+    lfpm.addPass(LoopFusePass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintAffineAAPass(std::cerr));
-    lfpm.addPass(LoopAnnotatorPass());
+    lfpm.addPass(EarlyParallelPass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(EarlyDCEPass());
     return lfpm;
 }

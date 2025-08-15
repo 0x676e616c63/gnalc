@@ -20,18 +20,27 @@ std::ostream &operator<<(std::ostream &os, const SCEVExpr &expr) {
     using Op = SCEVExpr::Binary::Op;
     if (expr.isBinary()) {
         std::string op;
-        if (expr.getOp() == Op::Add)
-            op = "+";
-        else if (expr.getOp() == Op::Sub)
-            op = "-";
-        else if (expr.getOp() == Op::Mul)
-            op = "*";
-        else if (expr.getOp() == Op::Div)
-            op = "/";
-        else if (expr.getOp() == Op::Pow)
-            op = "^";
-        else
+        switch (expr.getOp()) {
+#define MAKE_OP(scevop, str)                                                                                           \
+    case Op::scevop:                                                                                                   \
+        op = str;                                                                                                      \
+        break;
+            MAKE_OP(Add, "+")
+            MAKE_OP(Sub, "-")
+            MAKE_OP(Mul, "*")
+            MAKE_OP(Div, "/")
+            MAKE_OP(LShr, ">>>")
+            MAKE_OP(AShr, ">>")
+            MAKE_OP(Shl, "<<")
+            MAKE_OP(And, "&")
+            MAKE_OP(Or, "|")
+            MAKE_OP(Xor, "^")
+            MAKE_OP(Pow, "**")
+#undef MAKE_OP
+        default:
             Err::unreachable();
+        }
+
         os << "( " << *expr.getLHS() << " " << op << " " << *expr.getRHS() << " )";
     } else if (expr.isIcmp()) {
         std::string op;
@@ -675,6 +684,57 @@ SCEVExpr *SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
             //     return foldSCEVExpr(swapOperands(expr));
         }
 
+        // a * pow(2^n, k) ---> a << n * k
+        if (op == Op::Mul) {
+            SCEVExpr* pow = nullptr;
+            SCEVExpr* oper = nullptr;
+            if (rhs->isBinary() && rhs->getOp() == Op::Pow) {
+                pow = rhs;
+                oper = lhs;
+            } else if (lhs->isBinary() && lhs->getOp() == Op::Pow) {
+                pow = lhs;
+                oper = rhs;
+            }
+
+            if (pow && oper) {
+                auto base = pow->getLHS();
+                auto exp = pow->getRHS();
+                int base_ci;
+                if (base->isIRValue() && match(base->getRawIRValue(), M::PowerOfTwo(M::Bind(base_ci)))) {
+                    auto s = getSCEVExprMul(getSCEVExpr(ctz_wrapper(base_ci)), exp);
+                    return getSCEVExprShl(oper, s);
+                }
+            }
+        }
+
+        // a / pow(2^n, k)
+        //   let s = n * k, this can be optimized to
+        // (a + ((a >> W - 1) & ((1 << s) - 1))) >> s
+        if (op == Op::Div) {
+            if (rhs->isBinary() && rhs->getOp() == Op::Pow) {
+                auto base = rhs->getLHS();
+                auto exp = rhs->getRHS();
+                int base_ci;
+                if (base->isIRValue() && match(base->getRawIRValue(), M::PowerOfTwo(M::Bind(base_ci)))) {
+                    auto one = getSCEVExpr(1);
+                    // TODO: Currently we only compute SCEV of i32, extend this.
+                    auto bitwidth_minus_one = getSCEVExpr(31);
+                    auto s = getSCEVExprMul(getSCEVExpr(ctz_wrapper(base_ci)), exp);
+                    auto sign = getSCEVExprAShr(lhs, bitwidth_minus_one);
+                    auto mask = getSCEVExprSub(getSCEVExprShl(one, s), one);
+                    auto bias = getSCEVExprAnd(sign, mask);
+                    auto adjusted = getSCEVExprAdd(lhs, bias);
+                    auto shifted = getSCEVExprAShr(adjusted, s);
+
+                    // s (= n * k) can cause undefined behavior if s >= bitwidth, a select is
+                    // needed to handle this.
+                    auto overflow = getSCEVExprIcmp(ICMPOP::sgt, s, bitwidth_minus_one);
+                    auto res = getSCEVExprSelect(overflow, getSCEVExpr(0), shifted);
+                    return res;
+                }
+            }
+        }
+
         // Transform the tree.
         // Adapted from Muchnick's "Advanced Compiler Design & Implementation", Fig 12.6
         if (op == Op::Add || op == Op::Mul) {
@@ -781,7 +841,7 @@ TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
         auto e = apply(trec, getBackEdgeTakenCount(trec->getLoop()));
         if (!e)
             return getTRECUntracked();
-        return getExprTREC(e);
+        return getExprTREC(foldSCEVExpr(e));
     }
 
     return trec;
@@ -1362,6 +1422,24 @@ SCEVExpr *SCEVHandle::getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y) {
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Div, x, y));
 }
+SCEVExpr *SCEVHandle::getSCEVExprAShr(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::AShr, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprLShr(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::LShr, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprShl(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Shl, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprAnd(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::And, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprOr(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Or, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprXor(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Xor, x, y));
+}
 
 // https://stackoverflow.com/questions/101439/the-most-efficient-way-to-implement-an-integer-based-power-function-powint-int
 int ipow(int base, int exp) {
@@ -1490,19 +1568,24 @@ pVal SCEVSynthesizer::synthesizeExprImpl(SCEVExpr *expr, std::map<SCEVExpr *, pV
 
         OP ir_op = OP::ADD;
         switch (expr->getOp()) {
-        case SCEVExpr::Binary::Op::Add:
-            ir_op = OP::ADD;
-            break;
-        case SCEVExpr::Binary::Op::Sub:
-            ir_op = OP::SUB;
-            break;
-        case SCEVExpr::Binary::Op::Mul:
-            ir_op = OP::MUL;
-            break;
-        case SCEVExpr::Binary::Op::Div:
-            ir_op = OP::SDIV;
-            break;
-        // FIXME: Fix overflow
+#define MAKE_OP(scev, ir)                                                                                              \
+    case SCEVExpr::Binary::Op::scev:                                                                                   \
+        ir_op = OP::ir;                                                                                                \
+        break;
+
+            MAKE_OP(Add, ADD)
+            MAKE_OP(Sub, SUB)
+            MAKE_OP(Mul, MUL)
+            MAKE_OP(Div, SDIV)
+            MAKE_OP(AShr, ASHR)
+            MAKE_OP(LShr, LSHR)
+            MAKE_OP(Shl, SHL)
+            MAKE_OP(And, AND)
+            MAKE_OP(Or, OR)
+            MAKE_OP(Xor, XOR)
+
+#undef MAKE_OP
+        // FIXME: Fix overflow of pow
         case SCEVExpr::Binary::Op::Pow:
             return nullptr;
         default:

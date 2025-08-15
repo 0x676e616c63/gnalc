@@ -404,12 +404,11 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LCSSAPass());
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopUnrollPass());
+    fpm.addPass(LoopEliminationPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(NameNormalizePass(true));
     return fpm;
     // // Parallel

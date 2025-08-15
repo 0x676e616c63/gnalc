@@ -26,7 +26,7 @@ namespace IR {
 bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const pLoop &loop) {
     // See if SIR has prepared this for us
     if (auto loop_attrs = loop->getHeader()->attr().get<SIR::LoopAttrs>()) {
-        if (loop_attrs && loop_attrs->has(SIR::LoopAttr::NoCarriedDependency)) {
+        if (loop_attrs->has(SIR::LoopAttr::NoCarriedDependency)) {
             Logger::logDebug("[Para]: Loop '", loop->getHeader()->getName(),
                              "' has 'SIR::LoopAttr::NoCarriedDependency'.");
             return true;
@@ -170,8 +170,10 @@ const std::unordered_map<OP, IntrinsicID> AssociativeOps = {
 };
 
 #define FAIL_IF(cond)                                                                                                  \
-    if (cond)                                                                                                          \
-        return ParallelLoopInfo::fail();
+    if (cond) {                                                                                                        \
+        Logger::logDebug("[Para]: Parallelization canceled due to '", GNALC_STRINGFY(cond), "'.");                  \
+        return ParallelLoopInfo::fail();                                                                               \
+    }
 #define FAIL_IF_MSG(cond, ...)                                                                                         \
     if (cond) {                                                                                                        \
         Logger::logDebug("[Para]: ", __VA_ARGS__);                                                                     \
@@ -200,8 +202,7 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
         std::swap(raw_iv, iv_bound);
 
     auto iv = raw_iv->as<PHIInst>();
-    if (!iv || iv->getParent() != header || iv_bound->is<PHIInst>())
-        return ParallelLoopInfo::fail();
+    FAIL_IF(!iv || iv->getParent() != header || iv_bound->is<PHIInst>());
 
     if (auto iv_bound_inst = iv_bound->as<Instruction>()) {
         FAIL_IF_MSG(top_level->contains(iv_bound_inst->getParent()), "Skipped loop '", header->getName(),
@@ -394,8 +395,9 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
 }
 
 PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
-    // Parallel functions can not be nested, so only parallelize loops in `main`.
-    if (!function.hasFnAttr(FuncAttr::ProgramEntry))
+    // Parallel functions can not be nested, so only parallelize
+    // loops in functions that are execute exactly once.
+    if (!function.hasFnAttr(FuncAttr::ExecuteExactlyOnce))
         return PreserveAll();
 
     static constexpr auto gv_prefix = Config::IR::LOOP_PARALLEL_GLOBALVAR_NAME_PREFIX;
@@ -438,13 +440,23 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         auto info = analyzeParallelInfo(&function, &fam, &loop_aa, &scev, target, top_level, transform_float_reduction);
         auto [can_parallel, header, preheader, latch, exit, iv, iv_base, iv_bound, is_signed_less_equal_cond,
               reductions, exit_icmp, scalar_global_vars, local_arrays] = info;
-        if (!can_parallel)
+
+        auto *attrs = top_level->getHeader()->attr().getOrAdd<ParallelAttrs>();
+        if (!can_parallel) {
+            attrs->set(ParallelAttr::NoParallel);
+            if (auto loop_attrs = top_level->getHeader()->attr().get<SIR::LoopAttrs>()) {
+                if (loop_attrs->has(SIR::LoopAttr::NoCarriedDependency))
+                    Logger::logDebug("[Para]: Parallelization canceled though it has no carried dependency.");
+            }
             continue;
+        }
+
+        attrs->set(ParallelAttr::Parallelized);
 
         auto body_ret = std::make_shared<BasicBlock>("%parallel.exit");
         IRBuilder body_builder(body_ret);
 
-        // Rewrite Reduction into global variables
+        // Rewrite reduction into global variables
         for (auto &[reduction, reduction_base, reduction_inc, reduction_mod, atomic_fn, upd_insts] : reductions) {
             static int global_var_id = 0;
             auto gv_name = gv_prefix + std::string{".reduction."} + reduction->getName().substr(1) + "." +
@@ -539,9 +551,9 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
                 if (inst == iv || inst == exit_icmp)
                     continue;
 
-                // Skip rewritten Reduction
-                // Note that not all phis are Reduction, this is only a quick path for
-                // most common cases, since Reduction need rewritten must be a phi in the header.
+                // Skip rewritten reduction
+                // Note that not all phis are reduction, this is only a quick path for
+                // most common cases, since reduction need rewritten must be a phi in the header.
                 if (block == header.get() && inst->is<PHIInst>()) {
                     auto it = std::find_if(reductions.begin(), reductions.end(),
                                            [&](const auto &val) { return val.phi == inst; });
@@ -582,7 +594,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
                     if (auto operand_inst = operand->as<Instruction>()) {
                         if (top_level->contains(operand_inst->getParent()))
                             continue;
-                        // Since we've rewritten some Reductions before, some instructions
+                        // Since we've rewritten some reductions before, some instructions
                         // might become dead, so uses in them might be invalid.
                         if (operand_inst->getParent() == nullptr) {
                             Logger::logDebug("[Para]: Still has temporary holding the uses for '",

@@ -34,7 +34,7 @@ class SCEVExpr {
 
 public:
     struct Binary {
-        enum class Op { Add, Sub, Mul, Div, Pow };
+        enum class Op { Add, Sub, Mul, Div, AShr, LShr, Shl, And, Or, Xor, Pow };
         Op op;
         SCEVExpr *lhs;
         SCEVExpr *rhs;
@@ -236,6 +236,12 @@ public:
     SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprAShr(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprLShr(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprShl(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprAnd(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprOr(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprXor(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprPow(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
     SCEVExpr *getSCEVExprIcmp(ICMPOP cond, SCEVExpr *x, SCEVExpr *y);
