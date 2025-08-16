@@ -6,6 +6,7 @@
 #ifndef GNALC_SIR_PASSES_TRANSFORMS_LOOP_INTERCHANGE_HPP
 #define GNALC_SIR_PASSES_TRANSFORMS_LOOP_INTERCHANGE_HPP
 
+#include "sir/passes/analysis/affine_alias_analysis.hpp"
 #include "sir/passes/pass_manager.hpp"
 
 namespace SIR {
@@ -14,6 +15,6 @@ public:
     PM::PreservedAnalyses run(LinearFunction &function, LFAM &lfam);
     size_t name_cnt = 0;
 };
-
+bool canInterchange(AffineAAResult *affine_aa, FORInst *for_outer, FORInst *for_inner);
 } // namespace SIR
 #endif

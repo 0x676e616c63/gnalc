@@ -56,6 +56,7 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(loop_unswitch)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(loop_fuse)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(loop_interchange)                                                                          \
+    GNALC_SIR_IR_PASS_ENTRY(loop_tiling)                                                                          \
     GNALC_SIR_IR_PASS_ENTRY(affine_licm)                                                                               \
     GNALC_SIR_IR_PASS_ENTRY(relayout)                                                                                  \
     GNALC_SIR_IR_PASS_ENTRY(loop_annotator)

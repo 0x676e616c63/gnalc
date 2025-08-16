@@ -32,13 +32,14 @@ int getInterchangeCost(const ArrayAccess &arr, IndVar *outer_iv, IndVar *inner_i
     return (inner_idx < outer_idx) ? -1 : 1;
 }
 
+// Note that this is also used by loop tiling.
 bool canInterchange(AffineAAResult *affine_aa, FORInst *for_outer, FORInst *for_inner) {
     IndVar *iv_outer = for_outer->getIndVar().get();
     IndVar *iv_inner = for_inner->getIndVar().get();
     if (!iv_outer || !iv_inner)
         return false;
 
-    Err::gassert(iv_inner->getDepth() == iv_outer->getDepth() + 1, "Interchange what?");
+    Err::gassert(iv_inner->getDepth() > iv_outer->getDepth(), "Interchange what?");
 
     const auto rw = affine_aa->queryInstRW(for_outer);
     if (!rw)

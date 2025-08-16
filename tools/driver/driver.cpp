@@ -194,6 +194,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--earlydce", "--no-earlydce", early_dce)
         OPT_ARG("--constantfold", "--no-constantfold", constant_fold)
         OPT_ARG("--interchange", "--no-interchange", loop_interchange)
+        OPT_ARG("--tiling", "--no-tiling", loop_tiling)
         OPT_ARG("--unswitch", "--no-unswitch", loop_unswitch)
         OPT_ARG("--fuse", "--no-fuse", loop_fuse)
         OPT_ARG("--affinelicm", "--no-affinelicm", affine_licm)
@@ -313,6 +314,7 @@ Optimizations Flags:
   --earlydce           - Early dead code elimination
   --constantfold       - Early constant folding
   --interchange        - Loop interchange
+  --tiling             - Loop Tiling
   --unswitch           - Loop unswitch
   --fuse               - Loop fusion
   --loopannotator      - Loop Annotator
