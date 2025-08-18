@@ -526,10 +526,12 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     SIR::MPM sir_mpm;
     if (sir_debug_pipeline)
         sir_mpm = SIR::LinearPassBuilder::buildModuleDebugPipeline();
-    else if (fixed_point_pipeline)
-        sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
-        sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);
+        sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    // else if (fixed_point_pipeline)
+    //     sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    // else
+    //     sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);
 
     if (emit_sir) {
         sir_mpm.addPass(SIR::PrintLinearModulePass(*poutstream));

@@ -229,6 +229,10 @@ auto make_loop(const PMOptions &options) {
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
+    // fpm.addPass(LoopSimplifyPass());
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(LoopParallelPass(true));
+    // fpm.addPass(PrintFunctionPass(std::cerr));
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
@@ -400,46 +404,46 @@ MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
 }
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
-    // For SIR pass debug
-    FPM fpm;
-    fpm.addPass(VerifyPass());
-    fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass(true));
-    return fpm;
-    // // Parallel
+    // // For SIR pass debug
     // FPM fpm;
     // fpm.addPass(VerifyPass());
     // fpm.addPass(PromotePass());
-    // fpm.addPass(SCCPPass());
-    // fpm.addPass(BreakCriticalEdgesPass());
-    // fpm.addPass(GVNPREPass());
-    // fpm.addPass(CFGSimplifyPass());
-    // //
-    // // fpm.addPass(LoopSimplifyPass());
-    // // fpm.addPass(LCSSAPass());
-    // // fpm.addPass(LoopUnrollPass());
-    // // fpm.addPass(CFGSimplifyPass());
-    // // fpm.addPass(BreakCriticalEdgesPass());
-    // // fpm.addPass(GVNPREPass());
-
-    // fpm.addPass(ADCEPass());
-    // fpm.addPass(CFGSimplifyPass());
-    // fpm.addPass(SCCPPass());
-    // fpm.addPass(ADCEPass());
-    // fpm.addPass(CFGSimplifyPass());
-
+    // fpm.addPass(NameNormalizePass(true));
+    // return fpm;
+    // Parallel
+    FPM fpm;
+    fpm.addPass(VerifyPass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(BreakCriticalEdgesPass());
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(CFGSimplifyPass());
+    //
     // fpm.addPass(LoopSimplifyPass());
     // fpm.addPass(LCSSAPass());
-    // fpm.addPass(LICMPass());
-    // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(LoopParallelPass());
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(VerifyPass());
-    // fpm.addPass(DCEPass());
-    // fpm.addPass(NameNormalizePass());
+    // fpm.addPass(LoopUnrollPass());
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
 
-    // return fpm;
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
+
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LICMPass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LoopParallelPass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(VerifyPass());
+    fpm.addPass(DCEPass());
+    fpm.addPass(NameNormalizePass());
+
+    return fpm;
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

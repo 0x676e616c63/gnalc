@@ -127,7 +127,7 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(LoopAnnotatorPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintAffineAAPass(std::cerr));
-    lfpm.addPass(LoopTilingPass());
+    lfpm.addPass(LoopFusePass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(EarlyDCEPass());
     return lfpm;

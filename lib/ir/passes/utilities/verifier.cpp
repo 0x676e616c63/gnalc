@@ -260,6 +260,22 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         }
     }
 
+    // No nested parallel for
+    if (fatal_error_cnt == 0) {
+        if (function.hasFnAttr(FuncAttr::ParallelBody)) {
+            for (const auto& bb : function) {
+                for (const auto& inst : *bb) {
+                    if (auto call = inst->as<CALLInst>()) {
+                        if (call->getFunc()->getIntrinsicID() == IntrinsicID::ParallelForEntry) {
+                            Logger::logCritical("[VerifyPass]: Parallel body '", function.getName(), "' has call to parallel for.");
+                            ++fatal_error_cnt;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     //
     // Warning
     //

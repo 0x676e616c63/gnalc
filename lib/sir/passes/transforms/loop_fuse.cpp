@@ -267,10 +267,11 @@ PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
 
             affine_aa = lfam.getFreshResult<AffineAliasAnalysis>(function);
             loop_fuse_modified = true;
-
-            // Revisit this depth
-            --searching_depth;
         }
+
+        // Revisit this depth
+        if (!fuse_candidates.empty())
+            --searching_depth;
     }
 
     return loop_fuse_modified ? PreserveNone() : PreserveAll();
