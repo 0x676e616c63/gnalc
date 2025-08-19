@@ -83,12 +83,12 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     using Stage = GenericPeephole::Stage;
 
     FPM fpm;
+    fpm.addPass(MachineConstantFold());
     fpm.addPass(ISel());
     fpm.addPass(GenericPeephole(Stage::AfterIsel));
     // fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight));
     fpm.addPass(PreRAlegalize());
     fpm.addPass(MachineLICMPass());
-    //     fpm.addPass(CopyPropagation());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
     fpm.addPass(StackGenerate());

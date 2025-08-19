@@ -153,7 +153,7 @@ auto make_basic_clean(const PMOptions &options) {
     FUNCTION_TRANSFORM(sccp, SCCPPass());
     // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
     // TODO: Enable this pass?
-    // FUNCTION_TRANSFORM(constraint_elimination, LoopSimplifyPass(), ConstraintEliminationPass());
+    FUNCTION_TRANSFORM(constraint_elimination, LoopSimplifyPass(), ConstraintEliminationPass());
     FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
     return fpm;
