@@ -24,13 +24,15 @@
 using namespace Match;
 
 namespace IR {
-bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const pLoop &loop) {
-    // See if SIR has prepared this for us
-    if (auto loop_attrs = loop->getHeader()->attr().get<SIR::LoopAttrs>()) {
-        if (loop_attrs->has(SIR::LoopAttr::NoCarriedDependency)) {
-            Logger::logDebug("[Para]: Loop '", loop->getHeader()->getName(),
-                             "' has 'SIR::LoopAttr::NoCarriedDependency'.");
-            return true;
+bool isMemoryIndependentForEachIteration(FAM *fam, LoopAAResult *loop_aa, const pLoop &loop, bool conservative) {
+    if (!conservative) {
+        // See if SIR has prepared this for us
+        if (auto loop_attrs = loop->getHeader()->attr().get<SIR::LoopAttrs>()) {
+            if (loop_attrs->has(SIR::LoopAttr::NoCarriedDependency)) {
+                Logger::logDebug("[Para]: Loop '", loop->getHeader()->getName(),
+                                 "' has 'SIR::LoopAttr::NoCarriedDependency'.");
+                return true;
+            }
         }
     }
 
@@ -170,6 +172,13 @@ const std::unordered_map<OP, IntrinsicID> AssociativeOps = {
     {OP::FMUL, IntrinsicID::AtomicFMul},
 };
 
+struct ParallelOptions {
+    bool transform_float_reduction;
+    bool transform_local_reduction;
+    bool transform_scalar_gv;
+    bool conservative_dependency_test;
+};
+
 #define FAIL_IF(cond)                                                                                                  \
     if (cond) {                                                                                                        \
         Logger::logDebug("[Para]: Parallelization on '", loop->getHeader()->getName(), "' canceled due to '",          \
@@ -185,7 +194,7 @@ const std::unordered_map<OP, IntrinsicID> AssociativeOps = {
 // Analyze Loop's Parallel Info
 // This function doesn't modify IR, but only collects information.
 ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loop_aa, SCEVHandle *scev,
-                                     const pTarget &target, const pLoop &loop, bool transform_float_reduction) {
+                                     const pTarget &target, const pLoop &loop, ParallelOptions options) {
     auto header = loop->getHeader();
 
     FAIL_IF(!loop->hasSingleExit() || !loop->isHeaderExiting());
@@ -234,7 +243,8 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
         if (reduction == iv)
             continue;
 
-        FAIL_IF(reduction->getType()->isFloatingPoint() && !transform_float_reduction);
+        FAIL_IF(!options.transform_local_reduction);
+        FAIL_IF(reduction->getType()->isFloatingPoint() && !options.transform_float_reduction);
 
         auto reduction_base = reduction->getValueForBlock(preheader);
         auto reduction_update = reduction->getValueForBlock(latch)->as<Instruction>();
@@ -329,6 +339,8 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
     }
     std::vector<ParallelLoopInfo::ScalarGV> scalar_gvs;
     for (const auto &store : scalar_gv_stores) {
+        FAIL_IF(!options.transform_scalar_gv);
+
         pVal inc;
         pLoad load;
         OP op;
@@ -381,8 +393,8 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
 
     FAIL_IF(hasSylibOrRecursiveCall(func, fam, loop));
 
-    FAIL_IF_MSG(!isMemoryIndependentForEachIteration(fam, loop_aa, loop), "Skipped loop '", header->getName(),
-                "' with memory dependency.");
+    FAIL_IF_MSG(!isMemoryIndependentForEachIteration(fam, loop_aa, loop, options.conservative_dependency_test),
+        "Skipped loop '", header->getName(), "' with memory dependency.");
 
     return {.can_parallel = true,
             .header = header,
@@ -503,7 +515,7 @@ pFunc doParallelize(Function &func, const pLoop &loop, const ParallelLoopInfo &i
     local_arrays.clear();
 
     // Extract the loop to a new function
-    size_t body_fn_name_cnt = 0;
+    static size_t body_fn_name_cnt = 0;
     auto body_fn_name = body_fn_prefix + std::string{"."} + func.getName().substr(1) + "." +
                         loop->getHeader()->getName().substr(1) + "." + std::to_string(body_fn_name_cnt++);
     // using Task = void (*)(int32_t beg, int32_t end);
@@ -709,7 +721,6 @@ bool isUnrolledRemainder(const pLoop &loop) {
 }
 
 PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
-    return PreserveAll();
     // Parallel functions can not be nested, so only parallelize
     // loops in functions that are execute exactly once.
     if (!function.hasFnAttr(FuncAttr::ExecuteExactlyOnce) || function.hasFnAttr(FuncAttr::ParallelBody))
@@ -741,6 +752,13 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto &loop_aa = fam.getResult<LoopAliasAnalysis>(function);
 
+    auto options = ParallelOptions{
+        .transform_float_reduction = transform_float_reduction,
+        .transform_local_reduction = transform_local_reduction,
+        .transform_scalar_gv =  transform_scalar_gv,
+        .conservative_dependency_test = conservative_dependency_test
+    };
+
     for (const auto &top_level : loop_info) {
         auto loopdfv = top_level->getDFVisitor();
         for (const auto &loop : loopdfv) {
@@ -752,7 +770,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
 
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplifiedForm.");
 
-            auto info = analyzeParallelInfo(&function, &fam, &loop_aa, &scev, target, loop, transform_float_reduction);
+            auto info = analyzeParallelInfo(&function, &fam, &loop_aa, &scev, target, loop, options);
             auto *attrs = loop->getHeader()->attr().getOrAdd<ParallelAttrs>();
             if (!info.can_parallel) {
                 attrs->set(ParallelAttr::NoParallel);
