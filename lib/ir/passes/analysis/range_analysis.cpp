@@ -314,37 +314,38 @@ PhiOperSign analyzePhiOperSign(RangeResult &res, PHIInst *phi, Value *oper, Basi
 
 enum class PhiSign { NonNegative, NonPositive, Zero, Unknown };
 PhiSign analyzePhiSign(RangeResult &res, PHIInst *phi) {
-    auto [negative, zero, positive] = countOperSign(res, phi);
-    if (negative == 0 && positive == 0 && zero == 0)
-        return PhiSign::Unknown;
-
-    for (const auto &[val, bb] : phi->incomings()) {
-        switch (analyzePhiOperSign(res, phi, val.get(), bb.get())) {
-        case PhiOperSign::Same:
-        case PhiOperSign::Determined:
-            continue;
-        case PhiOperSign::Unknown:
-            return PhiSign::Unknown;
-        case PhiOperSign::PositiveIfPositive:
-            if (negative != 0)
-                return PhiSign::Unknown;
-            break;
-        case PhiOperSign::NegativeIfNegative:
-            if (positive != 0)
-                return PhiSign::Unknown;
-            break;
-        default:
-            Err::unreachable();
-        }
-    }
-
-    if (negative == 0)
-        return PhiSign::NonNegative;
-
-    if (positive == 0)
-        return PhiSign::NonPositive;
-
-    return PhiSign::Zero;
+    return PhiSign::Unknown;
+    // auto [negative, zero, positive] = countOperSign(res, phi);
+    // if (negative == 0 && positive == 0 && zero == 0)
+    //     return PhiSign::Unknown;
+    //
+    // for (const auto &[val, bb] : phi->incomings()) {
+    //     switch (analyzePhiOperSign(res, phi, val.get(), bb.get())) {
+    //     case PhiOperSign::Same:
+    //     case PhiOperSign::Determined:
+    //         continue;
+    //     case PhiOperSign::Unknown:
+    //         return PhiSign::Unknown;
+    //     case PhiOperSign::PositiveIfPositive:
+    //         if (negative != 0)
+    //             return PhiSign::Unknown;
+    //         break;
+    //     case PhiOperSign::NegativeIfNegative:
+    //         if (positive != 0)
+    //             return PhiSign::Unknown;
+    //         break;
+    //     default:
+    //         Err::unreachable();
+    //     }
+    // }
+    //
+    // if (negative == 0)
+    //     return PhiSign::NonNegative;
+    //
+    // if (positive == 0)
+    //     return PhiSign::NonPositive;
+    //
+    // return PhiSign::Zero;
 }
 
 void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
@@ -552,7 +553,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                     intersectFloat(call, FRng());
             }
         } else if (inst->is<ICMPInst, FCMPInst>())
-            intersectInt(inst, IRng(0, 2));
+            intersectInt(inst, IRng(0, 1));
         else {
             if (is_btype) {
                 if (is_int)

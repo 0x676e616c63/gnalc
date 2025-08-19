@@ -151,7 +151,7 @@ auto make_basic_clean(const PMOptions &options) {
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
     FUNCTION_TRANSFORM(sccp, SCCPPass());
-    // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
+    FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
     // TODO: Enable this pass?
     FUNCTION_TRANSFORM(constraint_elimination, LoopSimplifyPass(), ConstraintEliminationPass());
     FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
@@ -238,7 +238,7 @@ auto make_loop(const PMOptions &options) {
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     // FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
     //                    LoopUnrollPass(LoopUnrollPass::PO_Peel))
-    // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
+    FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(adce, CFGSimplifyPass(), ADCEPass())
     FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
                        LoopUnrollPass(LoopUnrollPass::PO_Unroll))
