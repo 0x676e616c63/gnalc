@@ -132,21 +132,21 @@ bool RangeResult::knownNonNegative(const pVal &val, BasicBlockEdge edge) const {
 
 bool RangeResult::intersect(Value *val, const IRng &range) { return int_range_map[val].intersectGlobal(range); }
 bool RangeResult::intersect(Value *val, const IRng &range, BasicBlock *bb) {
-    if (auto inst = val->as_raw<Instruction>()) {
-        if (inst->getParent().get() == bb) {
-            return intersect(inst, range);
-        }
-    }
+    // if (auto inst = val->as_raw<Instruction>()) {
+    //     if (inst->getParent().get() == bb) {
+    //         return intersect(inst, range);
+    //     }
+    // }
     return int_range_map[val].intersectContextual(range, bb);
 }
 
 bool RangeResult::intersect(Value *val, const FRng &range) { return float_range_map[val].intersectGlobal(range); }
 bool RangeResult::intersect(Value *val, const FRng &range, BasicBlock *bb) {
-    if (auto inst = val->as_raw<Instruction>()) {
-        if (inst->getParent().get() == bb) {
-            return intersect(inst, range);
-        }
-    }
+    // if (auto inst = val->as_raw<Instruction>()) {
+    //     if (inst->getParent().get() == bb) {
+    //         return intersect(inst, range);
+    //     }
+    // }
     return float_range_map[val].intersectContextual(range, bb);
 }
 
@@ -159,21 +159,21 @@ bool RangeResult::intersect(Value *val, const FRng &range, FCtxRng::Edge edge) {
 
 bool RangeResult::merge(Value *val, const IRng &range) { return int_range_map[val].mergeGlobal(range); }
 bool RangeResult::merge(Value *val, const IRng &range, BasicBlock *bb) {
-    if (auto inst = val->as_raw<Instruction>()) {
-        if (inst->getParent().get() == bb) {
-            return merge(inst, range);
-        }
-    }
+    // if (auto inst = val->as_raw<Instruction>()) {
+    //     if (inst->getParent().get() == bb) {
+    //         return merge(inst, range);
+    //     }
+    // }
     return int_range_map[val].mergeContextual(range, bb);
 }
 
 bool RangeResult::merge(Value *val, const FRng &range) { return float_range_map[val].mergeGlobal(range); }
 bool RangeResult::merge(Value *val, const FRng &range, BasicBlock *bb) {
-    if (auto inst = val->as_raw<Instruction>()) {
-        if (inst->getParent().get() == bb) {
-            return merge(inst, range);
-        }
-    }
+    // if (auto inst = val->as_raw<Instruction>()) {
+    //     if (inst->getParent().get() == bb) {
+    //         return merge(inst, range);
+    //     }
+    // }
     return float_range_map[val].mergeContextual(range, bb);
 }
 
@@ -199,6 +199,11 @@ void RangeAnalysis::analyzeCallSites(RangeResult &res, Function *func, FAM *fam)
             Logger::logWarning("Non-void function '", func->getName(), "' has no return value");
         return retval;
     }();
+
+    // FIXME
+    // FIXME
+    // FIXME
+    unique_retval = nullptr;
 
     bool initial_range_set = false;
     for (const auto &inst_user : func->inst_users()) {
