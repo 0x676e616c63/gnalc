@@ -25,6 +25,16 @@ bool isSafeToMove(const pLoop &loop, const pInst &inst, BasicAAResult &aa_res, F
     if (!inst->is<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>())
         return false;
 
+    switch (inst->getOpcode()) {
+    case OP::SDIV:
+    case OP::UDIV:
+    case OP::SREM:
+    case OP::UREM:
+    case OP::FDIV:
+        return false;
+    default: break;
+    }
+
     if (is_doing_aggressive_licm && inst->is<STOREInst>())
         return false;
 
