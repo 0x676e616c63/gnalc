@@ -129,13 +129,13 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
     if (GeneratedBySpill.count(mop))
         ++badspill;
 
-    if (mop->getUseTrait() == MIROperand::usage::StoreConst) {
-        ++reloadtimes;
-        return reloadConstVal(mop);
-    } else {
+    // if (mop->getUseTrait() == MIROperand::usage::StoreConst) {
+    //     ++reloadtimes;
+    //     return reloadConstVal(mop);
+    // } else {
         ++spilltimes;
         return spillToMem(mop);
-    }
+    // }
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) {
