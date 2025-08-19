@@ -132,21 +132,21 @@ bool RangeResult::knownNonNegative(const pVal &val, BasicBlockEdge edge) const {
 
 bool RangeResult::intersect(Value *val, const IRng &range) { return int_range_map[val].intersectGlobal(range); }
 bool RangeResult::intersect(Value *val, const IRng &range, BasicBlock *bb) {
-    // if (auto inst = val->as_raw<Instruction>()) {
-    //     if (inst->getParent().get() == bb) {
-    //         return intersect(inst, range);
-    //     }
-    // }
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return intersect(inst, range);
+        }
+    }
     return int_range_map[val].intersectContextual(range, bb);
 }
 
 bool RangeResult::intersect(Value *val, const FRng &range) { return float_range_map[val].intersectGlobal(range); }
 bool RangeResult::intersect(Value *val, const FRng &range, BasicBlock *bb) {
-    // if (auto inst = val->as_raw<Instruction>()) {
-    //     if (inst->getParent().get() == bb) {
-    //         return intersect(inst, range);
-    //     }
-    // }
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return intersect(inst, range);
+        }
+    }
     return float_range_map[val].intersectContextual(range, bb);
 }
 
@@ -159,21 +159,21 @@ bool RangeResult::intersect(Value *val, const FRng &range, FCtxRng::Edge edge) {
 
 bool RangeResult::merge(Value *val, const IRng &range) { return int_range_map[val].mergeGlobal(range); }
 bool RangeResult::merge(Value *val, const IRng &range, BasicBlock *bb) {
-    // if (auto inst = val->as_raw<Instruction>()) {
-    //     if (inst->getParent().get() == bb) {
-    //         return merge(inst, range);
-    //     }
-    // }
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return merge(inst, range);
+        }
+    }
     return int_range_map[val].mergeContextual(range, bb);
 }
 
 bool RangeResult::merge(Value *val, const FRng &range) { return float_range_map[val].mergeGlobal(range); }
 bool RangeResult::merge(Value *val, const FRng &range, BasicBlock *bb) {
-    // if (auto inst = val->as_raw<Instruction>()) {
-    //     if (inst->getParent().get() == bb) {
-    //         return merge(inst, range);
-    //     }
-    // }
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return merge(inst, range);
+        }
+    }
     return float_range_map[val].mergeContextual(range, bb);
 }
 
@@ -199,11 +199,6 @@ void RangeAnalysis::analyzeCallSites(RangeResult &res, Function *func, FAM *fam)
             Logger::logWarning("Non-void function '", func->getName(), "' has no return value");
         return retval;
     }();
-
-    // FIXME
-    // FIXME
-    // FIXME
-    unique_retval = nullptr;
 
     bool initial_range_set = false;
     for (const auto &inst_user : func->inst_users()) {
@@ -319,38 +314,37 @@ PhiOperSign analyzePhiOperSign(RangeResult &res, PHIInst *phi, Value *oper, Basi
 
 enum class PhiSign { NonNegative, NonPositive, Zero, Unknown };
 PhiSign analyzePhiSign(RangeResult &res, PHIInst *phi) {
-    return PhiSign::Unknown;
-    // auto [negative, zero, positive] = countOperSign(res, phi);
-    // if (negative == 0 && positive == 0 && zero == 0)
-    //     return PhiSign::Unknown;
-    //
-    // for (const auto &[val, bb] : phi->incomings()) {
-    //     switch (analyzePhiOperSign(res, phi, val.get(), bb.get())) {
-    //     case PhiOperSign::Same:
-    //     case PhiOperSign::Determined:
-    //         continue;
-    //     case PhiOperSign::Unknown:
-    //         return PhiSign::Unknown;
-    //     case PhiOperSign::PositiveIfPositive:
-    //         if (negative != 0)
-    //             return PhiSign::Unknown;
-    //         break;
-    //     case PhiOperSign::NegativeIfNegative:
-    //         if (positive != 0)
-    //             return PhiSign::Unknown;
-    //         break;
-    //     default:
-    //         Err::unreachable();
-    //     }
-    // }
-    //
-    // if (negative == 0)
-    //     return PhiSign::NonNegative;
-    //
-    // if (positive == 0)
-    //     return PhiSign::NonPositive;
-    //
-    // return PhiSign::Zero;
+    auto [negative, zero, positive] = countOperSign(res, phi);
+    if (negative == 0 && positive == 0 && zero == 0)
+        return PhiSign::Unknown;
+
+    for (const auto &[val, bb] : phi->incomings()) {
+        switch (analyzePhiOperSign(res, phi, val.get(), bb.get())) {
+        case PhiOperSign::Same:
+        case PhiOperSign::Determined:
+            continue;
+        case PhiOperSign::Unknown:
+            return PhiSign::Unknown;
+        case PhiOperSign::PositiveIfPositive:
+            if (negative != 0)
+                return PhiSign::Unknown;
+            break;
+        case PhiOperSign::NegativeIfNegative:
+            if (positive != 0)
+                return PhiSign::Unknown;
+            break;
+        default:
+            Err::unreachable();
+        }
+    }
+
+    if (negative == 0)
+        return PhiSign::NonNegative;
+
+    if (positive == 0)
+        return PhiSign::NonPositive;
+
+    return PhiSign::Zero;
 }
 
 void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
@@ -693,85 +687,85 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         //        For example, writing a SCEV-like algorithm that only figures out whether
         //        its expression is non-negative, rather than getting a `Untracked` result too early.
         // TODO: Extend SCEV or implement it in place.
-        if (inst->getType()->isI32()) {
-            auto analyzeSCEVExpr = [](SCEVExpr *expr) {
-                if (!expr->isIRValue())
-                    return IRng();
-                if (int c; match(expr->getIRValue(), M::Bind(c)))
-                    return IRng(c);
-                return IRng();
-            };
-
-            auto analyzeAddRec = [&scev, &bb, &res](TREC *trec) {
-                // For constant affine addrec, at least one bound can be determined.
-                if (auto constant_addrec = trec->getConstantAffineAddRec()) {
-                    auto [base, step] = *constant_addrec;
-
-                    // If the trip count can be statically determined, compute a more precise range.
-                    if (auto trip_count = scev.getTripCount(trec->getLoop())) {
-                        int c;
-                        if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
-                            auto m = static_cast<IRng::Bigger>(base) +
-                                     static_cast<IRng::Bigger>(step) * static_cast<IRng::Bigger>(c);
-                            if (step > 0)
-                                return IRng(base, m);
-                            return IRng(m, base);
-                        }
-                    }
-
-                    // Fallback: unknown trip count
-                    if (step > 0)
-                        return IRng(base, IRng::MAX);
-                    return IRng(IRng::MIN, base);
-                }
-
-                // Fallback: affine addrec, see if they are non-negative
-                if (auto addrec = trec->getAffineAddRec()) {
-                    auto [base, step] = *addrec;
-                    if (base->isIRValue() && step->isIRValue()) {
-                        if (res.knownNonNegative(base->getRawIRValue(), bb) &&
-                            res.knownNonNegative(step->getRawIRValue(), bb)) {
-                            return IRng(0, IRng::MAX);
-                        }
-                    }
-                }
-                return IRng();
-            };
-
-            auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
-                auto first_rng = analyzeSCEVExpr(trec->getFirst());
-                if (auto trip_count = scev.getTripCount(trec->getLoop())) {
-                    int trip_cnt_ci;
-                    if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
-                        if (trip_cnt_ci <= 1)
-                            return first_rng;
-                    }
-                }
-
-                auto rest = trec->getRest();
-                if (rest->isExpr()) {
-                    auto rng = analyzeSCEVExpr(rest->getExpr());
-                    return merge(IRng(first_rng), rng);
-                }
-                if (rest->isAddRec()) {
-                    auto rng = analyzeAddRec(rest);
-                    return merge(IRng(first_rng), rng);
-                }
-                return IRng();
-            };
-
-            auto trec = scev.getSCEVAtBlock(inst, bb);
-            if (trec->isExpr()) {
-                if (intersectContextualInt(inst, bb, analyzeSCEVExpr(trec->getExpr())))
-                    continue;
-            } else if (trec->isAddRec()) {
-                if (intersectContextualInt(inst, bb, analyzeAddRec(trec)))
-                    continue;
-            } else if (trec->isPeeled()) {
-                if (intersectContextualInt(inst, bb, analyzePeeledTREC(trec)))
-                    continue;
-            }
-        }
+        // if (inst->getType()->isI32()) {
+        //     auto analyzeSCEVExpr = [](SCEVExpr *expr) {
+        //         if (!expr->isIRValue())
+        //             return IRng();
+        //         if (int c; match(expr->getIRValue(), M::Bind(c)))
+        //             return IRng(c);
+        //         return IRng();
+        //     };
+        //
+        //     auto analyzeAddRec = [&scev, &bb, &res](TREC *trec) {
+        //         // For constant affine addrec, at least one bound can be determined.
+        //         if (auto constant_addrec = trec->getConstantAffineAddRec()) {
+        //             auto [base, step] = *constant_addrec;
+        //
+        //             // If the trip count can be statically determined, compute a more precise range.
+        //             if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+        //                 int c;
+        //                 if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
+        //                     auto m = static_cast<IRng::Bigger>(base) +
+        //                              static_cast<IRng::Bigger>(step) * static_cast<IRng::Bigger>(c);
+        //                     if (step > 0)
+        //                         return IRng(base, m);
+        //                     return IRng(m, base);
+        //                 }
+        //             }
+        //
+        //             // Fallback: unknown trip count
+        //             if (step > 0)
+        //                 return IRng(base, IRng::MAX);
+        //             return IRng(IRng::MIN, base);
+        //         }
+        //
+        //         // Fallback: affine addrec, see if they are non-negative
+        //         if (auto addrec = trec->getAffineAddRec()) {
+        //             auto [base, step] = *addrec;
+        //             if (base->isIRValue() && step->isIRValue()) {
+        //                 if (res.knownNonNegative(base->getRawIRValue(), bb) &&
+        //                     res.knownNonNegative(step->getRawIRValue(), bb)) {
+        //                     return IRng(0, IRng::MAX);
+        //                 }
+        //             }
+        //         }
+        //         return IRng();
+        //     };
+        //
+        //     auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
+        //         auto first_rng = analyzeSCEVExpr(trec->getFirst());
+        //         if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+        //             int trip_cnt_ci;
+        //             if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
+        //                 if (trip_cnt_ci <= 1)
+        //                     return first_rng;
+        //             }
+        //         }
+        //
+        //         auto rest = trec->getRest();
+        //         if (rest->isExpr()) {
+        //             auto rng = analyzeSCEVExpr(rest->getExpr());
+        //             return merge(IRng(first_rng), rng);
+        //         }
+        //         if (rest->isAddRec()) {
+        //             auto rng = analyzeAddRec(rest);
+        //             return merge(IRng(first_rng), rng);
+        //         }
+        //         return IRng();
+        //     };
+        //
+        //     auto trec = scev.getSCEVAtBlock(inst, bb);
+        //     if (trec->isExpr()) {
+        //         if (intersectContextualInt(inst, bb, analyzeSCEVExpr(trec->getExpr())))
+        //             continue;
+        //     } else if (trec->isAddRec()) {
+        //         if (intersectContextualInt(inst, bb, analyzeAddRec(trec)))
+        //             continue;
+        //     } else if (trec->isPeeled()) {
+        //         if (intersectContextualInt(inst, bb, analyzePeeledTREC(trec)))
+        //             continue;
+        //     }
+        // }
 
         if (auto binary = inst->as_raw<BinaryInst>()) {
             if (is_int) {

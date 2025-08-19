@@ -162,8 +162,8 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                                      *icmp_res ? "true" : "false", "'.");
                 }
             } else if (auto fcmp = inst->as<FCMPInst>()) {
-                auto lrng = ranges.getIntRange(fcmp->getLHS(), fcmp->getParent());
-                auto rrng = ranges.getIntRange(fcmp->getRHS(), fcmp->getParent());
+                auto lrng = ranges.getFloatRange(fcmp->getLHS(), fcmp->getParent());
+                auto rrng = ranges.getFloatRange(fcmp->getRHS(), fcmp->getParent());
                 auto fcmp_res = [&]() -> std::optional<bool> {
                     switch (fcmp->getCond()) {
                     case FCMPOP::oeq:
