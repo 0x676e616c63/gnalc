@@ -709,6 +709,7 @@ bool isUnrolledRemainder(const pLoop &loop) {
 }
 
 PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
+    return PreserveAll();
     // Parallel functions can not be nested, so only parallelize
     // loops in functions that are execute exactly once.
     if (!function.hasFnAttr(FuncAttr::ExecuteExactlyOnce) || function.hasFnAttr(FuncAttr::ParallelBody))
