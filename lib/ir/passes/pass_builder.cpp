@@ -263,17 +263,6 @@ auto make_vectorizer(const PMOptions &options) {
     return fpm;
 }
 
-auto make_pre_canonicalize(const PMOptions &options) {
-    FPM fpm;
-    FUNCTION_TRANSFORM(mem2reg, PromotePass())
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
-    FUNCTION_TRANSFORM(sccp, SCCPPass())
-    FUNCTION_TRANSFORM(adce, ADCEPass())
-    FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
-    return fpm;
-}
-
 auto make_post_legalize(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(globalize, GlobalizePass())

@@ -88,12 +88,12 @@ MPM make_locality(const PMOptions &options) {
 
 MPM LinearPassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
     MPM mpm;
-    mpm.addPass(makeLinearModulePass(buildFunctionFixedPointPipeline(options)));
+    // mpm.addPass(makeLinearModulePass(buildFunctionFixedPointPipeline(options)));
     // mpm.addPass(make_locality(options));
 
     // Annotate loops at the end of transforms to be more accurate.
-    if (options.loop_annotator)
-        mpm.addPass(makeLinearModulePass(LoopAnnotatorPass()));
+    // if (options.loop_annotator)
+    //     mpm.addPass(makeLinearModulePass(LoopAnnotatorPass()));
 
     return mpm;
 }
