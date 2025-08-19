@@ -431,32 +431,32 @@ std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr
         return {false, getTRECUndef(), UpdateExprType::Unknown};
     }
 
-    if (match(val, M::Mul(M::Bind(x), M::Bind(y)))) {
-        auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
-        auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
-        if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Mul, type_x, type_y))
-            return {false, getTRECUndef(), UpdateExprType::Unknown};
-
-        if (type_x == UpdateExprType::LoopPhi)
-            update_x = getExprTREC(getSCEVExpr(1));
-        if (type_y == UpdateExprType::LoopPhi)
-            update_y = getExprTREC(getSCEVExpr(1));
-
-        if (exist_x)
-            return {true, getTRECMul(update_x, getIRValTREC(y.get())), UpdateExprType::Mul};
-        if (exist_y)
-            return {true, getTRECMul(update_y, getIRValTREC(x.get())), UpdateExprType::Mul};
-        return {false, getTRECUndef(), UpdateExprType::Unknown};
-    }
-    if (match(val, M::SDiv(M::Bind(x), M::Bind(y)))) {
-        auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
-        auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
-        if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Div, type_x, type_y))
-            return {false, getTRECUndef(), UpdateExprType::Unknown};
-        if (exist_x && type_x == UpdateExprType::LoopPhi)
-            return {true, getIRValTREC(y.get()), UpdateExprType::Div};
-        return {false, getTRECUndef(), UpdateExprType::Unknown};
-    }
+    // if (match(val, M::Mul(M::Bind(x), M::Bind(y)))) {
+    //     auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+    //     auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+    //     if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Mul, type_x, type_y))
+    //         return {false, getTRECUndef(), UpdateExprType::Unknown};
+    //
+    //     if (type_x == UpdateExprType::LoopPhi)
+    //         update_x = getExprTREC(getSCEVExpr(1));
+    //     if (type_y == UpdateExprType::LoopPhi)
+    //         update_y = getExprTREC(getSCEVExpr(1));
+    //
+    //     if (exist_x)
+    //         return {true, getTRECMul(update_x, getIRValTREC(y.get())), UpdateExprType::Mul};
+    //     if (exist_y)
+    //         return {true, getTRECMul(update_y, getIRValTREC(x.get())), UpdateExprType::Mul};
+    //     return {false, getTRECUndef(), UpdateExprType::Unknown};
+    // }
+    // if (match(val, M::SDiv(M::Bind(x), M::Bind(y)))) {
+    //     auto [exist_x, update_x, type_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+    //     auto [exist_y, update_y, type_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+    //     if ((exist_x && exist_y) || !isConsistent_3(UpdateExprType::Div, type_x, type_y))
+    //         return {false, getTRECUndef(), UpdateExprType::Unknown};
+    //     if (exist_x && type_x == UpdateExprType::LoopPhi)
+    //         return {true, getIRValTREC(y.get()), UpdateExprType::Div};
+    //     return {false, getTRECUndef(), UpdateExprType::Unknown};
+    // }
 
     if (auto val_phi = val->as_raw<PHIInst>()) {
         auto val_phi_bb = val_phi->getParent();
@@ -482,11 +482,11 @@ std::tuple<bool, TREC *, SCEVHandle::UpdateExprType> SCEVHandle::buildUpdateExpr
                     if (s->getOp() == SCEVExpr::Binary::Op::Sub)
                         return {true, getTRECAdd(update, getExprTREC(getSCEVExprNeg(s->getRHS()))),
                                 UpdateExprType::Add};
-                    if (s->getOp() == SCEVExpr::Binary::Op::Mul)
-                        return {true, getTRECMul(update, getExprTREC(s->getRHS())), UpdateExprType::Mul};
-                    if (s->getOp() == SCEVExpr::Binary::Op::Div)
-                        return {true, getTRECDiv(update, getExprTREC(getSCEVExprDiv(getSCEVExpr(1), s->getRHS()))),
-                                UpdateExprType::Mul};
+                    // if (s->getOp() == SCEVExpr::Binary::Op::Mul)
+                    //     return {true, getTRECMul(update, getExprTREC(s->getRHS())), UpdateExprType::Mul};
+                    // if (s->getOp() == SCEVExpr::Binary::Op::Div)
+                    //     return {true, getTRECDiv(update, getExprTREC(getSCEVExprDiv(getSCEVExpr(1), s->getRHS()))),
+                    //             UpdateExprType::Mul};
                     return {true, getTRECUntracked(), UpdateExprType::Unknown};
                 }
             }
@@ -918,16 +918,16 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
         return apply(trec->getRest(), getSCEVExpr(trip_cnt_val - 1));
     }
 
-    if (trec->isMulRec() || trec->isDivRec()) {
-        auto base = trec->getBase();
-        auto step = trec->getStep();
-        if (!base->isExpr() || !step->isExpr())
-            return nullptr;
-        auto rhs = getSCEVExprPow(step->getExpr(), trip_cnt);
-        if (trec->isMulRec())
-            return getSCEVExprMul(base->getExpr(), rhs);
-        return getSCEVExprDiv(base->getExpr(), rhs);
-    }
+    // if (trec->isMulRec() || trec->isDivRec()) {
+    //     auto base = trec->getBase();
+    //     auto step = trec->getStep();
+    //     if (!base->isExpr() || !step->isExpr())
+    //         return nullptr;
+    //     auto rhs = getSCEVExprPow(step->getExpr(), trip_cnt);
+    //     if (trec->isMulRec())
+    //         return getSCEVExprMul(base->getExpr(), rhs);
+    //     return getSCEVExprDiv(base->getExpr(), rhs);
+    // }
 
     if (!trec->isAddRec())
         return nullptr;
