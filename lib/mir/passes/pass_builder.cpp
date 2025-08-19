@@ -5,14 +5,13 @@
 #include "mir/passes/pass_manager.hpp"
 
 // Analysis
-#include "mir/passes/analysis/liveanalysis.hpp"
-#include "mir/passes/analysis/loop_analysis.hpp"
 #include "mir/passes/analysis/branch_freq_analysis.hpp"
 #include "mir/passes/analysis/domtree_analysis.hpp"
+#include "mir/passes/analysis/liveanalysis.hpp"
+#include "mir/passes/analysis/loop_analysis.hpp"
 
 // Transforms
 #include "mir/passes/transforms/CFGsimplify.hpp"
-#include "mir/passes/transforms/codelayout.hpp"
 #include "mir/passes/transforms/CopyPropagation.hpp"
 #include "mir/passes/transforms/FusedAddr.hpp"
 #include "mir/passes/transforms/ICF_TailDup.hpp"
@@ -21,6 +20,7 @@
 #include "mir/passes/transforms/PreRAlegalize.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/passes/transforms/RedundantLoadEli.hpp"
+#include "mir/passes/transforms/codelayout.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/licm.hpp"
 #include "mir/passes/transforms/lowering.hpp"
