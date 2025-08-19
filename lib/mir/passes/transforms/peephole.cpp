@@ -517,7 +517,6 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
         }
 
         ///@warning https://ilinuxkernel.com/?p=1546
-        ///@warning fmadd and fmsub will lose accurency
         if (!inSet(minst->opcode<OpC>(), OpC::InstAdd, OpC::InstSub, OpC::InstVAdd,
                    OpC::InstVSub /* OpC::InstFAdd, OpC::InstFSub */)) {
             return false;
@@ -528,6 +527,11 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
                                           /* OpC::InstFAdd, ARMOpC::FMADD, OpC::InstFSub, ARMOpC::FMSUB */);
 
         if (minst->getOp(2)->isImme()) {
+            return false;
+        }
+
+        if (inSet(newOpC, ARMOpC::MLA_V, ARMOpC::MLS_V) &&
+            inSet(minst->ensureDef()->type(), OpT::Floatvec2, OpT::Floatvec4)) {
             return false;
         }
 

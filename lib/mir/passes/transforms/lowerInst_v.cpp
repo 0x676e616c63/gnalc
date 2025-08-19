@@ -172,7 +172,7 @@ void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
                      "lowerInst_v: try insert/extract with a variable idx");
 
         if (is_const_vector(insert->getVector())) {
-            // poison & clear
+            // poison | clear
 
             if (idx->imme() == 0 && is_all_zero_vector(insert->getVector())) {
                 def = ctx.newVReg(insert->getType()), use = nullptr;
