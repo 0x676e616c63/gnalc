@@ -164,7 +164,7 @@ auto make_cfg_clean(const PMOptions &options) {
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
-    FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
+    // FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     return fpm;
 }
@@ -208,8 +208,8 @@ auto make_memo(const PMOptions &options) {
     FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass());
     FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass());
-    FUNCTION_TRANSFORM(memo, MemoizePass());
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass());
+    // FUNCTION_TRANSFORM(memo, MemoizePass());
+    // FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass());
     return fpm;
 }
 
@@ -218,7 +218,7 @@ auto make_enabling(const PMOptions &options) {
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
     FUNCTION_TRANSFORM(inliner, InlinePass());
-    FUNCTION_TRANSFORM(func_spec, FunctionSpecializationPass());
+    // FUNCTION_TRANSFORM(func_spec, FunctionSpecializationPass());
     FUNCTION_TRANSFORM(internalize, InternalizePass());
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     return fpm;
