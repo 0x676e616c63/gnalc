@@ -1502,12 +1502,8 @@ SCEVExpr *SCEVHandle::getSCEVExprIcmp(ICMPOP cond, SCEVExpr *x, SCEVExpr *y) {
 SCEVExpr *SCEVHandle::getSCEVExprSelect(SCEVExpr *cond, SCEVExpr *x, SCEVExpr *y) {
     if (cond->isIRValue()) {
         bool cond_ci;
-        if (match(cond->getRawIRValue(), M::Bind(cond_ci))) {
+        if (match(cond->getRawIRValue(), M::Bind(cond_ci)))
             return cond_ci ? x : y;
-            if (cond_ci)
-                return x;
-            return y;
-        }
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(cond, x, y));
 }

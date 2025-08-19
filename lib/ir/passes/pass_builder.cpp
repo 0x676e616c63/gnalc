@@ -164,7 +164,7 @@ auto make_cfg_clean(const PMOptions &options) {
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
-    // FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
+    FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     return fpm;
 }
