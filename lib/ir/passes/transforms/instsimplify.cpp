@@ -380,12 +380,12 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // auto add = builder.makeAdd(x, function.getConst(c1 / c2));
         // REWRITE_END(add)
 
-        if (inst->getOpcode() == OP::PHI) {
-            auto phi = inst->as<PHIInst>();
-            instsimplify_inst_modified |= foldBinary(phi);
-            instsimplify_inst_modified |= foldGEP(phi);
-            instsimplify_inst_modified |= foldLoad(phi);
-        }
+        // if (inst->getOpcode() == OP::PHI) {
+        //     auto phi = inst->as<PHIInst>();
+        //     instsimplify_inst_modified |= foldBinary(phi);
+        //     instsimplify_inst_modified |= foldGEP(phi);
+        //     instsimplify_inst_modified |= foldLoad(phi);
+        // }
     }
 
     name_cnt = 0;
