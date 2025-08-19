@@ -414,86 +414,86 @@ bool GenericPeepholeImpl::Arithmetic(MatchInfo &info) {
         }
     }
 
-    if (isDIV() && arch == Arch::ARMv8) {
-
-        auto loadIter = findLoadImmtoOp2();
-
-        if (loadIter == minsts.end()) {
-            return false;
-        }
-
-        auto divisor_const = static_cast<int>((*loadIter)->getOp(1)->imme());
-        auto mdef = minst->ensureDef();
-        auto dividend = minst->getOp(1);
-
-        ///@brief 简单位移
-        if (popcounter_wrapper(divisor_const) == 1) {
-            ///@note 如果能预测到被除数范围, 对于正数则不必修正结果
-            // asr1 获取补码符号
-            // lsr 生成修正量
-            // add 修正计算结果
-            // asr2 除法计算
-
-            if (divisor_const < 0) {
-                auto middle_result = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-
-                auto neg =
-                    MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(middle_result, ctx)->setOperand<1>(dividend, ctx);
-
-                minsts.insert(iter, neg);
-            }
-
-            auto exp = ctz_wrapper(divisor_const);
-
-            auto mask = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-            auto middle_result_1 = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-            auto middle_result_2 = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-
-            auto const_31 = MIROperand::asImme(31, OpT::Int32);
-            auto const_lsr_shift = MIROperand::asImme(32 - exp, OpT::Int32);
-            auto const_asr_shift = MIROperand::asImme(exp, OpT::Int32);
-
-            auto asr1 = MIRInst::make(OpC::InstAShr)
-                            ->setOperand<0>(mask, ctx)
-                            ->setOperand<1>(dividend, ctx)
-                            ->setOperand<2>(const_31, ctx);
-
-            auto lsr = MIRInst::make(OpC::InstLShr)
-                           ->setOperand<0>(middle_result_1, ctx)
-                           ->setOperand<1>(mask, ctx)
-                           ->setOperand<2>(const_lsr_shift, ctx);
-
-            auto add = MIRInst::make(OpC::InstAdd)
-                           ->setOperand<0>(middle_result_2, ctx)
-                           ->setOperand<1>(dividend, ctx)
-                           ->setOperand<2>(middle_result_1, ctx);
-
-            auto asr2 = MIRInst::make(OpC::InstAShr)
-                            ->setOperand<0>(mdef, ctx)
-                            ->setOperand<1>(middle_result_2, ctx)
-                            ->setOperand<2>(const_asr_shift, ctx);
-
-            minsts.insert(iter, asr1);
-            minsts.insert(iter, lsr);
-            minsts.insert(iter, add);
-
-            (*iter)->putAllOp(ctx);
-            *iter = asr2;
-
-        }
-        // div -> smull
-        else {
-            ///@note 情况有些复杂, 因为没了smmla和smmul, 优化为乘法 + 位移会导致语句极大的膨胀
-            ///@note 如果能预测被除数一定是正数, 那么这个地方可以考虑优化
-
-            return false;
-        }
-
-        (*loadIter)->putAllOp(ctx);
-        minsts.erase(loadIter);
-
-        return true;
-    }
+    // if (isDIV() && arch == Arch::ARMv8) {
+    //
+    //     auto loadIter = findLoadImmtoOp2();
+    //
+    //     if (loadIter == minsts.end()) {
+    //         return false;
+    //     }
+    //
+    //     auto divisor_const = static_cast<int>((*loadIter)->getOp(1)->imme());
+    //     auto mdef = minst->ensureDef();
+    //     auto dividend = minst->getOp(1);
+    //
+    //     ///@brief 简单位移
+    //     if (popcounter_wrapper(divisor_const) == 1) {
+    //         ///@note 如果能预测到被除数范围, 对于正数则不必修正结果
+    //         // asr1 获取补码符号
+    //         // lsr 生成修正量
+    //         // add 修正计算结果
+    //         // asr2 除法计算
+    //
+    //         if (divisor_const < 0) {
+    //             auto middle_result = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+    //
+    //             auto neg =
+    //                 MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(middle_result, ctx)->setOperand<1>(dividend, ctx);
+    //
+    //             minsts.insert(iter, neg);
+    //         }
+    //
+    //         auto exp = ctz_wrapper(divisor_const);
+    //
+    //         auto mask = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+    //         auto middle_result_1 = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+    //         auto middle_result_2 = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+    //
+    //         auto const_31 = MIROperand::asImme(31, OpT::Int32);
+    //         auto const_lsr_shift = MIROperand::asImme(32 - exp, OpT::Int32);
+    //         auto const_asr_shift = MIROperand::asImme(exp, OpT::Int32);
+    //
+    //         auto asr1 = MIRInst::make(OpC::InstAShr)
+    //                         ->setOperand<0>(mask, ctx)
+    //                         ->setOperand<1>(dividend, ctx)
+    //                         ->setOperand<2>(const_31, ctx);
+    //
+    //         auto lsr = MIRInst::make(OpC::InstLShr)
+    //                        ->setOperand<0>(middle_result_1, ctx)
+    //                        ->setOperand<1>(mask, ctx)
+    //                        ->setOperand<2>(const_lsr_shift, ctx);
+    //
+    //         auto add = MIRInst::make(OpC::InstAdd)
+    //                        ->setOperand<0>(middle_result_2, ctx)
+    //                        ->setOperand<1>(dividend, ctx)
+    //                        ->setOperand<2>(middle_result_1, ctx);
+    //
+    //         auto asr2 = MIRInst::make(OpC::InstAShr)
+    //                         ->setOperand<0>(mdef, ctx)
+    //                         ->setOperand<1>(middle_result_2, ctx)
+    //                         ->setOperand<2>(const_asr_shift, ctx);
+    //
+    //         minsts.insert(iter, asr1);
+    //         minsts.insert(iter, lsr);
+    //         minsts.insert(iter, add);
+    //
+    //         (*iter)->putAllOp(ctx);
+    //         *iter = asr2;
+    //
+    //     }
+    //     // div -> smull
+    //     else {
+    //         ///@note 情况有些复杂, 因为没了smmla和smmul, 优化为乘法 + 位移会导致语句极大的膨胀
+    //         ///@note 如果能预测被除数一定是正数, 那么这个地方可以考虑优化
+    //
+    //         return false;
+    //     }
+    //
+    //     (*loadIter)->putAllOp(ctx);
+    //     minsts.erase(loadIter);
+    //
+    //     return true;
+    // }
 
     return false;
 }
