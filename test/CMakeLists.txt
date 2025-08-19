@@ -21,7 +21,7 @@ endif()
 
 add_executable(pass_benchmark benchmark.cpp benchmark_registry.cpp config.cpp runner.cpp)
 add_executable(gnalc_test test.cpp config.cpp runner.cpp)
-add_executable(ghaction ghaction.cpp config.cpp runner.cpp)
+add_executable(ghaction ghaction_no_multithreading.cpp config.cpp runner.cpp)
 add_executable(timer timer.cpp config.cpp runner.cpp)
 
 add_executable(ggc_test test.cpp config.cpp runner.cpp)
