@@ -59,9 +59,9 @@ LFPM make_enabling(const PMOptions &options) {
 
 LFPM make_affine(const PMOptions &options) {
     LFPM lfpm;
-    FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
+    // FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
     FUNCTION_TRANSFORM(affine_licm, AffineLICMPass())
-    FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
+    // FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
     FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
     return lfpm;
 }
@@ -89,7 +89,7 @@ MPM make_locality(const PMOptions &options) {
 MPM LinearPassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
     MPM mpm;
     mpm.addPass(makeLinearModulePass(buildFunctionFixedPointPipeline(options)));
-    mpm.addPass(make_locality(options));
+    // mpm.addPass(make_locality(options));
 
     // Annotate loops at the end of transforms to be more accurate.
     if (options.loop_annotator)

@@ -227,7 +227,7 @@ auto make_enabling(const PMOptions &options) {
 auto make_loop(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
-    FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
+    // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
     // fpm.addPass(LoopSimplifyPass());
     // fpm.addPass(PrintFunctionPass(std::cerr));
@@ -235,7 +235,7 @@ auto make_loop(const PMOptions &options) {
     // fpm.addPass(PrintFunctionPass(std::cerr));
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
-    FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
+    // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     // FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
     //                    LoopUnrollPass(LoopUnrollPass::PO_Peel))
     FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
@@ -307,7 +307,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
     fpm.addPass(make_enabling(options));
     fpm.addPass(make_deep_clean(options));
     fpm.addPass(make_memo(options));
-    fpm.addPass(make_arithmetic(options));
+    // fpm.addPass(make_arithmetic(options));
     fpm.addPass(make_loop(options));
     // Loop pass can expose many optimization opportunities
     fpm.addPass(make_deep_clean(options));

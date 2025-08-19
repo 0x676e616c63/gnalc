@@ -77,11 +77,11 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // 1 * x = x
             REPLACE(M::Mul(M::IsIntegerVal(1), M::Bind(x)), x)
 
-            // x * 1.0f = x
-            REPLACE(M::Fmul(M::Bind(x), M::Is(1.0f)), x)
-
-            // 1.0f * x = x
-            REPLACE(M::Fmul(M::Is(1.0f), M::Bind(x)), x)
+            // // x * 1.0f = x
+            // REPLACE(M::Fmul(M::Bind(x), M::Is(1.0f)), x)
+            //
+            // // 1.0f * x = x
+            // REPLACE(M::Fmul(M::Is(1.0f), M::Bind(x)), x)
 
             // x - x = 0
             REPLACE(M::Sub(M::Bind(x), M::Is(x)), i32_zero)
@@ -107,14 +107,14 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // x / x = 1
             REPLACE(M::SDiv(M::Bind(x), M::Is(x)), i32_one)
 
-            // x / x = 1.0f
-            REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)
+            // // x / x = 1.0f
+            // REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)
 
             // x + -x = 0
             REPLACE(M::Add(M::Bind(x), M::Sub(M::IsIntegerVal(0), M::Is(x))), i32_zero)
 
-            // x + -x = 0.0f
-            REPLACE(M::Fadd(M::Bind(x), M::Fneg(M::Is(x))), f32_zero)
+            // // x + -x = 0.0f
+            // REPLACE(M::Fadd(M::Bind(x), M::Fneg(M::Is(x))), f32_zero)
 
             // x + (y - x) = y
             REPLACE(M::Add(M::Bind(x), M::Sub(M::Bind(y), M::Is(x))), y)
@@ -164,53 +164,53 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         IRBuilder builder("%isim", inst->getParent(), inst->iter());
         worklist.pop_back();
 
-        // inttoptr ptrtoint x = x or bitcast x
-        // ptr -> int -> ptr
-        if (match(inst, M::IntToPtr(M::PtrToInt(M::Bind(x))))) {
-            auto i2p = inst->as<INTTOPTRInst>();
-            auto p2i = i2p->getOVal()->as<PTRTOINTInst>();
-            if (isSameType(p2i->getOType(), i2p->getTType()))
-                inst->replaceSelf(x);
-            else {
-                auto bc = builder.makeBitcast(x, i2p->getTType());
-                inst->replaceSelf(bc);
-            }
-            Logger::logDebug("[InstSimplify]: Rewrite M::IntToPtr(M::PtrToInt(M::Bind(x)))) with type check.");
-            instsimplify_inst_modified = true;
-            continue;
-        }
-
-        // x % (2^n) == t
-        if (inst->getSingleUser() && match(inst->getSingleUser(),
-            M::Icmp(M::Rem(M::Bind(x), M::PowerOfTwo(M::Bind(c1))), M::Bind(c2)))) {
-            auto cond = inst->getSingleUser()->as<ICMPInst>()->getCond();
-            if (cond == ICMPOP::eq) {
-                // x % (2^n) == 0 -> x & (2^n - 1) == 0
-                if (c2 == 0) {
-                    auto mask_val = static_cast<int64_t>((static_cast<uint64_t>(1) << ctz_wrapper(c1)) - 1);
-                    auto mask = function.getInteger(mask_val, inst->getType());
-                    auto and_inst = builder.makeAnd(x, mask);
-                    inst->replaceSelf(and_inst);
-                    Logger::logDebug("[InstSimplify]: Rewrite x % (2^n) to x & (2^n - 1)");
-                    instsimplify_inst_modified = true;
-                }
-                // x % 2 == 1 -> x & min == 1
-                else if (c1 == 2 && c2 == 1) {
-                    auto mask_val = -((static_cast<intmax_t>(1) << (x->getType()->getBytes() * 8 - 1)) - 1);
-                    auto mask = function.getInteger(mask_val, inst->getType());
-                    auto and_inst = builder.makeAnd(x, mask);
-                    inst->replaceSelf(and_inst);
-                    Logger::logDebug("[InstSimplify]: Rewrite (x % 2) to (x & min)");
-                    instsimplify_inst_modified = true;
-                }
-            }
-        }
-
-        // x * 2^n = x << n
-        REWRITE_BEG(M::Mul(M::Bind(x), M::PowerOfTwo(M::Bind(c1))))
-        auto shl = builder.makeShl(x, function.getInteger(ctz_wrapper(c1), x->getType()));
-        REWRITE_END(shl)
-
+        // // inttoptr ptrtoint x = x or bitcast x
+        // // ptr -> int -> ptr
+        // if (match(inst, M::IntToPtr(M::PtrToInt(M::Bind(x))))) {
+        //     auto i2p = inst->as<INTTOPTRInst>();
+        //     auto p2i = i2p->getOVal()->as<PTRTOINTInst>();
+        //     if (isSameType(p2i->getOType(), i2p->getTType()))
+        //         inst->replaceSelf(x);
+        //     else {
+        //         auto bc = builder.makeBitcast(x, i2p->getTType());
+        //         inst->replaceSelf(bc);
+        //     }
+        //     Logger::logDebug("[InstSimplify]: Rewrite M::IntToPtr(M::PtrToInt(M::Bind(x)))) with type check.");
+        //     instsimplify_inst_modified = true;
+        //     continue;
+        // }
+        //
+        // // x % (2^n) == t
+        // if (inst->getSingleUser() && match(inst->getSingleUser(),
+        //     M::Icmp(M::Rem(M::Bind(x), M::PowerOfTwo(M::Bind(c1))), M::Bind(c2)))) {
+        //     auto cond = inst->getSingleUser()->as<ICMPInst>()->getCond();
+        //     if (cond == ICMPOP::eq) {
+        //         // x % (2^n) == 0 -> x & (2^n - 1) == 0
+        //         if (c2 == 0) {
+        //             auto mask_val = static_cast<int64_t>((static_cast<uint64_t>(1) << ctz_wrapper(c1)) - 1);
+        //             auto mask = function.getInteger(mask_val, inst->getType());
+        //             auto and_inst = builder.makeAnd(x, mask);
+        //             inst->replaceSelf(and_inst);
+        //             Logger::logDebug("[InstSimplify]: Rewrite x % (2^n) to x & (2^n - 1)");
+        //             instsimplify_inst_modified = true;
+        //         }
+        //         // x % 2 == 1 -> x & min == 1
+        //         else if (c1 == 2 && c2 == 1) {
+        //             auto mask_val = -((static_cast<intmax_t>(1) << (x->getType()->getBytes() * 8 - 1)) - 1);
+        //             auto mask = function.getInteger(mask_val, inst->getType());
+        //             auto and_inst = builder.makeAnd(x, mask);
+        //             inst->replaceSelf(and_inst);
+        //             Logger::logDebug("[InstSimplify]: Rewrite (x % 2) to (x & min)");
+        //             instsimplify_inst_modified = true;
+        //         }
+        //     }
+        // }
+        //
+        // // x * 2^n = x << n
+        // REWRITE_BEG(M::Mul(M::Bind(x), M::PowerOfTwo(M::Bind(c1))))
+        // auto shl = builder.makeShl(x, function.getInteger(ctz_wrapper(c1), x->getType()));
+        // REWRITE_END(shl)
+        //
         // x + c1 + c2 = x + (c1 + c2)
         REWRITE_BEG(M::Add(M::Add(M::Bind(x), M::Bind(c1)), M::Bind(c2)))
         auto add = builder.makeAdd(x, function.getInteger(c1 + c2, x->getType()));
@@ -221,164 +221,164 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         auto gep = builder.makeGep(x, function.getConst(c1 + c2));
         REWRITE_END(gep)
 
-        // select i1 x, i32 1, i32 0 = zext x
-        REWRITE_BEG(M::Select(M::Bind(x), M::Is(1), M::Is(0)))
-        auto zext = builder.makeZext(x, IRBTYPE::I32);
-        REWRITE_END(zext)
-
-        // select i1 x, i64 1, i64 0 = zext x
-        REWRITE_BEG(M::Select(M::Bind(x), M::Is(static_cast<int64_t>(1)), M::Is(static_cast<int64_t>(0))))
-        auto zext = builder.makeZext(x, IRBTYPE::I64);
-        REWRITE_END(zext)
-
-        // select x, y, false = x & y
-        REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(false)))
-        auto andi = builder.makeAnd(x, y);
-        REWRITE_END(andi)
-
-        // select x, y, true = !x | y
-        REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(true)))
-        auto xori = builder.makeXor(function.getConst(true), x);
-        auto ori = builder.makeOr(xori, y);
-        REWRITE_END(ori)
-
-        // select x, false, y = !x & y
-        REWRITE_BEG(M::Select(M::Bind(x), M::Is(false), M::Bind(y)))
-        auto xori = builder.makeXor(function.getConst(false), x);
-        auto andi = builder.makeAnd(xori, y);
-        REWRITE_END(andi)
-
-        // select x, true, y = x | y
-        REWRITE_BEG(M::Select(M::Bind(x), M::Is(true), M::Bind(y)))
-        auto ori = builder.makeOr(x, y);
-        REWRITE_END(ori)
-
-        // x - (x + y) -> -y
-        REWRITE_BEG(M::Sub(M::Bind(x), M::Add(M::Is(x), M::Bind(y))))
-        auto neg = builder.makeSub(i32_zero, y);
-        REWRITE_END(neg)
-
-        // x - -y -> x + y
-        REWRITE_BEG(M::Sub(M::Bind(x), M::Sub(M::IsIntegerVal(0), M::Bind(y))))
-        auto add = builder.makeAdd(x, y);
-        REWRITE_END(add)
-
-        // x * y - x * z -> x * (y - z)
-        REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Bind(y)), M::Mul(M::Is(x), M::Bind(z))))
-        auto sub = builder.makeSub(y, z);
-        auto mul = builder.makeMul(x, sub);
-        REWRITE_END(mul)
-
-        // (x * x) - (y * y) -> (x + y) * (x - y)
-        REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Is(x)), M::Mul(M::Bind(y), M::Is(y))))
-        auto add = builder.makeAdd(x, y);
-        auto sub = builder.makeSub(x, y);
-        auto mul = builder.makeMul(add, sub);
-        REWRITE_END(mul)
-
-        // float: -x + y -> y - x
-        REWRITE_BEG(M::Fadd(M::Fneg(M::Bind(x)), M::Bind(y)))
-        auto fsub = builder.makeFSub(y, x);
-        REWRITE_END(fsub)
-
-        // float: (-x * y) + z -> z - (x * y)
-        REWRITE_BEG(M::Fadd(M::Fmul(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)))
-        auto fmul = builder.makeFMul(x, y);
-        auto fsub = builder.makeFSub(z, fmul);
-        REWRITE_END(fsub)
-
-        // float: (-x / y) + z or (x / -y) + z -> z - (x / y)
-        REWRITE_BEG(M::Fadd(M::Fdiv(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)),
-                    M::Fadd(M::Fdiv(M::Bind(x), M::Fneg(M::Bind(y))), M::Bind(z)))
-        auto fdiv = builder.makeFDiv(x, y);
-        auto fsub = builder.makeFSub(z, fdiv);
-        REWRITE_END(fsub)
-
-        // float: (sitofp x) + (sitofp y) -> sitofp(x + y)
-        REWRITE_BEG(M::Fadd(M::Sitofp(M::Bind(x)), M::Sitofp(M::Bind(y))))
-        auto fadd = builder.makeFAdd(x, y);
-        auto sitofp = builder.makeSitofp(fadd);
-        REWRITE_END(sitofp)
-
-        // float: -(x * c) -> x * -c
-        REWRITE_BEG(M::Fneg(M::OneUse(M::Fmul(M::Bind(x), M::Bind(fc1)))))
-        auto fmul = builder.makeFMul(x, function.getConst(-fc1));
-        REWRITE_END(fmul)
-
-        // float: -(x / c) -> x / -c
-        REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(x), M::Bind(fc1)))))
-        auto fdiv = builder.makeFDiv(x, function.getConst(-fc1));
-        REWRITE_END(fdiv)
-
-        // float: -(c / x) -> -c / x
-        REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(fc1), M::Bind(x)))))
-        auto fdiv = builder.makeFDiv(function.getConst(-fc1), x);
-        REWRITE_END(fdiv)
-
-        // float: -(x * y) -> (-x * y)
-        REWRITE_BEG(M::Fneg(M::Fmul(M::Bind(x), M::Bind(y))))
-        auto fneg = builder.makeFNeg(x);
-        auto fmul = builder.makeFMul(fneg, y);
-        REWRITE_END(fmul)
-
-        // float: -(x / y)  -> (-x / y)
-        REWRITE_BEG(M::Fneg(M::Fdiv(M::Bind(x), M::Bind(y))))
-        auto fneg = builder.makeFNeg(x);
-        auto fdiv = builder.makeFDiv(fneg, y);
-        REWRITE_END(fdiv)
-
-        // float: fsub -0.0, x -> fneg x
-        REWRITE_BEG(M::Fsub(M::Is(-0.0f), M::Bind(x)))
-        auto fneg = builder.makeFNeg(x);
-        REWRITE_END(fneg)
-
-        // float: x - (-y) -> x + y
-        REWRITE_BEG(M::Fsub(M::Bind(x), M::Fneg(M::Bind(y))))
-        auto fadd = builder.makeFAdd(x, y);
-        REWRITE_END(fadd)
-
-        // float: x - (-y * z) -> x + (y * z)
-        REWRITE_BEG(M::Fsub(M::Bind(x), M::Fmul(M::Fneg(M::Bind(y)), M::Bind(z))))
-        auto fmul = builder.makeFMul(y, z);
-        auto fadd = builder.makeFAdd(x, fmul);
-        REWRITE_END(fadd)
-
-        // float: x - (-y / z) -> x + (y / z)
-        REWRITE_BEG(M::Fsub(M::Bind(x), M::Fdiv(M::Fneg(M::Bind(y)), M::Bind(z))))
-        auto fdiv = builder.makeFDiv(y, z);
-        auto fadd = builder.makeFAdd(x, fdiv);
-        REWRITE_END(fadd)
-
-        // x * -1 -> sub 0 x
-        REWRITE_BEG(M::Mul(M::Bind(x), M::IsIntegerVal(-1)), M::Mul(M::IsIntegerVal(-1), M::Bind(x)))
-        auto sub = builder.makeSub(function.getConst(0), x);
-        REWRITE_END(sub)
-
-        // float: x * -1.0f or -1.0f * x -> fneg x
-        REWRITE_BEG(M::Fmul(M::Bind(x), M::Is(-1.0f)), M::Fmul(M::Is(-1.0f), M::Bind(x)))
-        auto fneg = builder.makeFNeg(x);
-        REWRITE_END(fneg)
-
-        // -x * -y -> x * y
-        // -x / -y -> x / y
-        // float: -x * -y -> x * y
-        //        -x / -y -> x / y
-        REWRITE_BEG(M::Mul(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
-                    M::SDiv(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
-                    M::Fmul(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))),
-                    M::Fdiv(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))))
-        auto binary = builder.makeBinary(inst->getOpcode(), x, y);
-        REWRITE_END(binary)
-
-        // x / (x * y) -> 1 / y
-        REWRITE_BEG(M::SDiv(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
-        auto div = builder.makeSDiv(i32_one, y);
-        REWRITE_END(div)
-
-        // ((x * c2) + c1) / c2 -> x + c1 / c2
-        REWRITE_BEG(M::SDiv(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
-        auto add = builder.makeAdd(x, function.getConst(c1 / c2));
-        REWRITE_END(add)
+        // // select i1 x, i32 1, i32 0 = zext x
+        // REWRITE_BEG(M::Select(M::Bind(x), M::Is(1), M::Is(0)))
+        // auto zext = builder.makeZext(x, IRBTYPE::I32);
+        // REWRITE_END(zext)
+        //
+        // // select i1 x, i64 1, i64 0 = zext x
+        // REWRITE_BEG(M::Select(M::Bind(x), M::Is(static_cast<int64_t>(1)), M::Is(static_cast<int64_t>(0))))
+        // auto zext = builder.makeZext(x, IRBTYPE::I64);
+        // REWRITE_END(zext)
+        //
+        // // select x, y, false = x & y
+        // REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(false)))
+        // auto andi = builder.makeAnd(x, y);
+        // REWRITE_END(andi)
+        //
+        // // select x, y, true = !x | y
+        // REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(true)))
+        // auto xori = builder.makeXor(function.getConst(true), x);
+        // auto ori = builder.makeOr(xori, y);
+        // REWRITE_END(ori)
+        //
+        // // select x, false, y = !x & y
+        // REWRITE_BEG(M::Select(M::Bind(x), M::Is(false), M::Bind(y)))
+        // auto xori = builder.makeXor(function.getConst(false), x);
+        // auto andi = builder.makeAnd(xori, y);
+        // REWRITE_END(andi)
+        //
+        // // select x, true, y = x | y
+        // REWRITE_BEG(M::Select(M::Bind(x), M::Is(true), M::Bind(y)))
+        // auto ori = builder.makeOr(x, y);
+        // REWRITE_END(ori)
+        //
+        // // x - (x + y) -> -y
+        // REWRITE_BEG(M::Sub(M::Bind(x), M::Add(M::Is(x), M::Bind(y))))
+        // auto neg = builder.makeSub(i32_zero, y);
+        // REWRITE_END(neg)
+        //
+        // // x - -y -> x + y
+        // REWRITE_BEG(M::Sub(M::Bind(x), M::Sub(M::IsIntegerVal(0), M::Bind(y))))
+        // auto add = builder.makeAdd(x, y);
+        // REWRITE_END(add)
+        //
+        // // x * y - x * z -> x * (y - z)
+        // REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Bind(y)), M::Mul(M::Is(x), M::Bind(z))))
+        // auto sub = builder.makeSub(y, z);
+        // auto mul = builder.makeMul(x, sub);
+        // REWRITE_END(mul)
+        //
+        // // (x * x) - (y * y) -> (x + y) * (x - y)
+        // REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Is(x)), M::Mul(M::Bind(y), M::Is(y))))
+        // auto add = builder.makeAdd(x, y);
+        // auto sub = builder.makeSub(x, y);
+        // auto mul = builder.makeMul(add, sub);
+        // REWRITE_END(mul)
+        //
+        // // float: -x + y -> y - x
+        // REWRITE_BEG(M::Fadd(M::Fneg(M::Bind(x)), M::Bind(y)))
+        // auto fsub = builder.makeFSub(y, x);
+        // REWRITE_END(fsub)
+        //
+        // // float: (-x * y) + z -> z - (x * y)
+        // REWRITE_BEG(M::Fadd(M::Fmul(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)))
+        // auto fmul = builder.makeFMul(x, y);
+        // auto fsub = builder.makeFSub(z, fmul);
+        // REWRITE_END(fsub)
+        //
+        // // float: (-x / y) + z or (x / -y) + z -> z - (x / y)
+        // REWRITE_BEG(M::Fadd(M::Fdiv(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)),
+        //             M::Fadd(M::Fdiv(M::Bind(x), M::Fneg(M::Bind(y))), M::Bind(z)))
+        // auto fdiv = builder.makeFDiv(x, y);
+        // auto fsub = builder.makeFSub(z, fdiv);
+        // REWRITE_END(fsub)
+        //
+        // // float: (sitofp x) + (sitofp y) -> sitofp(x + y)
+        // REWRITE_BEG(M::Fadd(M::Sitofp(M::Bind(x)), M::Sitofp(M::Bind(y))))
+        // auto fadd = builder.makeFAdd(x, y);
+        // auto sitofp = builder.makeSitofp(fadd);
+        // REWRITE_END(sitofp)
+        //
+        // // float: -(x * c) -> x * -c
+        // REWRITE_BEG(M::Fneg(M::OneUse(M::Fmul(M::Bind(x), M::Bind(fc1)))))
+        // auto fmul = builder.makeFMul(x, function.getConst(-fc1));
+        // REWRITE_END(fmul)
+        //
+        // // float: -(x / c) -> x / -c
+        // REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(x), M::Bind(fc1)))))
+        // auto fdiv = builder.makeFDiv(x, function.getConst(-fc1));
+        // REWRITE_END(fdiv)
+        //
+        // // float: -(c / x) -> -c / x
+        // REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(fc1), M::Bind(x)))))
+        // auto fdiv = builder.makeFDiv(function.getConst(-fc1), x);
+        // REWRITE_END(fdiv)
+        //
+        // // float: -(x * y) -> (-x * y)
+        // REWRITE_BEG(M::Fneg(M::Fmul(M::Bind(x), M::Bind(y))))
+        // auto fneg = builder.makeFNeg(x);
+        // auto fmul = builder.makeFMul(fneg, y);
+        // REWRITE_END(fmul)
+        //
+        // // float: -(x / y)  -> (-x / y)
+        // REWRITE_BEG(M::Fneg(M::Fdiv(M::Bind(x), M::Bind(y))))
+        // auto fneg = builder.makeFNeg(x);
+        // auto fdiv = builder.makeFDiv(fneg, y);
+        // REWRITE_END(fdiv)
+        //
+        // // float: fsub -0.0, x -> fneg x
+        // REWRITE_BEG(M::Fsub(M::Is(-0.0f), M::Bind(x)))
+        // auto fneg = builder.makeFNeg(x);
+        // REWRITE_END(fneg)
+        //
+        // // float: x - (-y) -> x + y
+        // REWRITE_BEG(M::Fsub(M::Bind(x), M::Fneg(M::Bind(y))))
+        // auto fadd = builder.makeFAdd(x, y);
+        // REWRITE_END(fadd)
+        //
+        // // float: x - (-y * z) -> x + (y * z)
+        // REWRITE_BEG(M::Fsub(M::Bind(x), M::Fmul(M::Fneg(M::Bind(y)), M::Bind(z))))
+        // auto fmul = builder.makeFMul(y, z);
+        // auto fadd = builder.makeFAdd(x, fmul);
+        // REWRITE_END(fadd)
+        //
+        // // float: x - (-y / z) -> x + (y / z)
+        // REWRITE_BEG(M::Fsub(M::Bind(x), M::Fdiv(M::Fneg(M::Bind(y)), M::Bind(z))))
+        // auto fdiv = builder.makeFDiv(y, z);
+        // auto fadd = builder.makeFAdd(x, fdiv);
+        // REWRITE_END(fadd)
+        //
+        // // x * -1 -> sub 0 x
+        // REWRITE_BEG(M::Mul(M::Bind(x), M::IsIntegerVal(-1)), M::Mul(M::IsIntegerVal(-1), M::Bind(x)))
+        // auto sub = builder.makeSub(function.getConst(0), x);
+        // REWRITE_END(sub)
+        //
+        // // float: x * -1.0f or -1.0f * x -> fneg x
+        // REWRITE_BEG(M::Fmul(M::Bind(x), M::Is(-1.0f)), M::Fmul(M::Is(-1.0f), M::Bind(x)))
+        // auto fneg = builder.makeFNeg(x);
+        // REWRITE_END(fneg)
+        //
+        // // -x * -y -> x * y
+        // // -x / -y -> x / y
+        // // float: -x * -y -> x * y
+        // //        -x / -y -> x / y
+        // REWRITE_BEG(M::Mul(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
+        //             M::SDiv(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
+        //             M::Fmul(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))),
+        //             M::Fdiv(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))))
+        // auto binary = builder.makeBinary(inst->getOpcode(), x, y);
+        // REWRITE_END(binary)
+        //
+        // // x / (x * y) -> 1 / y
+        // REWRITE_BEG(M::SDiv(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
+        // auto div = builder.makeSDiv(i32_one, y);
+        // REWRITE_END(div)
+        //
+        // // ((x * c2) + c1) / c2 -> x + c1 / c2
+        // REWRITE_BEG(M::SDiv(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
+        // auto add = builder.makeAdd(x, function.getConst(c1 / c2));
+        // REWRITE_END(add)
 
         if (inst->getOpcode() == OP::PHI) {
             auto phi = inst->as<PHIInst>();

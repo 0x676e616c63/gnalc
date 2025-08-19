@@ -1040,8 +1040,8 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
             auto cond_val = constant_cond->getVal();
 
             if (cmpop == ICMPOP::eq) {
-                if (base != cond_val || (base == cond_val && step != 0))
-                    return getSCEVExpr(0);
+                // if (base != cond_val || (base == cond_val && step != 0))
+                //     return getSCEVExpr(0);
                 return nullptr;
             }
 
