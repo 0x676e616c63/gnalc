@@ -687,85 +687,85 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         //        For example, writing a SCEV-like algorithm that only figures out whether
         //        its expression is non-negative, rather than getting a `Untracked` result too early.
         // TODO: Extend SCEV or implement it in place.
-        // if (inst->getType()->isI32()) {
-        //     auto analyzeSCEVExpr = [](SCEVExpr *expr) {
-        //         if (!expr->isIRValue())
-        //             return IRng();
-        //         if (int c; match(expr->getIRValue(), M::Bind(c)))
-        //             return IRng(c);
-        //         return IRng();
-        //     };
-        //
-        //     auto analyzeAddRec = [&scev, &bb, &res](TREC *trec) {
-        //         // For constant affine addrec, at least one bound can be determined.
-        //         if (auto constant_addrec = trec->getConstantAffineAddRec()) {
-        //             auto [base, step] = *constant_addrec;
-        //
-        //             // If the trip count can be statically determined, compute a more precise range.
-        //             if (auto trip_count = scev.getTripCount(trec->getLoop())) {
-        //                 int c;
-        //                 if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
-        //                     auto m = static_cast<IRng::Bigger>(base) +
-        //                              static_cast<IRng::Bigger>(step) * static_cast<IRng::Bigger>(c);
-        //                     if (step > 0)
-        //                         return IRng(base, m);
-        //                     return IRng(m, base);
-        //                 }
-        //             }
-        //
-        //             // Fallback: unknown trip count
-        //             if (step > 0)
-        //                 return IRng(base, IRng::MAX);
-        //             return IRng(IRng::MIN, base);
-        //         }
-        //
-        //         // Fallback: affine addrec, see if they are non-negative
-        //         if (auto addrec = trec->getAffineAddRec()) {
-        //             auto [base, step] = *addrec;
-        //             if (base->isIRValue() && step->isIRValue()) {
-        //                 if (res.knownNonNegative(base->getRawIRValue(), bb) &&
-        //                     res.knownNonNegative(step->getRawIRValue(), bb)) {
-        //                     return IRng(0, IRng::MAX);
-        //                 }
-        //             }
-        //         }
-        //         return IRng();
-        //     };
-        //
-        //     auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
-        //         auto first_rng = analyzeSCEVExpr(trec->getFirst());
-        //         if (auto trip_count = scev.getTripCount(trec->getLoop())) {
-        //             int trip_cnt_ci;
-        //             if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
-        //                 if (trip_cnt_ci <= 1)
-        //                     return first_rng;
-        //             }
-        //         }
-        //
-        //         auto rest = trec->getRest();
-        //         if (rest->isExpr()) {
-        //             auto rng = analyzeSCEVExpr(rest->getExpr());
-        //             return merge(IRng(first_rng), rng);
-        //         }
-        //         if (rest->isAddRec()) {
-        //             auto rng = analyzeAddRec(rest);
-        //             return merge(IRng(first_rng), rng);
-        //         }
-        //         return IRng();
-        //     };
-        //
-        //     auto trec = scev.getSCEVAtBlock(inst, bb);
-        //     if (trec->isExpr()) {
-        //         if (intersectContextualInt(inst, bb, analyzeSCEVExpr(trec->getExpr())))
-        //             continue;
-        //     } else if (trec->isAddRec()) {
-        //         if (intersectContextualInt(inst, bb, analyzeAddRec(trec)))
-        //             continue;
-        //     } else if (trec->isPeeled()) {
-        //         if (intersectContextualInt(inst, bb, analyzePeeledTREC(trec)))
-        //             continue;
-        //     }
-        // }
+        if (inst->getType()->isI32()) {
+            auto analyzeSCEVExpr = [](SCEVExpr *expr) {
+                if (!expr->isIRValue())
+                    return IRng();
+                if (int c; match(expr->getIRValue(), M::Bind(c)))
+                    return IRng(c);
+                return IRng();
+            };
+
+            auto analyzeAddRec = [&scev, &bb, &res](TREC *trec) {
+                // For constant affine addrec, at least one bound can be determined.
+                if (auto constant_addrec = trec->getConstantAffineAddRec()) {
+                    auto [base, step] = *constant_addrec;
+
+                    // If the trip count can be statically determined, compute a more precise range.
+                    if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+                        int c;
+                        if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
+                            auto m = static_cast<IRng::Bigger>(base) +
+                                     static_cast<IRng::Bigger>(step) * static_cast<IRng::Bigger>(c);
+                            if (step > 0)
+                                return IRng(base, m);
+                            return IRng(m, base);
+                        }
+                    }
+
+                    // Fallback: unknown trip count
+                    if (step > 0)
+                        return IRng(base, IRng::MAX);
+                    return IRng(IRng::MIN, base);
+                }
+
+                // Fallback: affine addrec, see if they are non-negative
+                if (auto addrec = trec->getAffineAddRec()) {
+                    auto [base, step] = *addrec;
+                    if (base->isIRValue() && step->isIRValue()) {
+                        if (res.knownNonNegative(base->getRawIRValue(), bb) &&
+                            res.knownNonNegative(step->getRawIRValue(), bb)) {
+                            return IRng(0, IRng::MAX);
+                        }
+                    }
+                }
+                return IRng();
+            };
+
+            auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
+                auto first_rng = analyzeSCEVExpr(trec->getFirst());
+                if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+                    int trip_cnt_ci;
+                    if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
+                        if (trip_cnt_ci <= 1)
+                            return first_rng;
+                    }
+                }
+
+                auto rest = trec->getRest();
+                if (rest->isExpr()) {
+                    auto rng = analyzeSCEVExpr(rest->getExpr());
+                    return merge(IRng(first_rng), rng);
+                }
+                if (rest->isAddRec()) {
+                    auto rng = analyzeAddRec(rest);
+                    return merge(IRng(first_rng), rng);
+                }
+                return IRng();
+            };
+
+            auto trec = scev.getSCEVAtBlock(inst, bb);
+            if (trec->isExpr()) {
+                if (intersectContextualInt(inst, bb, analyzeSCEVExpr(trec->getExpr())))
+                    continue;
+            } else if (trec->isAddRec()) {
+                if (intersectContextualInt(inst, bb, analyzeAddRec(trec)))
+                    continue;
+            } else if (trec->isPeeled()) {
+                if (intersectContextualInt(inst, bb, analyzePeeledTREC(trec)))
+                    continue;
+            }
+        }
 
         if (auto binary = inst->as_raw<BinaryInst>()) {
             if (is_int) {
