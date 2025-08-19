@@ -113,105 +113,103 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
         // Do a post order traversal of the loop tree, so that we can move instructions in one go.
         auto lpdfv = top_level->getDFVisitor<Util::DFVOrder::PostOrder>();
         for (const auto &loop : lpdfv) {
-            if (loop->getHeader()->isName("%for.cond2"))
-                int a;
             Err::gassert(loop->isLCSSAForm(), "Expected LCSSA form in LICM.");
             auto loop_blocks = loop->getBlocks();
+            // //
+            // // Sink
+            // //
+            // if (loop->hasDedicatedExits()) {
+            //     // Visit blocks that near the exit first
+            //     std::sort(loop_blocks.begin(), loop_blocks.end(),
+            //               [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] > rpo_index[b]; });
+            //     auto exits = loop->getExitBlocks();
+            //     for (const auto &bb : loop_blocks) {
+            //         std::set<pInst> dead_insts;
+            //         // Sink instructions that near the exit first
+            //         for (const auto &inst : Util::reverse(*bb)) {
+            //             if (isSafeToMove(loop, inst, aa_res, fam, false) && noUseInLoop(loop, inst) &&
+            //                 loop->isAllOperandsTriviallyInvariant(inst)) {
+            //                 // Sink instructions to the exit blocks that dominated by it.
+            //                 // Keep track of the instructions we sunk.
+            //                 // exit block -> new version
+            //                 std::map<pBlock, pInst> sunk_insts;
+            //                 for (const auto &exit : exits) {
+            //                     if (domtree.ADomB(bb, exit)) {
+            //                         auto sunk = makeClone(inst);
+            //                         if (inst->getType()->getTrait() == IRCTYPE::PTR)
+            //                             aa_res.addClonedPointer(inst, sunk);
+            //                         sunk->setName(inst->getName() + ".licm.s" + std::to_string(name_cnt++));
+            //                         exit->addInstAfterPhi(sunk);
+            //                         sunk_insts[exit] = sunk;
             //
-            // Sink
+            //                         // Rewrite the sunk instruction's uses to keep LCSSA Form
+            //                         for (const auto &use : sunk->operand_uses()) {
+            //                             if (auto oper = use->getValue()->as<Instruction>()) {
+            //                                 auto oper_inst_block = oper->getParent();
+            //                                 if (loop->contains(oper_inst_block)) {
+            //                                     // See if there is what we want already.
+            //                                     auto avail_phi = findLCSSAPhi(oper_inst_block, oper);
+            //                                     if (avail_phi == nullptr) {
+            //                                         avail_phi = std::make_shared<PHIInst>(
+            //                                             "%licm.p" + std::to_string(name_cnt++), oper->getType());
+            //                                         for (const auto &pred : exit->preds())
+            //                                             avail_phi->addPhiOper(oper, pred);
+            //                                         exit->addPhiInst(avail_phi);
+            //                                         if (oper->getType()->getTrait() == IRCTYPE::PTR)
+            //                                             aa_res.addClonedPointer(oper, avail_phi);
+            //                                     }
+            //                                     use->setValue(avail_phi);
+            //                                 }
+            //                             }
+            //                         }
+            //                         Logger::logDebug("[LICM] on '", function.getName(), "': Sunk an instruction '",
+            //                                          inst->getName(), "' to exit '", exit->getName(), "'.");
+            //                     }
+            //                 }
             //
-            if (loop->hasDedicatedExits()) {
-                // Visit blocks that near the exit first
-                std::sort(loop_blocks.begin(), loop_blocks.end(),
-                          [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] > rpo_index[b]; });
-                auto exits = loop->getExitBlocks();
-                for (const auto &bb : loop_blocks) {
-                    std::set<pInst> dead_insts;
-                    // Sink instructions that near the exit first
-                    for (const auto &inst : Util::reverse(*bb)) {
-                        if (isSafeToMove(loop, inst, aa_res, fam, false) && noUseInLoop(loop, inst) &&
-                            loop->isAllOperandsTriviallyInvariant(inst)) {
-                            // Sink instructions to the exit blocks that dominated by it.
-                            // Keep track of the instructions we sunk.
-                            // exit block -> new version
-                            std::map<pBlock, pInst> sunk_insts;
-                            for (const auto &exit : exits) {
-                                if (domtree.ADomB(bb, exit)) {
-                                    auto sunk = makeClone(inst);
-                                    if (inst->getType()->getTrait() == IRCTYPE::PTR)
-                                        aa_res.addClonedPointer(inst, sunk);
-                                    sunk->setName(inst->getName() + ".licm.s" + std::to_string(name_cnt++));
-                                    exit->addInstAfterPhi(sunk);
-                                    sunk_insts[exit] = sunk;
-
-                                    // Rewrite the sunk instruction's uses to keep LCSSA Form
-                                    for (const auto &use : sunk->operand_uses()) {
-                                        if (auto oper = use->getValue()->as<Instruction>()) {
-                                            auto oper_inst_block = oper->getParent();
-                                            if (loop->contains(oper_inst_block)) {
-                                                // See if there is what we want already.
-                                                auto avail_phi = findLCSSAPhi(oper_inst_block, oper);
-                                                if (avail_phi == nullptr) {
-                                                    avail_phi = std::make_shared<PHIInst>(
-                                                        "%licm.p" + std::to_string(name_cnt++), oper->getType());
-                                                    for (const auto &pred : exit->preds())
-                                                        avail_phi->addPhiOper(oper, pred);
-                                                    exit->addPhiInst(avail_phi);
-                                                    if (oper->getType()->getTrait() == IRCTYPE::PTR)
-                                                        aa_res.addClonedPointer(oper, avail_phi);
-                                                }
-                                                use->setValue(avail_phi);
-                                            }
-                                        }
-                                    }
-                                    Logger::logDebug("[LICM] on '", function.getName(), "': Sunk an instruction '",
-                                                     inst->getName(), "' to exit '", exit->getName(), "'.");
-                                }
-                            }
-
-                            if (sunk_insts.empty())
-                                continue;
-
-                            for (const auto &user : inst->inst_users()) {
-                                auto user_block = user->getParent();
-                                // A quick path for most uses being in the same block
-                                if (user_block == inst->getParent() || loop->contains(user_block))
-                                    continue;
-
-                                // Outside Loop Use
-                                auto phi = user->as<PHIInst>();
-                                Err::gassert(phi != nullptr, "Expected LCSSA form in LICM.");
-                                auto exit_block = phi->getParent();
-                                Err::gassert(loop->isExit(exit_block), "Expected LCSSA form in LICM.");
-
-                                const auto &sunk = sunk_insts[exit_block];
-                                Err::gassert(sunk != nullptr);
-
-                                // Since we've ensured the exit is dedicated, the exit
-                                // can not have predecessors outside loop. So any use in the exit block
-                                // must be a LCSSA phi. Thus, we can safely replace it with the sunk instruction.
-                                Err::gassert(isLCSSAPhi(phi, inst), "Exit is not dedicated");
-                                phi->replaceSelf(sunk);
-                                dead_insts.emplace(phi);
-                            }
-                            dead_insts.emplace(inst);
-                            for (const auto &[exit, sunk] : sunk_insts) {
-                                if (!sunk->is<STOREInst, CALLInst>() && sunk->getUseCount() == 0)
-                                    dead_insts.emplace(sunk);
-                            }
-                            licm_inst_modified = true;
-                        }
-                    }
-                    bb->delInstIf([&dead_insts](const auto &inst) { return dead_insts.find(inst) != dead_insts.end(); },
-                                  BasicBlock::DEL_MODE::ALL);
-                    // Don't forget to delete the unused sunk insts or LCSSA phi.
-                    for (const auto &exit : exits) {
-                        exit->delInstIf(
-                            [&dead_insts](const auto &inst) { return dead_insts.find(inst) != dead_insts.end(); },
-                            BasicBlock::DEL_MODE::ALL);
-                    }
-                }
-            }
+            //                 if (sunk_insts.empty())
+            //                     continue;
+            //
+            //                 for (const auto &user : inst->inst_users()) {
+            //                     auto user_block = user->getParent();
+            //                     // A quick path for most uses being in the same block
+            //                     if (user_block == inst->getParent() || loop->contains(user_block))
+            //                         continue;
+            //
+            //                     // Outside Loop Use
+            //                     auto phi = user->as<PHIInst>();
+            //                     Err::gassert(phi != nullptr, "Expected LCSSA form in LICM.");
+            //                     auto exit_block = phi->getParent();
+            //                     Err::gassert(loop->isExit(exit_block), "Expected LCSSA form in LICM.");
+            //
+            //                     const auto &sunk = sunk_insts[exit_block];
+            //                     Err::gassert(sunk != nullptr);
+            //
+            //                     // Since we've ensured the exit is dedicated, the exit
+            //                     // can not have predecessors outside loop. So any use in the exit block
+            //                     // must be a LCSSA phi. Thus, we can safely replace it with the sunk instruction.
+            //                     Err::gassert(isLCSSAPhi(phi, inst), "Exit is not dedicated");
+            //                     phi->replaceSelf(sunk);
+            //                     dead_insts.emplace(phi);
+            //                 }
+            //                 dead_insts.emplace(inst);
+            //                 for (const auto &[exit, sunk] : sunk_insts) {
+            //                     if (!sunk->is<STOREInst, CALLInst>() && sunk->getUseCount() == 0)
+            //                         dead_insts.emplace(sunk);
+            //                 }
+            //                 licm_inst_modified = true;
+            //             }
+            //         }
+            //         bb->delInstIf([&dead_insts](const auto &inst) { return dead_insts.find(inst) != dead_insts.end(); },
+            //                       BasicBlock::DEL_MODE::ALL);
+            //         // Don't forget to delete the unused sunk insts or LCSSA phi.
+            //         for (const auto &exit : exits) {
+            //             exit->delInstIf(
+            //                 [&dead_insts](const auto &inst) { return dead_insts.find(inst) != dead_insts.end(); },
+            //                 BasicBlock::DEL_MODE::ALL);
+            //         }
+            //     }
+            // }
             //
             // Hoist
             //
@@ -236,7 +234,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     for (const auto &inst : *bb) {
                         if (isSafeToMove(loop, inst, aa_res, fam, is_doing_aggressive_licm)) {
                             auto invariant = std::all_of(
-                                inst->operand_begin(), inst->operand_end(), [&loop, to_hoist](const auto &val) {
+                                inst->operand_begin(), inst->operand_end(), [&loop, &to_hoist](const auto &val) {
                                     if (auto inst = val->template as<Instruction>()) {
                                         auto it = std::find(to_hoist.begin(), to_hoist.end(), inst);
                                         if (it != to_hoist.end())

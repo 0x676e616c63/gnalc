@@ -86,8 +86,8 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // x - x = 0
             REPLACE(M::Sub(M::Bind(x), M::Is(x)), i32_zero)
 
-            // x - x = 0.0f
-            REPLACE(M::Fsub(M::Bind(x), M::Is(x)), f32_zero)
+            // // x - x = 0.0f
+            // REPLACE(M::Fsub(M::Bind(x), M::Is(x)), f32_zero)
 
             // x * 0 = 0
             REPLACE(M::Mul(M::Val(), M::IsIntegerVal(0)), i32_zero)
@@ -104,8 +104,8 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // x % 1 = 0
             REPLACE(M::Rem(M::Val(), M::IsIntegerVal(1)), i32_zero)
 
-            // x / x = 1
-            REPLACE(M::SDiv(M::Bind(x), M::Is(x)), i32_one)
+            // // x / x = 1
+            // REPLACE(M::SDiv(M::Bind(x), M::Is(x)), i32_one)
 
             // // x / x = 1.0f
             // REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)
@@ -126,10 +126,10 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             REPLACE(M::Select(M::Bind(x), M::Bind(y), M::Is(y)), y)
 
             // icmp x, x
-            REPLACE(M::Icmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<ICMPInst>()->getCond()) ? i1_true : i1_false)
+            REPLACE(M::Icmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(inst->as<ICMPInst>()->getCond()) ? i1_true : i1_false)
 
             // fcmp x, x
-            REPLACE(M::Fcmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<FCMPInst>()->getCond()) ? i1_true : i1_false)
+            REPLACE(M::Fcmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(inst->as<FCMPInst>()->getCond()) ? i1_true : i1_false)
 
             // ptrtoint inttoptr x = x
             // int -> ptr -> int
@@ -210,7 +210,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         REWRITE_BEG(M::Mul(M::Bind(x), M::PowerOfTwo(M::Bind(c1))))
         auto shl = builder.makeShl(x, function.getInteger(ctz_wrapper(c1), x->getType()));
         REWRITE_END(shl)
-        //
+
         // x + c1 + c2 = x + (c1 + c2)
         REWRITE_BEG(M::Add(M::Add(M::Bind(x), M::Bind(c1)), M::Bind(c2)))
         auto add = builder.makeAdd(x, function.getInteger(c1 + c2, x->getType()));
@@ -349,10 +349,10 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // auto fadd = builder.makeFAdd(x, fdiv);
         // REWRITE_END(fadd)
         //
-        // x * -1 -> sub 0 x
-        REWRITE_BEG(M::Mul(M::Bind(x), M::IsIntegerVal(-1)), M::Mul(M::IsIntegerVal(-1), M::Bind(x)))
-        auto sub = builder.makeSub(function.getConst(0), x);
-        REWRITE_END(sub)
+        // // x * -1 -> sub 0 x
+        // REWRITE_BEG(M::Mul(M::Bind(x), M::IsIntegerVal(-1)), M::Mul(M::IsIntegerVal(-1), M::Bind(x)))
+        // auto sub = builder.makeSub(function.getConst(0), x);
+        // REWRITE_END(sub)
         //
         // // float: x * -1.0f or -1.0f * x -> fneg x
         // REWRITE_BEG(M::Fmul(M::Bind(x), M::Is(-1.0f)), M::Fmul(M::Is(-1.0f), M::Bind(x)))
@@ -370,15 +370,15 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // auto binary = builder.makeBinary(inst->getOpcode(), x, y);
         // REWRITE_END(binary)
         //
-        // x / (x * y) -> 1 / y
-        REWRITE_BEG(M::SDiv(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
-        auto div = builder.makeSDiv(i32_one, y);
-        REWRITE_END(div)
+        // // x / (x * y) -> 1 / y
+        // REWRITE_BEG(M::SDiv(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
+        // auto div = builder.makeSDiv(i32_one, y);
+        // REWRITE_END(div)
 
-        // ((x * c2) + c1) / c2 -> x + c1 / c2
-        REWRITE_BEG(M::SDiv(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
-        auto add = builder.makeAdd(x, function.getConst(c1 / c2));
-        REWRITE_END(add)
+        // // ((x * c2) + c1) / c2 -> x + c1 / c2
+        // REWRITE_BEG(M::SDiv(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
+        // auto add = builder.makeAdd(x, function.getConst(c1 / c2));
+        // REWRITE_END(add)
 
         // if (inst->getOpcode() == OP::PHI) {
         //     auto phi = inst->as<PHIInst>();
