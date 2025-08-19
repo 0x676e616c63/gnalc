@@ -104,22 +104,22 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
     using Stage = GenericPeephole::Stage;
 
     // clang-format off
-                                            // fpm.addPass(FusedAddr());
-                                            // fpm.addPass(MachineConstantFold());
+                                            fpm.addPass(FusedAddr());
+                                            fpm.addPass(MachineConstantFold());
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
-    // opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight)) : nop;
+    opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight)) : nop;
                                             fpm.addPass(PreRAlegalize());
-    // opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
+    opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
                                             fpm.addPass(RegisterAlloc(opt_info.registeralloc_dmp_times));
-    // opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
+    opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
                                             fpm.addPass(StackGenerate());
-    // opt_info.peephole_afterStackGenerate ?  fpm.addPass(GenericPeephole(Stage::AfterPostLegalize)) : nop;
-    // opt_info.codeLayout ?                   fpm.addPass(CodeLayoutPass()) : nop;
-    // opt_info.CFGsimplifyAfterRa ?           fpm.addPass(CFGsimplifyAfterRA()) : nop;
+    opt_info.peephole_afterStackGenerate ?  fpm.addPass(GenericPeephole(Stage::AfterPostLegalize)) : nop;
+    opt_info.codeLayout ?                   fpm.addPass(CodeLayoutPass()) : nop;
+    opt_info.CFGsimplifyAfterRa ?           fpm.addPass(CFGsimplifyAfterRA()) : nop;
                                             fpm.addPass(PostRAlegalize());
-    // opt_info.PostRaScheduling ?             fpm.addPass(PostRaScheduling()) : nop;
+    opt_info.PostRaScheduling ?             fpm.addPass(PostRaScheduling()) : nop;
 
     // clang-format on
     return fpm;
