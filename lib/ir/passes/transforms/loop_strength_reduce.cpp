@@ -192,7 +192,7 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
     auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto domtree = fam.lazyGetResult<DomTreeAnalysis>(function);
 
-    lsr_inst_modified |= reduceMultiply(scev, loop_info);
+    // lsr_inst_modified |= reduceMultiply(scev, loop_info);
     lsr_inst_modified |= reduceGep(function, scev, loop_info, domtree);
 
     return lsr_inst_modified ? PreserveCFGAnalyses() : PreserveAll();

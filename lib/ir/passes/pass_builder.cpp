@@ -234,7 +234,7 @@ auto make_loop(const PMOptions &options) {
     // fpm.addPass(LoopParallelPass(true));
     // fpm.addPass(PrintFunctionPass(std::cerr));
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
-    // FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
+    FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     // FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
     //                    LoopUnrollPass(LoopUnrollPass::PO_Peel))

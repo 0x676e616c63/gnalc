@@ -665,7 +665,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         return res.intersect(v, rng, edge);
     };
 
-    auto &scev = fam->getResult<SCEVAnalysis>(*func);
+    // auto &scev = fam->getResult<SCEVAnalysis>(*func);
     while (!worklist.empty()) {
         auto pair = worklist.front();
         worklist.pop_front();
