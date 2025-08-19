@@ -732,27 +732,27 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 return IRng();
             };
 
-            auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
-                auto first_rng = analyzeSCEVExpr(trec->getFirst());
-                if (auto trip_count = scev.getTripCount(trec->getLoop())) {
-                    int trip_cnt_ci;
-                    if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
-                        if (trip_cnt_ci <= 1)
-                            return first_rng;
-                    }
-                }
-
-                auto rest = trec->getRest();
-                if (rest->isExpr()) {
-                    auto rng = analyzeSCEVExpr(rest->getExpr());
-                    return merge(IRng(first_rng), rng);
-                }
-                if (rest->isAddRec()) {
-                    auto rng = analyzeAddRec(rest);
-                    return merge(IRng(first_rng), rng);
-                }
-                return IRng();
-            };
+            // auto analyzePeeledTREC = [&scev, &analyzeSCEVExpr, &analyzeAddRec](TREC *trec) {
+            //     auto first_rng = analyzeSCEVExpr(trec->getFirst());
+            //     if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+            //         int trip_cnt_ci;
+            //         if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
+            //             if (trip_cnt_ci <= 1)
+            //                 return first_rng;
+            //         }
+            //     }
+            //
+            //     auto rest = trec->getRest();
+            //     if (rest->isExpr()) {
+            //         auto rng = analyzeSCEVExpr(rest->getExpr());
+            //         return merge(IRng(first_rng), rng);
+            //     }
+            //     if (rest->isAddRec()) {
+            //         auto rng = analyzeAddRec(rest);
+            //         return merge(IRng(first_rng), rng);
+            //     }
+            //     return IRng();
+            // };
 
             auto trec = scev.getSCEVAtBlock(inst, bb);
             if (trec->isExpr()) {
@@ -761,10 +761,11 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             } else if (trec->isAddRec()) {
                 if (intersectContextualInt(inst, bb, analyzeAddRec(trec)))
                     continue;
-            } else if (trec->isPeeled()) {
-                if (intersectContextualInt(inst, bb, analyzePeeledTREC(trec)))
-                    continue;
             }
+            // else if (trec->isPeeled()) {
+            //     if (intersectContextualInt(inst, bb, analyzePeeledTREC(trec)))
+            //         continue;
+            // }
         }
 
         if (auto binary = inst->as_raw<BinaryInst>()) {
