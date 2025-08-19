@@ -1948,6 +1948,8 @@ pVal VectorizerPass::vectorizeTrees() {
 }
 
 PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &fam) {
+    return PreserveAll();
+
     target = fam.getResult<TargetAnalysis>(function);
     if (!target->isVectorSupported())
         return PreserveAll();
