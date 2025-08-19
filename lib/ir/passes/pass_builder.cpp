@@ -226,15 +226,15 @@ auto make_enabling(const PMOptions &options) {
 
 auto make_loop(const PMOptions &options) {
     FPM fpm;
-    // FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
+    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
     // fpm.addPass(LoopSimplifyPass());
     // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(LoopParallelPass(true));
     // fpm.addPass(PrintFunctionPass(std::cerr));
-    // FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
-    FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
+    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
+    // FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     // FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
     //                    LoopUnrollPass(LoopUnrollPass::PO_Peel))
@@ -282,20 +282,6 @@ auto make_post_legalize(const PMOptions &options) {
     if (!options.advance_name_norm)
         fpm.addPass(NameNormalizePass());
 
-    return fpm;
-}
-
-auto make_gep_opt(const PMOptions &options) {
-    FPM fpm;
-    FUNCTION_TRANSFORM(gep_flatten, GEPFlattenPass())
-    fpm.addPass(make_basic_clean(options));
-    fpm.addPass(make_cfg_clean(options));
-    fpm.addPass(make_arithmetic(options));
-    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
-    FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
-    fpm.addPass(make_basic_clean(options));
-    fpm.addPass(make_cfg_clean(options));
-    fpm.addPass(NameNormalizePass(true));
     return fpm;
 }
 
