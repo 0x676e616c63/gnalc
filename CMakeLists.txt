@@ -93,6 +93,9 @@ aux_source_directory(lib/pass_manager GNALC_PM_SRC)
 # Match
 aux_source_directory(lib/match GNALC_MATCH_SRC)
 
+# Constraint
+aux_source_directory(lib/constraint GNALC_CONSTRAINT_SRC)
+
 # Utilities
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
 
@@ -120,6 +123,7 @@ set(GNALC_SRC
         ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
         ${GNALC_MATCH_SRC}
+        ${GNALC_CONSTRAINT_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_RISCV64BKD_SRC}
         ${GNALC_RUNTIME_SRC}
@@ -133,6 +137,7 @@ set(GGC_SRC
         ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
         ${GNALC_MATCH_SRC}
+        ${GNALC_CONSTRAINT_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_RISCV64BKD_SRC}
         ${GNALC_RUNTIME_SRC}
@@ -140,6 +145,7 @@ set(GGC_SRC
 
 # debug driver
 add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
+add_executable(omega_test tools/driver/debug/omega_test.cpp ${GNALC_CONSTRAINT_SRC} ${GNALC_UTILS_SRC})
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 target_compile_definitions(bfhelper PRIVATE GNALC_EXTENSION_BRAINFK)
 

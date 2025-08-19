@@ -11,6 +11,7 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "sir/base.hpp"
 #include "sir/passes/pass_manager.hpp"
+#include "constraint/base.hpp"
 
 #include <optional>
 
@@ -83,6 +84,8 @@ struct ArrayAccess {
     bool covers(const ArrayAccess &other) const;
     bool overlaps(const ArrayAccess &other) const;
     bool isLoopInvariant() const;
+
+    bool operator==(const ArrayAccess &other) const;
 };
 
 std::ostream& operator<<(std::ostream &os, const AffineExpr &expr);
@@ -112,6 +115,11 @@ struct InstRW {
     std::set<Value *> read;
     std::set<Value *> write;
 };
+
+CSTR::VarID getCSTRVarFrom(std::map<Value *, CSTR::VarID> &map, CSTR::VarHandle &VH, Value *val);
+
+CSTR::Expr buildConstraintExpr(const AffineExpr &ae, const std::map<IndVar *, CSTR::VarID> &iv_map, CSTR::VarHandle &VH,
+                         std::map<Value *, CSTR::VarID> &invariant_map);
 
 class AffineAAResult {
 private:
@@ -145,6 +153,10 @@ public:
     // without interference from scalar dependencies.
     bool isScalarIndependent(const pInst &lhs, const pInst &rhs) const;
     bool isScalarIndependent(Instruction *lhs, Instruction *rhs) const;
+
+    // Determines whether an Affine FORInst has loop-carried dependence
+    bool hasLoopCarriedDependence(FORInst* affine_for);
+    bool hasLoopCarriedDependence(const pForInst &affine_for);
 };
 
 class AffineAliasAnalysis : public PM::AnalysisInfo<AffineAliasAnalysis> {

@@ -8,7 +8,12 @@
 #include "sir/utils.hpp"
 #include "sir/visitor.hpp"
 
+#include "constraint/base.hpp"
+#include "constraint/omega_test.hpp"
+
 #include <vector>
+
+using namespace CSTR;
 
 namespace SIR {
 struct FuseCandidate {
@@ -17,15 +22,19 @@ struct FuseCandidate {
     FORInst *for2;
 };
 
-bool canFuse(AffineAAResult* affine_aa, FORInst* for1, FORInst* for2) {
-    auto indvar1 = for1->getIndVar();
-    auto indvar2 = for2->getIndVar();
+// FIXME: Refactor this to avoid too much duplication with `AffineAAResult::hasLoopCarriedDependence`.
+bool canFuse(AffineAAResult *affine_aa, FORInst *for1, FORInst *for2) {
+    auto iv1 = for1->getIndVar().get();
+    auto iv2 = for2->getIndVar().get();
+
+    Err::gassert(iv1->getDepth() == iv2->getDepth(), "Fuse what?");
+    auto depth = iv1->getDepth();
 
     // Give up if two FORInst have different iteration domain.
     // TODO: Loop Alignment
-    if (!isTriviallyIdentical(indvar1->getBase(), indvar2->getBase()) ||
-        !isTriviallyIdentical(indvar1->getStep(),  indvar2->getStep()) ||
-        !isTriviallyIdentical(indvar1->getBound(), indvar2->getBound()))
+    if (!isTriviallyIdentical(iv1->getBase(), iv2->getBase()) ||
+        !isTriviallyIdentical(iv1->getStep(), iv2->getStep()) ||
+        !isTriviallyIdentical(iv1->getBound(), iv2->getBound()))
         return false;
 
     // Scalars can't be fused
@@ -34,58 +43,155 @@ bool canFuse(AffineAAResult* affine_aa, FORInst* for1, FORInst* for2) {
         return false;
     }
 
-    const auto& rw1 = affine_aa->queryInstRW(for1);
-    const auto& rw2 = affine_aa->queryInstRW(for2);
+    const auto &rw1 = affine_aa->queryInstRW(for1);
+    const auto &rw2 = affine_aa->queryInstRW(for2);
     if (!rw1 || !rw2) {
         Logger::logDebug("[LoopFuse]: Skipped two loops because failed to analyze RWInfo.");
         return false;
     }
 
-    auto has_dep = [&](const std::set<Value*>& set1, const std::set<Value*>& set2) {
-        for (const auto& s1 : set1) {
-            const auto& a1 = affine_aa->queryPointer(s1);
-            if (!a1)
+    OmegaSolver solver;
+    // solver.enableDebugDump(std::cerr);
+
+    auto has_bad_dep = [&](const std::set<Value *> &set1, const std::set<Value *> &set2) -> bool {
+        for (const auto &v1 : set1) {
+            const auto &p1 = affine_aa->queryPointer(v1);
+            if (!p1)
                 return true;
-
-            if (!a1->isArray())
+            if (p1->isScalar())
                 continue;
-            for (const auto& s2 : set2) {
-                const auto& a2 = affine_aa->queryPointer(s2);
-                if (!a2)
+
+            auto acc1 = p1->array();
+
+            for (const auto &v2 : set2) {
+                const auto &p2 = affine_aa->queryPointer(v2);
+                if (!p2)
                     return true;
-
-                if (!a2->isArray())
-                    continue;
-                if (a1->array().base != a2->array().base)
+                if (p2->isScalar())
                     continue;
 
-                // FIXME: More Accurate
-                // TODO: dependency distance
-                auto idx1 = a1->array().indices;
-                auto idx2 = a2->array().indices;
-                if (idx1.size() != idx2.size())
+                auto acc2 = p2->array();
+
+                if (acc1.base != acc2.base || acc1.indices.size() != acc2.indices.size())
+                    continue;
+
+                // Quick path for same access.
+                auto trivially_same = [&]() -> bool {
+                    for (size_t i = 0; i < acc1.indices.size(); ++i) {
+                        if (!acc1.indices[i].isIsomorphic(acc2.indices[i]))
+                            return false;
+                    }
                     return true;
+                }();
+                if (trivially_same)
+                    continue;
 
-                for (size_t i = 0; i < idx1.size(); ++i) {
-                    if (!idx1[i].isIsomorphic(idx2[i]))
-                        return true;
+                solver.reset();
+
+                std::map<IndVar *, VarID> iter1_map; // Iteration 1, IV 1
+                std::map<IndVar *, VarID> iter2_map; // Iteration 2, IV 2
+                std::map<Value *, VarID> invariant_map;
+
+                std::set<IndVar *> iv_in_expr;
+                for (auto &[iv, rng] : acc1.domain)
+                    iv_in_expr.insert(iv);
+                for (auto &[iv, rng] : acc2.domain)
+                    iv_in_expr.insert(iv);
+
+                for (IndVar *iv : iv_in_expr) {
+                    auto id = iv->getName().substr(1);
+                    iter1_map[iv] = solver.VH.newVar(id + "_1");
+                    iter2_map[iv] = solver.VH.newVar(id + "_2");
                 }
 
-                return false;
+                for (auto iv : iv_in_expr) {
+                    if (iv->getDepth() >= depth)
+                        continue;
+                    auto iter1_expr = Expr::newVar(iter1_map.at(iv));
+                    auto iter2_expr = Expr::newVar(iter2_map.at(iv));
+                    solver.addConstraint(Constraint::newEqual(iter1_expr, iter2_expr));
+                }
+
+                // Ensure indices are equal
+                // We've ensured the dims are equal above.
+                size_t dims = acc1.indices.size();
+                for (size_t d = 0; d < dims; ++d) {
+                    auto e1 = buildConstraintExpr(acc1.indices[d], iter1_map, solver.VH, invariant_map);
+                    auto e2 = buildConstraintExpr(acc2.indices[d], iter2_map, solver.VH, invariant_map);
+                    solver.addConstraint(Constraint::newEqual(e1, e2));
+                }
+
+                // Add iteration domain constraints for each iv
+                // TODO: When step != 1, there can be more accurate result.
+                for (IndVar *iv : iv_in_expr) {
+                    auto it1 = acc1.domain.find(iv);
+                    if (it1 != acc1.domain.end()) {
+                        auto base = buildConstraintExpr(it1->second.base, iter1_map, solver.VH, invariant_map);
+                        auto bound = buildConstraintExpr(it1->second.bound, iter1_map, solver.VH, invariant_map);
+                        auto iv_var = Expr::newVar(iter1_map.at(iv));
+                        solver.addConstraint(Constraint::newGreaterEqual(iv_var, base));
+                        solver.addConstraint(Constraint::newLessThan(iv_var, bound));
+                    }
+
+                    auto it2 = acc2.domain.find(iv);
+                    if (it2 != acc2.domain.end()) {
+                        auto base = buildConstraintExpr(it2->second.base, iter2_map, solver.VH, invariant_map);
+                        auto bound = buildConstraintExpr(it2->second.bound, iter2_map, solver.VH, invariant_map);
+                        auto iv_var = Expr::newVar(iter2_map.at(iv));
+                        solver.addConstraint(Constraint::newGreaterEqual(iv_var, base));
+                        solver.addConstraint(Constraint::newLessThan(iv_var, bound));
+                    }
+                }
+
+                // Add invariant iv range
+                // Don't introduce more parameters here, they are not related to current problem.
+                for (const auto &[invariant, var] : invariant_map) {
+                    auto iv = invariant->as<IndVar>();
+                    if (!iv)
+                        continue;
+
+                    auto expr = Expr::newVar(var);
+                    if (auto base_ci = iv->getBase()->as<ConstantInt>())
+                        solver.addConstraint(Constraint::newGreaterEqual(expr, Expr::newConst(base_ci->getVal())));
+                    else if (auto it = invariant_map.find(iv->getBase().get()); it != invariant_map.end())
+                        solver.addConstraint(Constraint::newGreaterEqual(expr, Expr::newVar(it->second)));
+
+                    if (auto bound_ci = iv->getBound()->as<ConstantInt>())
+                        solver.addConstraint(Constraint::newLessThan(expr, Expr::newConst(bound_ci->getVal())));
+                    else if (auto it = invariant_map.find(iv->getBound().get()); it != invariant_map.end())
+                        solver.addConstraint(Constraint::newLessThan(expr, Expr::newVar(it->second)));
+                }
+
+                // std::cerr << "Candidate: " << v1->getName() << " and " << v2->getName() << std::endl;
+
+                // Ensure iv1 > iv2
+                if (iv_in_expr.count(iv1) && iv_in_expr.count(iv2)) {
+                    auto iv1_expr = Expr::newVar(iter1_map.at(iv1));
+                    auto iv2_expr = Expr::newVar(iter2_map.at(iv2));
+
+                    OmegaSolver s = solver;
+                    s.addConstraint(Constraint::newGreaterThan(iv1_expr, iv2_expr));
+                    if (s.mayHasIntSolutions())
+                        return true;
+                } else {
+                    if (solver.mayHasIntSolutions())
+                        return true;
+                }
             }
         }
         return false;
     };
 
-    if (has_dep(rw1->write, rw2->read) || has_dep(rw2->write, rw1->read) || has_dep(rw1->write, rw2->write)) {
-        Logger::logDebug("[LoopFuse]: Skipped two adjacent loops ('",
-            for1->getIndVar()->getName(), "' and '", for2->getIndVar()->getName(),
-            "') because unresolved array dependency.");
+    if (has_bad_dep(rw1->write, rw2->read) || has_bad_dep(rw2->write, rw1->read) ||
+        has_bad_dep(rw1->write, rw2->write)) {
+        Logger::logDebug("[LoopFuse]: Skipped two adjacent loops ('", for1->getIndVar()->getName(), "' and '",
+                         for2->getIndVar()->getName(), "') because unresolved array dependency.");
         return false;
     }
 
     return true;
 }
+
 struct FuseVisitor : ContextVisitor {
     using FuseCandidates = std::vector<FuseCandidate>;
     FuseCandidates *candidates{};
@@ -155,15 +261,17 @@ PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
             for2->appendDbgData(for1->getDbgData());
             for2->appendDbgData("fused=" + for1->getIndVar()->getName());
 
+            Logger::logDebug("[LoopFuse]: Fused affine for '", for1->getIndVar()->getName(), "' into '",
+                             for2->getIndVar()->getName(), "'");
             IListDel(*ilist, for1);
-            Logger::logDebug("[LoopFuse]: Fused two loops");
 
             affine_aa = lfam.getFreshResult<AffineAliasAnalysis>(function);
             loop_fuse_modified = true;
-
-            // Revisit this depth
-            --searching_depth;
         }
+
+        // Revisit this depth
+        if (!fuse_candidates.empty())
+            --searching_depth;
     }
 
     return loop_fuse_modified ? PreserveNone() : PreserveAll();

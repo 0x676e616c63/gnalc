@@ -310,6 +310,10 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     case OpC::InstShl:
     case OpC::InstLShr:
     case OpC::InstAShr: {
+        auto lhs = minst->getOp(1);
+        if (lhs->isImme())
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+
         auto shift = minst->getOp(2);
         if (shift->isImme()) {
             unsigned s = static_cast<unsigned>(shift->imme());

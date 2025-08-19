@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // Loop Annotator
+//   Annotate affine for loops with loop attributes
 #pragma once
 #ifndef GNALC_SIR_PASSES_TRANSFORMS_LOOP_ANNOTATOR_HPP
 #define GNALC_SIR_PASSES_TRANSFORMS_LOOP_ANNOTATOR_HPP
@@ -11,7 +12,7 @@
 
 namespace SIR {
 enum class LoopAttr {
-    NoCarriedDependency,
+    NoCarriedDependency = 1 << 0,
 };
 GNALC_ENUM_OPERATOR(LoopAttr)
 using LoopAttrs = Attr::BitFlagsAttr<LoopAttr>;

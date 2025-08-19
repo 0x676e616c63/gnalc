@@ -455,6 +455,9 @@ public:
             return getContextual(edge.dst);
         return it->second;
     }
+
+    const auto& getContextualMap() const { return context_map; }
+    const auto& getEdgeMap() const { return edge_map; }
 };
 
 using IRng = Range<int>;
@@ -487,6 +490,8 @@ public:
     bool knownNonNegative(Value *val, BasicBlockEdge edge) const;
     bool knownNonNegative(const pVal &val, BasicBlockEdge edge) const;
 
+    const auto& getIntRangeMap() const { return int_range_map; }
+    const auto& getFloatRangeMap() const { return float_range_map; }
 private:
     bool intersect(Value *val, const IRng &range);
     bool intersect(Value *val, const IRng &range, BasicBlock *bb);

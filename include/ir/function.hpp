@@ -29,7 +29,6 @@ enum class FuncAttr {
     // Main function
     ProgramEntry = 1 << 1,
 
-    // Typically this is a main function
     ExecuteExactlyOnce = 1 << 2,
 
     // Sylib

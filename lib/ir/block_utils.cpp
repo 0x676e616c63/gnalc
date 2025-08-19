@@ -471,6 +471,34 @@ std::vector<pVal> collectOperands(const pInst &inst) {
     return result;
 }
 
+std::vector<pInst> collectOperandInsts(const pInst &inst) {
+    std::vector<pInst> worklist;
+    std::vector<pInst> result;
+    for (const auto &oper : inst->operands()) {
+        if (auto oper_inst = oper->as<Instruction>())
+        worklist.emplace_back(oper_inst);
+    }
+
+    std::unordered_set<pInst> visited;
+    while (!worklist.empty()) {
+        auto curr = worklist.back();
+        worklist.pop_back();
+        visited.emplace(curr);
+
+        result.emplace_back(curr);
+
+        if (auto curr_user = curr->as<User>()) {
+            for (const auto &oper : curr_user->operands()) {
+                if (auto oper_inst = oper->as<Instruction>()) {
+                    if (!visited.count(oper_inst))
+                        worklist.emplace_back(oper_inst);
+                }
+            }
+        }
+    }
+    return result;
+}
+
 bool isReachableFrom(const pBlock &from, const pBlock &to) {
     auto dfv = from->getDFVisitor();
     return std::find(dfv.begin(), dfv.end(), to) != dfv.end();

@@ -154,10 +154,6 @@ struct TransposeVisitor : ContextVisitor {
     }
 };
 
-// TODO: Tiling
-struct TilingCandidate {};
-struct TilingVisitor : ContextVisitor {};
-
 PM::PreservedAnalyses RelayoutPass::run(Module &module, MAM &mam) {
     TransposeVisitor::TransposeCandidates candidates;
     TransposeVisitor visitor(&candidates, &mam);

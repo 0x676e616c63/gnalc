@@ -7,21 +7,24 @@
 #include "ir/passes/pass_manager.hpp"
 
 // Analysis
-#include "sir/passes/analysis/instdom_analysis.hpp"
 #include "sir/passes/analysis/affine_alias_analysis.hpp"
+#include "sir/passes/analysis/instdom_analysis.hpp"
 
 // Transforms
-#include "sir/passes/transforms/early_mem2reg.hpp"
-#include "sir/passes/transforms/early_dce.hpp"
-#include "sir/passes/transforms/constant_fold.hpp"
-#include "sir/passes/transforms/loop_fuse.hpp"
-#include "sir/passes/transforms/loop_unswitch.hpp"
-#include "sir/passes/transforms/while2for.hpp"
-#include "sir/passes/transforms/reshape_fold.hpp"
-#include "sir/passes/transforms/early_inline.hpp"
-#include "sir/passes/transforms/loop_interchange.hpp"
 #include "sir/passes/transforms/affine_licm.hpp"
+#include "sir/passes/transforms/affine_renamer.hpp"
+#include "sir/passes/transforms/constant_fold.hpp"
+#include "sir/passes/transforms/early_dce.hpp"
+#include "sir/passes/transforms/early_inline.hpp"
+#include "sir/passes/transforms/early_mem2reg.hpp"
+#include "sir/passes/transforms/loop_annotator.hpp"
+#include "sir/passes/transforms/loop_fuse.hpp"
+#include "sir/passes/transforms/loop_interchange.hpp"
+#include "sir/passes/transforms/loop_tiling.hpp"
+#include "sir/passes/transforms/loop_unswitch.hpp"
 #include "sir/passes/transforms/relayout.hpp"
+#include "sir/passes/transforms/reshape_fold.hpp"
+#include "sir/passes/transforms/while2for.hpp"
 
 // Utilities
 #include "sir/passes/utilities/sirprinter.hpp"
@@ -29,8 +32,7 @@
 #include <algorithm>
 
 namespace SIR {
-template <typename PM, typename Pass>
-void registerPassForOptInfo(PM &lfpm, bool enable, Pass &&pass) {
+template <typename PM, typename Pass> void registerPassForOptInfo(PM &lfpm, bool enable, Pass &&pass) {
     if (enable) {
         lfpm.addPass(std::forward<Pass>(pass));
     } else
@@ -43,49 +45,70 @@ void registerPassForOptInfo(PM &lfpm, bool enable, First &&first, Rest &&...rest
     registerPassForOptInfo(lfpm, enable, std::forward<Rest>(rest)...);
 }
 
-LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
+#define FUNCTION_TRANSFORM(name, ...) registerPassForOptInfo(lfpm, options.name, __VA_ARGS__);
+
+LFPM make_enabling(const PMOptions &options) {
     LFPM lfpm;
-
-#define FUNCTION_TRANSFORM(name, ...)                                                                                  \
-    registerPassForOptInfo(lfpm, options.name, __VA_ARGS__);
-
     FUNCTION_TRANSFORM(early_inline, EarlyInlinePass())
     FUNCTION_TRANSFORM(early_mem2reg, EarlyPromotePass())
     FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
     FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
     FUNCTION_TRANSFORM(while2for, While2ForPass())
+    return lfpm;
+}
+
+LFPM make_affine(const PMOptions &options) {
+    LFPM lfpm;
     FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
     FUNCTION_TRANSFORM(affine_licm, AffineLICMPass())
     FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
-    // FUNCTION_TRANSFORM(loop_unswitch, LoopUnswitchPass())
     FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
-    // FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
-    // FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
-
-#undef FUNCTION_TRANSFORM
     return lfpm;
 }
 
-MPM LinearPassBuilder::buildModuleFixedPointPipeline(const PMOptions& options) {
+LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
+    LFPM lfpm;
+
+    lfpm.addPass(make_enabling(options));
+    lfpm.addPass(make_affine(options));
+
+    return lfpm;
+}
+
+#undef FUNCTION_TRANSFORM
+
+MPM make_locality(const PMOptions &options) {
     MPM mpm;
-    mpm.addPass(makeLinearModulePass(buildFunctionFixedPointPipeline(options)));
     if (options.relayout)
         mpm.addPass(RelayoutPass());
+    if (options.loop_interchange)
+        mpm.addPass(makeLinearModulePass(LoopInterchangePass()));
     return mpm;
 }
 
-LFPM LinearPassBuilder::buildFunctionPipeline(const PMOptions& opt_info) {
+MPM LinearPassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
+    MPM mpm;
+    mpm.addPass(makeLinearModulePass(buildFunctionFixedPointPipeline(options)));
+    mpm.addPass(make_locality(options));
+
+    // Annotate loops at the end of transforms to be more accurate.
+    if (options.loop_annotator)
+        mpm.addPass(makeLinearModulePass(LoopAnnotatorPass()));
+
+    return mpm;
+}
+
+LFPM LinearPassBuilder::buildFunctionPipeline(const PMOptions &opt_info) {
     LFPM lfpm;
 
-#define FUNCTION_TRANSFORM(name, ...)                                                                                  \
-    registerPassForOptInfo(lfpm, opt_info.name, __VA_ARGS__);
+#define FUNCTION_TRANSFORM(name, ...) registerPassForOptInfo(lfpm, opt_info.name, __VA_ARGS__);
 
 #undef FUNCTION_TRANSFORM
 
     return lfpm;
 }
 
-MPM LinearPassBuilder::buildModulePipeline(const PMOptions& opt_info) {
+MPM LinearPassBuilder::buildModulePipeline(const PMOptions &opt_info) {
     MPM mpm;
     mpm.addPass(makeLinearModulePass(buildFunctionPipeline(opt_info)));
     return mpm;
@@ -99,9 +122,13 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(EarlyDCEPass());
     lfpm.addPass(While2ForPass());
     lfpm.addPass(ReshapeFoldPass());
+    lfpm.addPass(AffineLICMPass());
+    lfpm.addPass(AffineRenamePass());
+    lfpm.addPass(LoopAnnotatorPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(PrintAffineAAPass(std::cerr));
-    lfpm.addPass(AffineLICMPass());
+    lfpm.addPass(LoopFusePass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(EarlyDCEPass());
     return lfpm;
 }
@@ -109,9 +136,7 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
 MPM LinearPassBuilder::buildModuleDebugPipeline() {
     MPM mpm;
     mpm.addPass(makeLinearModulePass(buildFunctionDebugPipeline()));
-    mpm.addPass(PrintLinearModulePass(std::cerr));
     mpm.addPass(RelayoutPass());
-    mpm.addPass(PrintLinearModulePass(std::cerr));
     return mpm;
 }
 
@@ -130,4 +155,4 @@ void LinearPassBuilder::registerFunctionAnalyses(LFAM &lfam) {
 
 void LinearPassBuilder::registerModuleAnalyses(MAM &) {}
 
-} // namespace IR
+} // namespace SIR

@@ -6,16 +6,14 @@
 
 #include <algorithm>
 #include <iterator>
+#include <list>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
-#include <list>
 
 namespace Util {
-template <typename Key,
-typename Hash = std::hash<Key>,
-typename Equal = std::equal_to<Key>,
-typename Alloc = std::allocator<std::pair<const Key, typename std::list<Key>::iterator>>>
+template <typename Key, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>,
+          typename Alloc = std::allocator<std::pair<const Key, typename std::list<Key>::iterator>>>
 class FastSet {
 private:
     using ContainerType = std::list<Key>;
@@ -44,21 +42,17 @@ public:
             insert(elem);
     }
 
-    template <typename InputIterator>
-    FastSet(InputIterator first, InputIterator last) {
+    template <typename InputIterator> FastSet(InputIterator first, InputIterator last) {
         for (; first != last; ++first)
             insert(*first);
     }
 
     template <typename Container>
-    explicit FastSet(const Container& container) : FastSet(container.begin(), container.end()) {}
+    explicit FastSet(const Container &container) : FastSet(container.begin(), container.end()) {}
 
-    FastSet(const FastSet &other) : elements(other.elements) {
-        rebuildMap();
-    }
+    FastSet(const FastSet &other) : elements(other.elements) { rebuildMap(); }
 
-    FastSet(FastSet &&other) noexcept
-        : elements(std::move(other.elements)), index(std::move(other.index)) {}
+    FastSet(FastSet &&other) noexcept : elements(std::move(other.elements)), index(std::move(other.index)) {}
 
     FastSet &operator=(const FastSet &other) {
         if (this != &other) {
@@ -185,27 +179,29 @@ public:
     void max_load_factor(float z) { index.max_load_factor(z); }
     void rehash(size_t n) { index.rehash(n); }
     void reserve(size_t n) { index.reserve(n); }
-    bool operator==(const FastSet & fasts) const {
-        return index == fasts.index;
+
+    bool operator==(const FastSet &rhs) const {
+        return index.size() == rhs.index.size() && std::all_of(index.begin(), index.end(), [&](auto const &p) {
+                   return rhs.index.find(p.first) != rhs.index.end();
+               });
     }
+    bool operator!=(const FastSet &rhs) const { return !(*this == rhs); }
 };
 
-template <typename Key>
-FastSet<Key> fastset_difference(const FastSet<Key>& A, const FastSet<Key>& B) {
+template <typename Key> FastSet<Key> fastset_difference(const FastSet<Key> &A, const FastSet<Key> &B) {
     FastSet<Key> result;
     result.reserve(A.size());
-    for (const auto& elem : A) {
+    for (const auto &elem : A) {
         if (B.find(elem) == B.end())
             result.insert(elem);
     }
     return result;
 }
 
-template <typename Key>
-FastSet<Key> fastset_union(const FastSet<Key>& A, const FastSet<Key>& B) {
+template <typename Key> FastSet<Key> fastset_union(const FastSet<Key> &A, const FastSet<Key> &B) {
     FastSet<Key> result = A;
     result.reserve(A.size() + B.size());
-    for (const auto& elem : B)
+    for (const auto &elem : B)
         result.insert(elem);
     return result;
 }

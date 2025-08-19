@@ -51,6 +51,9 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
                 arg_ptrs.emplace_back(r.get());
         }
 
+        if (callee->hasFnAttr(FuncAttr::builtinMemNoReadWrite))
+            return {};
+
         if (callee->hasFnAttr(FuncAttr::builtinMemWriteOnly))
             return {.read = {}, .write = arg_ptrs, .untracked = false};
 
@@ -59,9 +62,6 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
 
         if (callee->hasFnAttr(FuncAttr::builtinMemReadWrite))
             return {.read = arg_ptrs, .write = arg_ptrs, .untracked = false};
-
-        if (!callee->hasFnAttr(FuncAttr::builtinMemReadOnly) && !callee->hasFnAttr(FuncAttr::builtinMemWriteOnly))
-            return {};
 
         return {.untracked = true};
     }

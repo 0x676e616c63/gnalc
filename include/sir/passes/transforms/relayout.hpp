@@ -12,7 +12,6 @@
 namespace SIR {
 enum class RelayoutAttr {
     Transpose = 1 << 0,
-    Tiling = 1 << 1,
 };
 GNALC_ENUM_OPERATOR(RelayoutAttr)
 using RelayoutAttrs = Attr::BitFlagsAttr<RelayoutAttr>;

@@ -184,6 +184,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--gepflatten", "--no-gepflatten", gep_flatten)
         OPT_ARG("--storerng", "--no-storerng", store_range)
         OPT_ARG("--codesink", "--no-codesink", code_sink)
+        OPT_ARG("--cstrelim", "--no-cstrelim", constraint_elimination)
         OPT_ARG("--cgprepare", "--no-cgprepare", codegen_prepare)
         // SIR Function Transforms
         OPT_ARG("--earlymem2reg", "--no-earlymem2reg", early_mem2reg)
@@ -193,9 +194,11 @@ int main(int argc, char **argv) {
         OPT_ARG("--earlydce", "--no-earlydce", early_dce)
         OPT_ARG("--constantfold", "--no-constantfold", constant_fold)
         OPT_ARG("--interchange", "--no-interchange", loop_interchange)
+        OPT_ARG("--tiling", "--no-tiling", loop_tiling)
         OPT_ARG("--unswitch", "--no-unswitch", loop_unswitch)
         OPT_ARG("--fuse", "--no-fuse", loop_fuse)
         OPT_ARG("--affinelicm", "--no-affinelicm", affine_licm)
+        OPT_ARG("--loopannotator", "--no-loopannotator", loop_annotator)
         // IR Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
         // SIR Module Transforms
@@ -311,8 +314,10 @@ Optimizations Flags:
   --earlydce           - Early dead code elimination
   --constantfold       - Early constant folding
   --interchange        - Loop interchange
+  --tiling             - Loop Tiling
   --unswitch           - Loop unswitch
   --fuse               - Loop fusion
+  --loopannotator      - Loop Annotator
   --affinelicm         - Affine loop invariant code motion
   --mem2reg            - Promote memory to register
   --sccp               - Sparse conditional constant propagation
@@ -343,6 +348,7 @@ Optimizations Flags:
   --gepflatten         - Flatten getelementptr to binarys
   --storerng           - Store Range Analysis result. (For backend)
   --codesink           - Code Sink
+  --cstrelim           - Constraint Elimination
   --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables
   --relayout           - Data space layout optimization
@@ -520,10 +526,12 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     SIR::MPM sir_mpm;
     if (sir_debug_pipeline)
         sir_mpm = SIR::LinearPassBuilder::buildModuleDebugPipeline();
-    else if (fixed_point_pipeline)
-        sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
-        sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);
+        sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    // else if (fixed_point_pipeline)
+    //     sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    // else
+    //     sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);
 
     if (emit_sir) {
         sir_mpm.addPass(SIR::PrintLinearModulePass(*poutstream));

@@ -196,6 +196,7 @@ struct PairHash {
 };
 
 bool beginsWith(const std::string &a, const std::string &b);
+bool endsWith(const std::string &a, const std::string &b);
 
 template <typename T> std::enable_if_t<std::is_integral_v<T>, bool> isPowerOfTwo(T x) {
     return x && !(x & (x - static_cast<T>(1)));

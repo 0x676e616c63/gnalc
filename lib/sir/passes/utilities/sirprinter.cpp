@@ -64,12 +64,8 @@ void LinearPrinterBase::visitCondValue(Value &value, bool is_first) {
 
 void LinearPrinterBase::visit(Instruction &node) {
     auto write_dbg_msg = [&] {
-        const auto& dbg = node.getDbgData();
-        if (!dbg.empty()) {
-            write("        ;", dbg[0]);
-            for (size_t i = 1; i < dbg.size(); ++i)
-                write(", ", dbg[i]);
-        }
+        if (!node.getDbgData().empty())
+            write("        ;", node.formatDbgData());
     };
     auto write_dbg_msg_ln = [&] {
         write_dbg_msg();

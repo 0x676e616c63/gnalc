@@ -428,8 +428,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                     if (callee->hasFnAttr(FuncAttr::Sylib))
                         res.has_sylib_call = true;
 
-                    if (!callee->hasFnAttr(FuncAttr::builtinMemReadOnly) &&
-                        !callee->hasFnAttr(FuncAttr::builtinMemWriteOnly))
+                    if (callee->hasFnAttr(FuncAttr::builtinMemNoReadWrite))
                         continue;
 
                     // For memcpy intrinsic, a more precise analysis is available.
@@ -466,6 +465,19 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                                     if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
                                         mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER)
                                         res.read.insert(mayalias);
+                                }
+                            }
+                        }
+                    } else if (callee->hasFnAttr(FuncAttr::builtinMemReadWrite)) {
+                        auto actual_args = call->getArgs();
+                        for (const auto &actual : actual_args) {
+                            if (actual->getType()->getTrait() == IRCTYPE::PTR) {
+                                for (const auto &mayalias : res.getPtrInfo(actual.get()).potential_alias) {
+                                    if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
+                                        mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
+                                        res.read.insert(mayalias);
+                                        res.write.insert(mayalias);
+                                    }
                                 }
                             }
                         }

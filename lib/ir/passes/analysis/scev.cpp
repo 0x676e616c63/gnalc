@@ -20,19 +20,54 @@ std::ostream &operator<<(std::ostream &os, const SCEVExpr &expr) {
     using Op = SCEVExpr::Binary::Op;
     if (expr.isBinary()) {
         std::string op;
-        if (expr.getOp() == Op::Add)
-            op = "+";
-        else if (expr.getOp() == Op::Sub)
-            op = "-";
-        else if (expr.getOp() == Op::Mul)
-            op = "*";
-        else if (expr.getOp() == Op::Div)
-            op = "/";
-        else if (expr.getOp() == Op::Pow)
-            op = "^";
-        else
+        switch (expr.getOp()) {
+#define MAKE_OP(scevop, str)                                                                                           \
+    case Op::scevop:                                                                                                   \
+        op = str;                                                                                                      \
+        break;
+            MAKE_OP(Add, "+")
+            MAKE_OP(Sub, "-")
+            MAKE_OP(Mul, "*")
+            MAKE_OP(Div, "/")
+            MAKE_OP(LShr, ">>>")
+            MAKE_OP(AShr, ">>")
+            MAKE_OP(Shl, "<<")
+            MAKE_OP(And, "&")
+            MAKE_OP(Or, "|")
+            MAKE_OP(Xor, "^")
+            MAKE_OP(Pow, "**")
+#undef MAKE_OP
+        default:
             Err::unreachable();
+        }
+
         os << "( " << *expr.getLHS() << " " << op << " " << *expr.getRHS() << " )";
+    } else if (expr.isIcmp()) {
+        std::string op;
+        switch (expr.getCmpCond()) {
+        case ICMPOP::eq:
+            op = "==";
+            break;
+        case ICMPOP::ne:
+            op = "!=";
+            break;
+        case ICMPOP::slt:
+            op = "<";
+            break;
+        case ICMPOP::sle:
+            op = "<=";
+            break;
+        case ICMPOP::sgt:
+            op = ">";
+            break;
+        case ICMPOP::sge:
+            op = ">=";
+        default:
+            Err::unreachable();
+        }
+        os << "( " << *expr.getCmpLHS() << " " << op << " " << *expr.getCmpRHS() << " )";
+    } else if (expr.isSelect()) {
+        os << "( " << *expr.getSelCond() << " ? " << *expr.getSelLHS() << " : " << *expr.getSelRHS() << " )";
     } else if (expr.isIRValue())
         os << expr.getRawIRValue()->getName();
     else
@@ -649,6 +684,57 @@ SCEVExpr *SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
             //     return foldSCEVExpr(swapOperands(expr));
         }
 
+        // a * pow(2^n, k) ---> a << n * k
+        if (op == Op::Mul) {
+            SCEVExpr* pow = nullptr;
+            SCEVExpr* oper = nullptr;
+            if (rhs->isBinary() && rhs->getOp() == Op::Pow) {
+                pow = rhs;
+                oper = lhs;
+            } else if (lhs->isBinary() && lhs->getOp() == Op::Pow) {
+                pow = lhs;
+                oper = rhs;
+            }
+
+            if (pow && oper) {
+                auto base = pow->getLHS();
+                auto exp = pow->getRHS();
+                int base_ci;
+                if (base->isIRValue() && match(base->getRawIRValue(), M::PowerOfTwo(M::Bind(base_ci)))) {
+                    auto s = getSCEVExprMul(getSCEVExpr(ctz_wrapper(base_ci)), exp);
+                    return getSCEVExprShl(oper, s);
+                }
+            }
+        }
+
+        // a / pow(2^n, k)
+        //   let s = n * k, this can be optimized to
+        // (a + ((a >> W - 1) & ((1 << s) - 1))) >> s
+        if (op == Op::Div) {
+            if (rhs->isBinary() && rhs->getOp() == Op::Pow) {
+                auto base = rhs->getLHS();
+                auto exp = rhs->getRHS();
+                int base_ci;
+                if (base->isIRValue() && match(base->getRawIRValue(), M::PowerOfTwo(M::Bind(base_ci)))) {
+                    auto one = getSCEVExpr(1);
+                    // TODO: Currently we only compute SCEV of i32, extend this.
+                    auto bitwidth_minus_one = getSCEVExpr(31);
+                    auto s = getSCEVExprMul(getSCEVExpr(ctz_wrapper(base_ci)), exp);
+                    auto sign = getSCEVExprAShr(lhs, bitwidth_minus_one);
+                    auto mask = getSCEVExprSub(getSCEVExprShl(one, s), one);
+                    auto bias = getSCEVExprAnd(sign, mask);
+                    auto adjusted = getSCEVExprAdd(lhs, bias);
+                    auto shifted = getSCEVExprAShr(adjusted, s);
+
+                    // s (= n * k) can cause undefined behavior if s >= bitwidth, a select is
+                    // needed to handle this.
+                    auto overflow = getSCEVExprIcmp(ICMPOP::sgt, s, bitwidth_minus_one);
+                    auto res = getSCEVExprSelect(overflow, getSCEVExpr(0), shifted);
+                    return res;
+                }
+            }
+        }
+
         // Transform the tree.
         // Adapted from Muchnick's "Advanced Compiler Design & Implementation", Fig 12.6
         if (op == Op::Add || op == Op::Mul) {
@@ -698,6 +784,44 @@ SCEVExpr *SCEVHandle::foldSCEVExpr(SCEVExpr *expr) {
         }
     }
 
+    else if (expr->isIcmp()) {
+        auto lhs = expr->getCmpLHS();
+        auto rhs = expr->getCmpRHS();
+        auto cond = expr->getCmpCond();
+        if (lhs->isIRValue() && rhs->isIRValue()) {
+            int a, b;
+            if (match(lhs->getRawIRValue(), M::Bind(a)) && match(rhs->getRawIRValue(), M::Bind(b))) {
+
+#define COND(op, cppop)                                                                                                \
+    case ICMPOP::op:                                                                                                   \
+        return getSCEVExpr(function->getConst(a cppop b).get());
+
+                switch (cond) {
+                    COND(eq, ==)
+                    COND(ne, !=)
+                    COND(slt, <)
+                    COND(sle, <=)
+                    COND(sgt, >)
+                    COND(sge, >=)
+                default:
+                    Err::unreachable();
+                }
+#undef COND
+            }
+        }
+    }
+
+    else if (expr->isSelect()) {
+        auto lhs = expr->getSelLHS();
+        auto rhs = expr->getSelRHS();
+        auto cond = expr->getSelCond();
+        if (cond->isIRValue()) {
+            bool cond_ci;
+            if (match(cond->getRawIRValue(), M::Bind(cond_ci)))
+                return cond_ci ? lhs : rhs;
+        }
+    }
+
     return expr;
 }
 
@@ -717,7 +841,7 @@ TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
         auto e = apply(trec, getBackEdgeTakenCount(trec->getLoop()));
         if (!e)
             return getTRECUntracked();
-        return getExprTREC(e);
+        return getExprTREC(foldSCEVExpr(e));
     }
 
     return trec;
@@ -968,12 +1092,14 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
 
             auto step_ir_val = step->getRawIRValue();
 
-            if (cmpop == ICMPOP::sge) {
-                cmpop = ICMPOP::sgt;
+            if (cmpop == ICMPOP::sge)
                 cond = getSCEVExprSub(cond, getSCEVExpr(1));
-            } else if (cmpop == ICMPOP::sle) {
-                cmpop = ICMPOP::slt;
+            else if (cmpop == ICMPOP::sle)
                 cond = getSCEVExprAdd(cond, getSCEVExpr(1));
+            else if (cmpop == ICMPOP::ne) {
+                // Convert 'x != y' to 'x - y != 0'
+                base = getSCEVExprSub(base, cond);
+                cond = getSCEVExpr(0);
             } else if (cmpop == ICMPOP::eq) {
                 if (base == cond && !match(step_ir_val, M::Is(0)))
                     return getSCEVExpr(1);
@@ -983,6 +1109,8 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
                 return nullptr;
             }
 
+            bool known_step_positive = false;
+            bool known_step_negative = false;
             // If the step is a constant
             if (int step_val; match(step_ir_val, M::Bind(step_val))) {
                 // See if the step is constant 1/-1, where the trip count is simply (x - a)/(a - x).
@@ -991,30 +1119,39 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
                 if (step_val == -1)
                     return getSCEVExprSub(base, cond);
 
-                // If the step can be negative or zero, give up
-                if (step_val == 0 || step_val < 0)
+                if (step_val == 0)
                     return nullptr;
+
+                if (step_val < 0)
+                    known_step_negative = true;
+                if (step_val > 0)
+                    known_step_positive = true;
             }
             // Here we only consider positive step.
-            else if (!ranges || !ranges->knownNonNegative(step_ir_val))
-                return nullptr;
+            else if (ranges && ranges->knownNonNegative(step_ir_val))
+                known_step_positive = true;
 
-            // Compute a symbolic trip count.
-            // Avoid `!=`, since there can be remainders.
-            if (cmpop == ICMPOP::ne)
-                return nullptr;
-
-            // Since step > 0,
-            // ceil ((cond - base) / step) == floor((cond - base + (step - 1)) / step)
             auto delta = getSCEVExprSub(cond, base);
             auto step_minus_1 = getSCEVExprSub(step, getSCEVExpr(1));
-            auto ret = getSCEVExprDiv(getSCEVExprAdd(delta, step_minus_1), step);
-            ret = foldSCEVExpr(ret);
+            auto step_add_1 = getSCEVExprAdd(step, getSCEVExpr(1));
 
-            if (step->getRawIRValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                Logger::logDebug("[SCEV]: The step is known non-positive by RangeAnalysis.");
+            // For step > 0, ceil ((cond - base) / step) == floor((cond - base + (step - 1)) / step)
+            auto pos_ret = getSCEVExprDiv(getSCEVExprAdd(delta, step_minus_1), step);
 
-            return ret;
+            // For step < 0, ceil ((cond - base) / step) == floor((cond - base + (step + 1)) / step)
+            auto neg_ret = getSCEVExprDiv(getSCEVExprAdd(delta, step_add_1), step);
+
+            SCEVExpr *ret = nullptr;
+            if (known_step_positive)
+                ret = pos_ret;
+            else if (known_step_negative)
+                ret = neg_ret;
+            else {
+                auto cmp = getSCEVExprIcmp(ICMPOP::sgt, step, getSCEVExpr(0));
+                ret = getSCEVExprSelect(cmp, pos_ret, neg_ret);
+            }
+
+            return foldSCEVExpr(ret);
         }
         return nullptr;
     }
@@ -1285,6 +1422,24 @@ SCEVExpr *SCEVHandle::getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y) {
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Div, x, y));
 }
+SCEVExpr *SCEVHandle::getSCEVExprAShr(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::AShr, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprLShr(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::LShr, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprShl(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Shl, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprAnd(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::And, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprOr(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Or, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprXor(SCEVExpr *x, SCEVExpr *y) {
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Xor, x, y));
+}
 
 // https://stackoverflow.com/questions/101439/the-most-efficient-way-to-implement-an-integer-based-power-function-powint-int
 int ipow(int base, int exp) {
@@ -1319,6 +1474,44 @@ SCEVExpr *SCEVHandle::getSCEVExprNeg(SCEVExpr *x) {
     return getSCEVExprSub(getSCEVExpr(0), x);
 }
 
+SCEVExpr *SCEVHandle::getSCEVExprIcmp(ICMPOP cond, SCEVExpr *x, SCEVExpr *y) {
+    if (x->isIRValue() && y->isIRValue()) {
+        int a, b;
+        if (match(x->getRawIRValue(), M::Bind(a)) && match(y->getRawIRValue(), M::Bind(b))) {
+
+#define COND(op, cppop)                                                                                                \
+    case ICMPOP::op:                                                                                                   \
+        return getSCEVExpr(function->getConst(a cppop b).get());
+
+            switch (cond) {
+                COND(eq, ==)
+                COND(ne, !=)
+                COND(slt, <)
+                COND(sle, <=)
+                COND(sgt, >)
+                COND(sge, >=)
+            default:
+                Err::unreachable();
+            }
+#undef COND
+        }
+    }
+    return getPoolSCEV(std::make_shared<SCEVExpr>(cond, x, y));
+}
+
+SCEVExpr *SCEVHandle::getSCEVExprSelect(SCEVExpr *cond, SCEVExpr *x, SCEVExpr *y) {
+    if (cond->isIRValue()) {
+        bool cond_ci;
+        if (match(cond->getRawIRValue(), M::Bind(cond_ci))) {
+            return cond_ci ? x : y;
+            if (cond_ci)
+                return x;
+            return y;
+        }
+    }
+    return getPoolSCEV(std::make_shared<SCEVExpr>(cond, x, y));
+}
+
 SCEVExpr *SCEVHandle::getSCEVExpr(int x) { return getSCEVExpr(function->getConst(x).get()); }
 SCEVExpr *SCEVHandle::getSCEVExpr(Value *x) { return getPoolSCEV(std::make_shared<SCEVExpr>(x)); }
 
@@ -1330,9 +1523,7 @@ void SCEVSynthesizer::setInsertPoint(const pBlock &block_, BasicBlock::iterator 
 
 void SCEVSynthesizer::disableCheck() { unchecked = true; }
 
-void SCEVSynthesizer::withRanges(RangeResult* ranges_) {
-    ranges = ranges_;
-}
+void SCEVSynthesizer::withRanges(RangeResult *ranges_) { ranges = ranges_; }
 
 pVal SCEVSynthesizer::synthesizeExpr(SCEVExpr *expr) {
     std::map<SCEVExpr *, pVal> inserted;
@@ -1368,7 +1559,6 @@ pVal SCEVSynthesizer::synthesizeExprImpl(SCEVExpr *expr, std::map<SCEVExpr *, pV
         return ir_val;
     }
     if (expr->isBinary()) {
-        // Trivial cases
         auto lhs = synthesizeExprImpl(expr->getLHS(), inserted);
         if (!lhs)
             return nullptr;
@@ -1378,19 +1568,24 @@ pVal SCEVSynthesizer::synthesizeExprImpl(SCEVExpr *expr, std::map<SCEVExpr *, pV
 
         OP ir_op = OP::ADD;
         switch (expr->getOp()) {
-        case SCEVExpr::Binary::Op::Add:
-            ir_op = OP::ADD;
-            break;
-        case SCEVExpr::Binary::Op::Sub:
-            ir_op = OP::SUB;
-            break;
-        case SCEVExpr::Binary::Op::Mul:
-            ir_op = OP::MUL;
-            break;
-        case SCEVExpr::Binary::Op::Div:
-            ir_op = OP::SDIV;
-            break;
-        // FIXME: Fix overflow
+#define MAKE_OP(scev, ir)                                                                                              \
+    case SCEVExpr::Binary::Op::scev:                                                                                   \
+        ir_op = OP::ir;                                                                                                \
+        break;
+
+            MAKE_OP(Add, ADD)
+            MAKE_OP(Sub, SUB)
+            MAKE_OP(Mul, MUL)
+            MAKE_OP(Div, SDIV)
+            MAKE_OP(AShr, ASHR)
+            MAKE_OP(LShr, LSHR)
+            MAKE_OP(Shl, SHL)
+            MAKE_OP(And, AND)
+            MAKE_OP(Or, OR)
+            MAKE_OP(Xor, XOR)
+
+#undef MAKE_OP
+        // FIXME: Fix overflow of pow
         case SCEVExpr::Binary::Op::Pow:
             return nullptr;
         default:
@@ -1401,6 +1596,38 @@ pVal SCEVSynthesizer::synthesizeExprImpl(SCEVExpr *expr, std::map<SCEVExpr *, pV
         block->addInst(insert_point, inst);
         return inst;
     }
+
+    if (expr->isIcmp()) {
+        auto lhs = synthesizeExprImpl(expr->getCmpLHS(), inserted);
+        if (!lhs)
+            return nullptr;
+        auto rhs = synthesizeExprImpl(expr->getCmpRHS(), inserted);
+        if (!rhs)
+            return nullptr;
+
+        auto inst = std::make_shared<ICMPInst>("%scev.e" + std::to_string(name_cnt++), expr->getCmpCond(), lhs, rhs);
+        inserted[expr] = inst;
+        block->addInst(insert_point, inst);
+        return inst;
+    }
+
+    if (expr->isSelect()) {
+        auto cond = synthesizeExprImpl(expr->getSelCond(), inserted);
+        if (!cond)
+            return nullptr;
+        auto lhs = synthesizeExprImpl(expr->getSelLHS(), inserted);
+        if (!lhs)
+            return nullptr;
+        auto rhs = synthesizeExprImpl(expr->getSelRHS(), inserted);
+        if (!rhs)
+            return nullptr;
+
+        auto inst = std::make_shared<SELECTInst>("%scev.e" + std::to_string(name_cnt++), cond, lhs, rhs);
+        inserted[expr] = inst;
+        block->addInst(insert_point, inst);
+        return inst;
+    }
+
     Err::unreachable();
     return nullptr;
 }
@@ -1507,6 +1734,32 @@ std::optional<size_t> SCEVSynthesizer::estimateCostImpl(SCEVExpr *expr, const pB
         visited.emplace(expr);
         return *lhs + *rhs + 1;
     }
+
+    if (expr->isIcmp()) {
+        auto lhs = estimateCostImpl(expr->getCmpLHS(), block, visited);
+        if (!lhs)
+            return std::nullopt;
+        auto rhs = estimateCostImpl(expr->getCmpRHS(), block, visited);
+        if (!rhs)
+            return std::nullopt;
+        visited.emplace(expr);
+        return *lhs + *rhs + 1;
+    }
+
+    if (expr->isSelect()) {
+        auto cond = estimateCostImpl(expr->getSelCond(), block, visited);
+        if (!cond)
+            return std::nullopt;
+        auto lhs = estimateCostImpl(expr->getSelLHS(), block, visited);
+        if (!lhs)
+            return std::nullopt;
+        auto rhs = estimateCostImpl(expr->getSelRHS(), block, visited);
+        if (!rhs)
+            return std::nullopt;
+        visited.emplace(expr);
+        return *cond + *lhs + *rhs + 1;
+    }
+
     return std::nullopt;
 }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // CodeGenPrepare
+//   - Convert select to branch if target not supported
 //   - Break all critical edges
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_CODEGEN_PREPARE_HPP

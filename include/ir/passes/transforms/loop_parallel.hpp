@@ -8,6 +8,12 @@
 #include "ir/passes/pass_manager.hpp"
 
 namespace IR {
+enum class ParallelAttr {
+    NoParallel = 1 << 0,
+    Parallelized = 1 << 1
+};
+GNALC_ENUM_OPERATOR(ParallelAttr)
+using ParallelAttrs = Attr::BitFlagsAttr<ParallelAttr>;
 class LoopParallelPass : public PM::PassInfo<LoopParallelPass> {
 public:
     explicit LoopParallelPass(bool parallel_debug_message_ = false)

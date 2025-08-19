@@ -1372,6 +1372,7 @@ Performance Dashboard 的数据来源于 Github Action 自动推送的测试结�
 - 深入理解 LLVM：代码生成
 - 多面体编译理论与深度学习实践
 - [Compiler Optimizations for a Time-constrained Environment](http://digitalcommons.macalester.edu/mathcs_honors/8/)
+- Optimizing Compilers for Modern Architectures
 - [The LLVM Project Blog](https://blog.llvm.org/)
 - [Enna1’s study notes about LLVM](https://llvm-study-notes.readthedocs.io/en/latest/index.html)
 - [Enna1's website](https://enna1.github.io/)
