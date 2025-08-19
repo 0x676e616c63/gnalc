@@ -226,14 +226,14 @@ auto make_enabling(const PMOptions &options) {
 
 auto make_loop(const PMOptions &options) {
     FPM fpm;
-    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
+    // FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
     // fpm.addPass(LoopSimplifyPass());
     // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(LoopParallelPass(true));
     // fpm.addPass(PrintFunctionPass(std::cerr));
-    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
+    // FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     // FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
@@ -319,7 +319,6 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
 
     // Note:
     // `--ann` moved to make_post_legalize()
-
 
     return fpm;
 }
