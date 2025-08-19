@@ -107,8 +107,8 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
                                             // fpm.addPass(FusedAddr());
                                             // fpm.addPass(MachineConstantFold());
                                             fpm.addPass(ISel());
-    // opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
-    // opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
+    opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
+    opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
     // opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight)) : nop;
                                             fpm.addPass(PreRAlegalize());
     // opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
