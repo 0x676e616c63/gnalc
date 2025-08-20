@@ -1039,7 +1039,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
             auto [base, step] = *constant_affine;
             auto cond_val = constant_cond->getVal();
 
-            if (cmpop == ICMPOP::eq) {
+            if (cmpop == ICMPOP::eq || cmpop == ICMPOP::ne) {
                 // if (base != cond_val || (base == cond_val && step != 0))
                 //     return getSCEVExpr(0);
                 return nullptr;
@@ -1096,18 +1096,8 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *range
                 cond = getSCEVExprSub(cond, getSCEVExpr(1));
             else if (cmpop == ICMPOP::sle)
                 cond = getSCEVExprAdd(cond, getSCEVExpr(1));
-            else if (cmpop == ICMPOP::ne) {
-                // Convert 'x != y' to 'x - y != 0'
-                base = getSCEVExprSub(base, cond);
-                cond = getSCEVExpr(0);
-            } else if (cmpop == ICMPOP::eq) {
-                if (base == cond && !match(step_ir_val, M::Is(0)))
-                    return getSCEVExpr(1);
-                // If base != cond, we are not sure whether base equals cond or not at runtime.
-                // if (base != cond)
-                //     return getSCEVExpr(0);
+            else if (cmpop == ICMPOP::eq || cmpop == ICMPOP::ne)
                 return nullptr;
-            }
 
             bool known_step_positive = false;
             bool known_step_negative = false;
