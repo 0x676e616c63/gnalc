@@ -227,11 +227,11 @@ auto make_enabling(const PMOptions &options) {
 auto make_loop(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
-    // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
+    FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
-    // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
+    FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     // FUNCTION_TRANSFORM(loop_unroll, CFGSimplifyPass(), LoopSimplifyPass(), LCSSAPass(),
     //                    LoopUnrollPass(LoopUnrollPass::PO_Peel))
     FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
