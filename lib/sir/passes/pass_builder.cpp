@@ -59,7 +59,7 @@ LFPM make_enabling(const PMOptions &options) {
 
 LFPM make_affine(const PMOptions &options) {
     LFPM lfpm;
-    // FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
+    FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
     FUNCTION_TRANSFORM(affine_licm, AffineLICMPass())
     FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
     FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
