@@ -477,22 +477,22 @@ void RegisterAllocImpl::AssignColors() {
             unsigned int c;
             if (okColors.size()) {
 
-                if (mfunc->Context().isARMv8()) {
-                    int calleesave_cnt = 0;
-                    auto _ = std::find_if(okColors.begin(), okColors.end(), [&](auto &&elem) {
-                        ++calleesave_cnt;
-                        return elem > 18;
-                    });
-
-                    if (calleesave_cnt < 6) {
-                        goto __use_fallback;
-                    } else {
-                        c = okColors[n->getRecover() % calleesave_cnt]; // prefer caller-saves
-                    }
-
-                } else if (mfunc->Context().isRISCV64()) {
+                // if (mfunc->Context().isARMv8()) {
+                //     int calleesave_cnt = 0;
+                //     auto _ = std::find_if(okColors.begin(), okColors.end(), [&](auto &&elem) {
+                //         ++calleesave_cnt;
+                //         return elem > 18;
+                //     });
+                //
+                //     if (calleesave_cnt < 6) {
+                //         goto __use_fallback;
+                //     } else {
+                //         c = okColors[n->getRecover() % calleesave_cnt]; // prefer caller-saves
+                //     }
+                //
+                // } else if (mfunc->Context().isRISCV64()) {
                     goto __use_fallback;
-                }
+                // }
             } else {
             __use_fallback:
                 c = okColors[n->getRecover() % okColors.size()]; // fallback

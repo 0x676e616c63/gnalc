@@ -153,7 +153,7 @@ auto make_basic_clean(const PMOptions &options) {
     FUNCTION_TRANSFORM(sccp, SCCPPass());
     FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
     // TODO: Enable this pass?
-    FUNCTION_TRANSFORM(constraint_elimination, LoopSimplifyPass(), ConstraintEliminationPass());
+    // FUNCTION_TRANSFORM(constraint_elimination, LoopSimplifyPass(), ConstraintEliminationPass());
     FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
     return fpm;
@@ -216,7 +216,7 @@ auto make_memo(const PMOptions &options) {
 auto make_enabling(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
-    FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
+    // FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
     FUNCTION_TRANSFORM(inliner, InlinePass());
     // FUNCTION_TRANSFORM(func_spec, FunctionSpecializationPass());
     FUNCTION_TRANSFORM(internalize, InternalizePass());
@@ -229,10 +229,6 @@ auto make_loop(const PMOptions &options) {
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
-    // fpm.addPass(LoopSimplifyPass());
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(LoopParallelPass(true));
-    // fpm.addPass(PrintFunctionPass(std::cerr));
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
@@ -265,7 +261,7 @@ auto make_vectorizer(const PMOptions &options) {
 
 auto make_post_legalize(const PMOptions &options) {
     FPM fpm;
-    FUNCTION_TRANSFORM(globalize, GlobalizePass())
+    // FUNCTION_TRANSFORM(globalize, GlobalizePass())
     FUNCTION_TRANSFORM(codegen_prepare, CodeGenPreparePass())
 
     if (!options.advance_name_norm)
