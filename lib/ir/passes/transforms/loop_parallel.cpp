@@ -301,7 +301,7 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
 
         reduction_updates.emplace(reduction);
         reduction_updates.emplace(reduction_update);
-        // If the reduction is used accross the iteration, it has loop carried dependencies.
+        // If the reduction is used across the iteration, it has loop carried dependencies.
         for (const auto& v : reduction_updates) {
             for (const auto &inst_user : v->inst_users()) {
                 FAIL_IF_MSG(loop->contains(inst_user->getParent()) && !reduction_updates.count(inst_user), "Skipped loop '",

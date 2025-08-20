@@ -81,15 +81,15 @@ MPM make_locality(const PMOptions &options) {
     MPM mpm;
     if (options.relayout)
         mpm.addPass(RelayoutPass());
-    // if (options.loop_interchange)
-    //     mpm.addPass(makeLinearModulePass(LoopInterchangePass()));
+    if (options.loop_interchange)
+        mpm.addPass(makeLinearModulePass(LoopInterchangePass()));
     return mpm;
 }
 
 MPM LinearPassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
     MPM mpm;
     mpm.addPass(makeLinearModulePass(buildFunctionFixedPointPipeline(options)));
-    mpm.addPass(make_locality(options));
+    // mpm.addPass(make_locality(options));
 
     // Annotate loops at the end of transforms to be more accurate.
     if (options.loop_annotator)
