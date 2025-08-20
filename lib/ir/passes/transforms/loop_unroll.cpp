@@ -362,8 +362,7 @@ void LoopUnrollPass::unroll_analyze(const pLoop &loop, UnrollOption &option, Fun
         return;
     } else {
         // 变量展开策略
-        // if (pass_options & PO_RuntimeUnroll) {
-        if (false) {
+        if (pass_options & PO_RuntimeUnroll) {
             // Calculate unroll factor
             int unroll_factor = calcUnrollFactor(loop, inst_size, RUS, RUC);
 

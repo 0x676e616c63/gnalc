@@ -276,10 +276,11 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
         if (auto bin = reduction_update->as<BinaryInst>()) {
             reduction_updates.emplace(bin);
             if (bin->getOpcode() == OP::SREM) {
-                mod = bin->getRHS();
                 bin = bin->getLHS()->as<BinaryInst>();
                 FAIL_IF(!bin || bin->getOpcode() != OP::ADD);
                 reduction_updates.emplace(bin);
+                mod = bin->getRHS();
+                FAIL_IF(!loop->isTriviallyInvariant(mod));
             }
             op = bin->getOpcode();
 
@@ -440,21 +441,22 @@ pFunc doParallelize(Function &func, const pLoop &loop, const ParallelLoopInfo &i
         // reduction global variable. This is possible only if the parent function executes exactly once,
         // since the first iteration's base must be zero.
         auto zero = func.getZero(reduction_base->getType());
-        bool init_is_redundant = true;
-        if (func.hasFnAttr(FuncAttr::ExecuteExactlyOnce)) {
-            if (auto base_phi = reduction_base->as<PHIInst>()) {
-                for (const auto &[val, bb] : base_phi->incomings()) {
-                    if (val != reduction && val != zero) {
-                        init_is_redundant = false;
-                        break;
-                    }
-                }
-            }
-        }
-        if (!init_is_redundant) {
-            auto reduction_init = std::make_shared<STOREInst>(reduction_base, global_var);
-            preheader->addInst(preheader->getEndInsertPoint(), reduction_init);
-        }
+        // FIXME
+        // bool init_is_redundant = true;
+        // if (func.hasFnAttr(FuncAttr::ExecuteExactlyOnce)) {
+        //     if (auto base_phi = reduction_base->as<PHIInst>()) {
+        //         for (const auto &[val, bb] : base_phi->incomings()) {
+        //             if (val != reduction && val != zero) {
+        //                 init_is_redundant = false;
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // }
+        // if (!init_is_redundant) {
+        auto reduction_init = std::make_shared<STOREInst>(reduction_base, global_var);
+        preheader->addInst(preheader->getEndInsertPoint(), reduction_init);
+        // }
 
         // Each thread has its own local reduction, and sum up by atomic_fn at the end of the
         // parallel body. Therefore, rewrite reduction base in parallel body to zero if needed.

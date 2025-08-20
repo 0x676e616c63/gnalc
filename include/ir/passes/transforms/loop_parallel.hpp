@@ -24,9 +24,9 @@ public:
 
 private:
     static constexpr bool transform_float_reduction = false;
-    static constexpr bool transform_local_reduction = false;
+    static constexpr bool transform_local_reduction = true;
     static constexpr bool transform_scalar_gv = false;
-    static constexpr bool conservative_dependency_test = false;
+    static constexpr bool conservative_dependency_test = true;
 
     bool parallel_debug_message = false;
     size_t name_cnt = 0;
