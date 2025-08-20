@@ -24,7 +24,7 @@ static constexpr int32_t small_task_threshold = 16;
 static constexpr int32_t small_task_threshold = 0;
 #endif
 
-static constexpr auto stack_size = 64 * 1024;
+static constexpr auto stack_size = 1024 * 1024;
 static constexpr int32_t cache_line_size = 64;
 
 using Task = void (*)(int32_t beg, int32_t end);

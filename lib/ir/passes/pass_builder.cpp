@@ -228,7 +228,7 @@ auto make_loop(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
-    // FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
+    FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     // FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
