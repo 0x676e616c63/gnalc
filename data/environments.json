@@ -1,5 +1,5 @@
 [
-  { "id": "educg-riscv", "name": "RISC-V on educg" },
   { "id": "educg-arm", "name": "ARM on educg" },
-  { "id": "local-arm", "name": "ARM Backend" }
+  { "id": "local-arm", "name": "ARM Backend" },
+  { "id": "educg-riscv", "name": "RISC-V on educg" }
 ]
