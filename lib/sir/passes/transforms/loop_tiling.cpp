@@ -60,7 +60,7 @@ struct NestedForVisitor : ContextVisitor {
         ContextVisitor::visit(ctx, for_inst);
     }
 
-    NestedForVisitor(Candidates *candidates_) : candidates(candidates_) {}
+    explicit NestedForVisitor(Candidates *candidates_) : candidates(candidates_) {}
 
     static std::string dumpEntry(const Entry &entry) {
         if (entry.empty())
@@ -70,16 +70,6 @@ struct NestedForVisitor : ContextVisitor {
             ret += ", " + it->for_inst->getIndVar()->getName();
         return ret;
     }
-};
-
-struct TileCandidate {
-    FORInst *for_inner;
-    FORInst *for_outer;
-    int tile_step;
-    IList *outer_ilist;
-    IList *inner_ilist;
-    LInstIter outer_iter;
-    LInstIter inner_iter;
 };
 
 // Optimizing Compilers for Modern Architectures, 9.3.3 Profitability of Blocking:
@@ -101,7 +91,7 @@ struct TileCandidate {
 //                for (k = kk; k < min(kk+Tk, K); ++k)
 //                  for (j = jj; j < min(jj+Tj, M); ++j)
 //                    C[i][j] += A[i][k] * B[k][j];
-bool hasDataReuse(AffineAAResult *affine_aa, FORInst* for_inst) {
+bool hasDataReuse(AffineAAResult *affine_aa, FORInst *for_inst) {
     const auto &rw = affine_aa->queryInstRW(for_inst);
     if (!rw)
         return false;
@@ -148,7 +138,7 @@ bool hasDataReuse(AffineAAResult *affine_aa, FORInst* for_inst) {
                 for (auto iv : iv_in_expr) {
                     // We're interested if there is any dependency carried by this loop,
                     // so all other induction variables should be the same.
-                    if (iv != candidate_iv)
+                    if (iv == candidate_iv)
                         continue;
                     auto e1 = Expr::newVar(iv1_map.at(iv));
                     auto e2 = Expr::newVar(iv2_map.at(iv));
@@ -230,15 +220,15 @@ bool hasDataReuse(AffineAAResult *affine_aa, FORInst* for_inst) {
     };
 
     if (check_dep(rw->read, rw->read) || check_dep(rw->read, rw->write) || check_dep(rw->write, rw->write)) {
-        Logger::logDebug("[Tiling]: Data reuse found in small threshold carried dependency. (",
-            candidate_iv->getName(), ")");
+        Logger::logDebug("[Tiling]: Data reuse found in small threshold carried dependency. (", candidate_iv->getName(),
+                         ")");
         return true;
     }
 
     // Part 2: Loop index in contiguous dimension with small stride
     auto check_contig = [&](const std::set<Value *> &accesses) -> bool {
         for (auto v : accesses) {
-            auto p = affine_aa->queryPointer(v);
+            const auto &p = affine_aa->queryPointer(v);
             if (!p || p->isScalar())
                 continue;
             auto acc = p->array();
@@ -260,7 +250,7 @@ bool hasDataReuse(AffineAAResult *affine_aa, FORInst* for_inst) {
 
     if (check_contig(rw->read) || check_contig(rw->write)) {
         Logger::logDebug("[Tiling]: Data reuse found in contiguous dimension with small stride. (",
-            candidate_iv->getName(), ")");
+                         candidate_iv->getName(), ")");
         return true;
     }
 
@@ -268,27 +258,19 @@ bool hasDataReuse(AffineAAResult *affine_aa, FORInst* for_inst) {
 }
 
 int computeTileStep(AffineAAResult *affine_aa, FORInst *for_outer, FORInst *for_inner) {
-    // 1) If inner bound is constant, pick a power-of-two <= min(64, max(1, bound/4)).
-    // 2) Otherwise return a modest default (8).
-    if (auto bound_ci = for_inner->getIndVar()->getBound()->as<ConstantInt>()) {
-        int N = std::max(1, bound_ci->getVal());
-        int caps[] = {64, 32, 16, 8, 4, 2, 1};
-        int target = std::max(1, N / 4);
-        for (int c : caps) {
-            if (c <= target)
-                return c;
-        }
-        // if none fits target (very small loops), pick smallest >=1 but <=N
-        for (int c : caps) {
-            if (c <= N)
-                return c;
-        }
-        return 1;
-    }
-
-    // If we don't know the bound, pick a conservative default.
-    return 4;
+    // FIXME:
+    return 64;
 }
+
+struct TileCandidate {
+    FORInst *for_inner;
+    FORInst *for_outer;
+    int tile_step;
+    IList *outer_ilist;
+    IList *inner_ilist;
+    LInstIter outer_iter;
+    LInstIter inner_iter;
+};
 
 PM::PreservedAnalyses LoopTilingPass::run(LinearFunction &function, LFAM &lfam) {
     auto &affine_aa = lfam.getResult<AffineAliasAnalysis>(function);
@@ -316,7 +298,8 @@ PM::PreservedAnalyses LoopTilingPass::run(LinearFunction &function, LFAM &lfam) 
                 auto [for_outer, outer_iter, outer_ilist] = entry[j];
                 if (canInterchange(&affine_aa, for_outer, for_inner)) {
                     auto tile_step = computeTileStep(&affine_aa, for_outer, for_inner);
-                    candidates.emplace_back(TileCandidate{for_inner, for_outer, tile_step, outer_ilist, inner_ilist, outer_iter, inner_iter});
+                    candidates.emplace_back(TileCandidate{for_inner, for_outer, tile_step, outer_ilist, inner_ilist,
+                                                          outer_iter, inner_iter});
                     break;
                 }
             }
@@ -341,7 +324,7 @@ PM::PreservedAnalyses LoopTilingPass::run(LinearFunction &function, LFAM &lfam) 
         auto add =
             std::make_shared<BinaryInst>(tile_iv->getName() + ".add", OP::ADD, tile_iv, function.getConst(tile_step));
         auto icmp = std::make_shared<ICMPInst>(tile_iv->getName() + ".min.cmp", ICMPOP::sgt, add, tile_iv->getBound());
-        auto sel = std::make_shared<SELECTInst>(tile_iv->getName() + ".min.sel", icmp, tile_iv, add);
+        auto sel = std::make_shared<SELECTInst>(tile_iv->getName() + ".min.sel", icmp, tile_iv->getBound(), add);
         tile_body->insert(tile_body->end(), add);
         tile_body->insert(tile_body->end(), icmp);
         tile_body->insert(tile_body->end(), sel);

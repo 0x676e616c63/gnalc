@@ -148,6 +148,12 @@ Array Access 由 base, indices, domain 三个部分组成：
 - indices: 索引表达式，每个元素为 `AffineExpr`，表示该索引的表达式。
 - domain: indices 中，各 `AffineExpr` 内归纳变量的范围。
 
+依赖测试部分我们使用了 Omega Test，包装成了 `OmegaSolver`，在 `include/constraint/` 目录下。
+
+参考资料
+
+- [A fast and practical integer programming algorithm for dependence analysis](https://www.cs.utexas.edu/~pingali/CS380C/2025/papers/pugh92omega.pdf)
+
 ### Transform Passes
 
 #### Early Promote Memory to Register
@@ -842,6 +848,31 @@ LICM 进行的代码移动分为 hoist 和 sink
 
 函数内联
 
+#### Function Specialization
+
+函数特化
+
+这个 pass 将常量参数的调用换为特化过的版本
+
+```c++
+int foo(int x, int flag) {
+    if (flag)
+        return x + 1;
+    return x - 1;
+}
+```
+
+如下面两个调用则会特化出相应的 `foo(int)`
+
+```c++
+foo(x, 1);
+foo(x, 0);
+```
+
+参考资料
+
+- [Introducing Function Specialization, and can we enable it by default ?](https://llvm.org/devmtg/2021-11/slides/2021-IntroducingFunctionSpecialisationAndCanWeEnableItByDefault.pdf)
+
 #### Tail Recursion Elimination
 
 - 将尾递归转换为循环，从而减少函数调用开销和栈空间使用。
@@ -856,6 +887,22 @@ LICM 进行的代码移动分为 hoist 和 sink
 - [Clava - C/C++/CUDA/OpenCL source-to-source compiler](https://github.com/specs-feup/clava)
 - [A framework for automatic and parameterizable memoization](https://www.sciencedirect.com/science/article/pii/S2352711018301559)
 - [A methodology and framework for software memoization of functions.](https://doi.org/10.1145/3457388.3458668)
+
+#### Constraint Elimination
+
+消除冗余的条件。
+
+如在下面的 `(*)` 处 的 `a > c` 是冗余的。
+
+```c++
+if (a > b && b > c) {
+  if (a > c) {
+    // (*)    
+  }
+}
+```
+
+这个 pass 是借助 OmegaSolver 实现的。
 
 #### Code Sink
 
@@ -1361,9 +1408,33 @@ Performance Dashboard 的数据来源于 Github Action 自动推送的测试结�
 ![Commit 对比](/docs/images/dashboard2.png)
 ![测例历史性能](/docs/images/dashboard3.png)
 
+## 关于毕昇杯
+
+决赛刚开始时我们的编译器出现了大量的 WA + TLE，由于决赛时间短且每次评测时间很长（我们的寄存器分配存在随机性，导致平台的缓存几乎无法命中），再加上决赛测例不公布，几乎无法调试。
+因此我们不断打开关闭了一些 pass，发现下列 pass 中可能存在 bug，会导致编译产物结果错误或死循环。
+由于当时时间有限，并没有排查出具体是哪个 pass 有问题，它们在决赛时都没有开启。（通宵爆肝 30+ h 才 AC 😭，平时的测试真的太重要了）
+
+- MemoizePass
+- LoopInterchangePass
+- FunctionSpecializationPass
+- ReassociatePass
+
+由于决赛刚结束（2025/08/23），测例还未公开，以上 bug 还未修复。
+
+以下 pass 由于效果不好未开启
+- RelayoutPass
+- LoopPeel in LoopUnrollPass
+- CodeSinkPass
+- GepFlattenPass
+
+以下 pass 截至决赛时还未完成
+- LoopTilingPass
+- LoopUnswitchPass
+- IndVarSimplifyPass
+
 ## Books and Blogs
 
-以下是我们在开发时阅读的部分书籍与博客
+以下是我们在开发时阅读的部分书籍与博客（排序不分先后）
 
 - Engineering A Compiler 2nd
 - [Static Single Assignment Book](https://github.com/pfalcon/ssabook)
