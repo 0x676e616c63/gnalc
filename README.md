@@ -150,9 +150,17 @@ Array Access 由 base, indices, domain 三个部分组成：
 
 依赖测试部分我们使用了 Omega Test，包装成了 `OmegaSolver`，在 `include/constraint/` 目录下。
 
+Omega Test 是一个整数线性规划算法，给定一组整数的线性约束，它可以判断是否可能存在整数解。
+它先消除等式约束，将整个系统转为一组不等式约束。然后通过 Fourier-Motzkin 消去法消元。  
+直观上来讲，如果把所有的不等式约束抽象成一个 N 维空间上的多面体，Fourier-Motzkin 消去法就是求其在 N - 1 维空间上的投影。分析投影与投影变量的上下界以推断
+原多面体内是否存在整数点。
+
+![workflow](/docs/images/omega_test.png)
+
 参考资料
 
 - [A fast and practical integer programming algorithm for dependence analysis](https://www.cs.utexas.edu/~pingali/CS380C/2025/papers/pugh92omega.pdf)
+-《多面体编译理论与深度学习实践》 3.4.4 Omega 测试
 
 ### Transform Passes
 
@@ -353,8 +361,8 @@ SCEV 的分析结果如下：
 - 归纳变量 `i` 在循环体内的变化规律为 `{ 1, +, 2 }`，即初始值为 1，每次迭代增加 2
 - 返回值 `sum` 的变化规律。他在循环结束后的值可以直接表示为参数 `n` 的表达式
 
-其中最重要的是 `sum` 关于 `n` 的表达式，利用这个信息可以直接把循环改写为几条四则运算，不经迭代就可得到循环的结果。不过实际使用中很少有循环可以直接得到这样的表达式，即使得到了也会因为副作用或
-use-def 而无法删除循环。
+其中最重要的是 `sum` 关于 `n` 的表达式，利用这个信息可以直接把循环改写为几条四则运算，不经迭代就可得到循环的结果。不过实际使用中很少有循环可以直接得到这样的表达式，即使得到了通常也会因为副作用或
+use-def 依赖而无法删除循环。
 
 相关资料：
 
@@ -1226,7 +1234,7 @@ int main()
 
 # Test Suite
 
-![workflow](/docs/images/workflow.png)
+![omega_test](/docs/images/workflow.png)
 
 以下内容的配置方法在 [这里](/docs/testsuite.md)。
 
