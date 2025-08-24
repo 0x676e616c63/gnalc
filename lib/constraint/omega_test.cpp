@@ -78,6 +78,14 @@ void OmegaSolver::setDebugDumpPoint(const std::string &msg) {
 
 void OmegaSolver::enableDebugDump(std::ostream &os) { debug_dump_stream = &os; }
 
+void OmegaSolver::rebuildVarSet() {
+    V.clear();
+    for (const auto &con : S) {
+        for (const auto &kv : con.coeffs)
+            V.insert(kv.first);
+    }
+}
+
 bool OmegaSolver::normalize() {
     for (auto it = S.begin(); it != S.end();) {
         if (!it->normalize())
@@ -88,6 +96,8 @@ bool OmegaSolver::normalize() {
         else
             ++it;
     }
+
+    rebuildVarSet();
     return true;
 }
 

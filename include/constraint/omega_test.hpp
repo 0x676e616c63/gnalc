@@ -85,6 +85,7 @@ public:
     void enableDebugDump(std::ostream &os);
 
 private:
+    void rebuildVarSet();
     bool normalize();
 
     // Substitute variable v with def
