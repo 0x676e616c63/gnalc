@@ -31,11 +31,6 @@ graph LR
 
 - 语句节点: `CompStmt`, `IfStmt`, `WhileStmt`, `NullStmt`, `BreakStmt`, `ContinueStmt`, `ReturnStmt`. 均继承自 `Stmt`.
 
-## SIR Generation
-
-基于 Visitor 模式，对 AST 进行遍历，生成 SIR。 SIR 没有基本块，If-else/While/For 均由相关辅助指令（`IFInst`/`WhileInst`
-/...）实现。
-
 ## Pass Manager
 
 PassManager 是 SIR、IR、MIR 共用的模块。他们分别根据其数据结构特化通用的 PassManager
@@ -160,7 +155,7 @@ Omega Test 是一个整数线性规划算法，给定一组整数的线性约束
 参考资料
 
 - [A fast and practical integer programming algorithm for dependence analysis](https://www.cs.utexas.edu/~pingali/CS380C/2025/papers/pugh92omega.pdf)
--《多面体编译理论与深度学习实践》 3.4.4 Omega 测试
+- 《多面体编译理论与深度学习实践》 3.4.4 Omega 测试
 
 ### Transform Passes
 
@@ -1363,9 +1358,7 @@ graph TD
 
 这是针对整个编译器的测试，具体而言，先在官方 runner 上编译链接所有测例，并将其推送到 artifacts 分支，然后触发 pi 上的测试流程，
 拉取 artifacts 分支，并运行测试，测试运行结果会保存在 test-results 分支中。
-pi 上的测试在 [ghaction.cpp](/test/ghaction_no_multithreading.cpp)
-中，初期为多线程测试，后期为了保证计时精度，改为单线程。原多线程版本在 [ghaction_multithread.cpp](/test/ghaction.cpp)。
-测试结果会自动保存在 test-results 分支中，并推送到 Gnalc Performance Dashboard。  
+pi 上的测试在 [ghaction.cpp](/test/ghaction_no_multithreading.cpp)。测试结果会自动保存在 test-results 分支中，并推送到 Gnalc Performance Dashboard。  
 此外，为避免仓库体积过于膨胀，artifacts 分支仅保留最近 10 次运行的结果。
 
 ```mermaid

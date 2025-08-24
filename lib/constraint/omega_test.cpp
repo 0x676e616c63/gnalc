@@ -585,7 +585,7 @@ bool OmegaSolver::eliminateInequalities() {
         real_shadow_solver.S = std::move(real_shadow);
         real_shadow_solver.V.erase(pick);
         // no integer solutions to the real shadow
-        if (!real_shadow_solver.normalize())
+        if (!real_shadow_solver.mayHasIntSolutions())
             return false;
 
         // (b) If there are integer solutions to the dark shadow, we know there are integer
@@ -594,10 +594,7 @@ bool OmegaSolver::eliminateInequalities() {
         dark_shadow_solver.S = std::move(dark_shadow);
         dark_shadow_solver.V.erase(pick);
 
-        if (!dark_shadow_solver.normalize()) {
-            if (debug_dump_stream)
-                *debug_dump_stream << "Dark shadow has no integer solutions. :(\n";
-        } else if (dark_shadow_solver.V.size() <= 1 || dark_shadow_solver.mayHasIntSolutions())
+        if (dark_shadow_solver.mayHasIntSolutions())
             return true;
 
         // (c) Otherwise, we know if an integer solution exists, it must be closely nestled
