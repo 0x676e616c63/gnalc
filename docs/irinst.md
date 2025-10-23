@@ -44,7 +44,7 @@ Gnalc IR is subset of [LLVM IR](https://llvm.org/docs/LangRef.html).
 
 - fmul
 
-- ~~udiv~~
+- udiv
 
 - sdiv
 

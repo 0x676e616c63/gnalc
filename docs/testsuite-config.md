@@ -1,4 +1,4 @@
-# Gnalc Test/Benchmark Suite
+# Test/Benchmark Configuration
 
 ### Test Data
 

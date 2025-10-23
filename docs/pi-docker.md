@@ -32,3 +32,5 @@ deb-src http://mirrors.tuna.tsinghua.edu.cn/raspbian/raspbian/ buster main non-f
 ```
 deb http://mirrors.tuna.tsinghua.edu.cn/raspberrypi/ buster main
 ```
+
+(We didn't end up using this method because we have a real Raspberry Pi.)
