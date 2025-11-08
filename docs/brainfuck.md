@@ -1,5 +1,7 @@
 ## Brainfuck
 
+- 2025/11 更新: A LLVM pass that lowers LLVM IR to Brainfuck: https://github.com/caozhanhao/llvm-brainfuck
+
 在这个编译器的开发初期，我们尝试将 Gnalc IR 翻译为 Brainfuck，并实现了部分功能。 编译时带上 `GNALC_EXTENSION_BRAINFK`
 即可启用，命令行参数为 `-march=brainfk` 和 `-march=brainfk-3tape`。
 

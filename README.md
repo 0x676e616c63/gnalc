@@ -46,7 +46,7 @@ cmake .. && make gnalc -j$(nproc)
 - [IR Instructions](docs/irinst.md)
 - [Optimizations](docs/optimization.md)
 - [Test & Benchmark](docs/test-and-benchmark.md)
-- [Brainfuck backend](docs/brainfuck.md)
+- [Brainfuck Backend](docs/brainfuck.md)
 
 ## Name
 

@@ -46,6 +46,9 @@
 // - Optimization.
 // - Fix trans to 8-bit BF.
 // - Maybe implement float.
+//
+// 2025/11 UPDATE:
+//   A LLVM Pass that lowers LLVM IR to brainfuck: https://github.com/caozhanhao/llvm-brainfuck
 #ifdef GNALC_EXTENSION_BRAINFK
 #pragma once
 #ifndef GNALC_CODEGEN_BRAINFK_BFGEN_HPP
