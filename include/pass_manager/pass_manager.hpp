@@ -522,6 +522,9 @@ public:
     }
 
     PreservedAnalyses run(UnitT &unit, AnalysisManager<UnitT> &am) {
+        if (passes.empty())
+            return PreservedAnalyses::all();
+
         PreservedAnalyses pa = PreservedAnalyses::all();
         bool modified = true;
         std::string last_modified_pass;
